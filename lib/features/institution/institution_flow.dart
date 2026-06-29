@@ -194,6 +194,9 @@ class _CaseDetailScreenState extends State<_CaseDetailScreen> {
     final evidence = signal?.evidenceId == null
         ? null
         : await widget.repository.getEvidence(signal!.evidenceId!);
+    final rampMeasurement = evidence == null
+        ? null
+        : await widget.repository.getRampMeasurementForEvidence(evidence.id);
     final state = await widget.repository.getDimensionState(
       freshCase.placeDimensionId,
     );
@@ -209,6 +212,7 @@ class _CaseDetailScreenState extends State<_CaseDetailScreen> {
       pulse: pulse,
       signal: signal,
       evidence: evidence,
+      rampMeasurement: rampMeasurement,
       memory: memory,
     );
   }
@@ -302,6 +306,7 @@ class _CaseDetailScreenState extends State<_CaseDetailScreen> {
                       _SignalPanel(
                         signal: detail.signal!,
                         evidence: detail.evidence,
+                        rampMeasurement: detail.rampMeasurement,
                       ),
                     const SizedBox(height: 16),
                     _MemoryPanel(memory: detail.memory),
@@ -646,10 +651,15 @@ class _InstitutionStateCard extends StatelessWidget {
 }
 
 class _SignalPanel extends StatelessWidget {
-  const _SignalPanel({required this.signal, required this.evidence});
+  const _SignalPanel({
+    required this.signal,
+    required this.evidence,
+    required this.rampMeasurement,
+  });
 
   final BarrierSignal signal;
   final Evidence? evidence;
+  final RampMeasurement? rampMeasurement;
 
   @override
   Widget build(BuildContext context) {
@@ -678,6 +688,10 @@ class _SignalPanel extends StatelessWidget {
             ),
             if (evidence?.note != null)
               _MetricRow(label: 'Contributor note', value: evidence!.note!),
+            if (rampMeasurement != null) ...[
+              const Divider(height: 24),
+              _RampMeasurementBlock(measurement: rampMeasurement!),
+            ],
             const Divider(height: 24),
             Text(signal.structuredSummary),
             const SizedBox(height: 12),
@@ -713,6 +727,57 @@ class _SignalPanel extends StatelessWidget {
                 ),
               ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RampMeasurementBlock extends StatelessWidget {
+  const _RampMeasurementBlock({required this.measurement});
+
+  final RampMeasurement measurement;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: 'Ramp measurement supporting evidence',
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Theme.of(context).colorScheme.outline),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const _SectionHeader(
+                icon: Icons.straighten,
+                title: 'Ramp Measurement',
+              ),
+              const SizedBox(height: 10),
+              _MetricRow(
+                label: 'Estimated angle',
+                value:
+                    '${measurement.estimatedAngleDegrees.toStringAsFixed(1)} deg',
+              ),
+              _MetricRow(
+                label: 'Capture quality',
+                value: measurement.qualityLabel,
+              ),
+              _MetricRow(label: 'Source', value: 'Citizen field capture'),
+              _MetricRow(
+                label: 'Captured at',
+                value: _formatDate(measurement.capturedAt),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Estimated reading provided to support review; official measurement may still be required.',
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -960,6 +1025,7 @@ class _CaseDetailData {
     required this.memory,
     this.signal,
     this.evidence,
+    this.rampMeasurement,
   });
 
   final AccessCase accessCase;
@@ -967,7 +1033,14 @@ class _CaseDetailData {
   final DimensionPulseRecord pulse;
   final BarrierSignal? signal;
   final Evidence? evidence;
+  final RampMeasurement? rampMeasurement;
   final List<MemoryEvent> memory;
+}
+
+String _formatDate(DateTime dateTime) {
+  final month = dateTime.month.toString().padLeft(2, '0');
+  final day = dateTime.day.toString().padLeft(2, '0');
+  return '${dateTime.year}-$month-$day';
 }
 
 Route<T> _institutionRoute<T>(Widget child) {
