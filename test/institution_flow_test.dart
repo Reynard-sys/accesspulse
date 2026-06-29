@@ -30,6 +30,16 @@ void main() {
             'AI structured evidence for review but did not make an official judgment.',
       ),
       imagePath: 'demo/main-entrance.jpg',
+      rampSlopeMeasurement: RampSlopeMeasurement(
+        estimatedAngleDegrees: 14.8,
+        qualityScore: 64,
+        qualityLabel: 'Moderate stability',
+        captureDurationMs: 3200,
+        sampleCount: 48,
+        status: RampMeasurementStatus.captured,
+        capturedAt: DateTime(2026, 6, 30, 9),
+        usedFallback: false,
+      ),
     );
 
     await tester.pumpWidget(
@@ -52,6 +62,18 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Evidence bundle'), findsOneWidget);
+    expect(find.text('Ramp Measurement'), findsOneWidget);
+    expect(find.text('Estimated angle'), findsOneWidget);
+    expect(find.text('14.8 deg'), findsOneWidget);
+    expect(find.text('Capture quality'), findsOneWidget);
+    expect(find.text('Moderate stability'), findsOneWidget);
+    expect(find.text('Citizen field capture'), findsOneWidget);
+    expect(
+      find.text(
+        'Estimated reading provided to support review; official measurement may still be required.',
+      ),
+      findsOneWidget,
+    );
     await tester.scrollUntilVisible(
       find.text('Request inspection'),
       300,
