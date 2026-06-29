@@ -1,0 +1,241 @@
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
+type EvidenceRequest = {
+  dimension?: string;
+  note?: string;
+  imagePath?: string;
+  imageBase64?: string;
+  imageMimeType?: string;
+};
+
+Deno.serve(async (request) => {
+  if (request.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
+  if (request.method !== "POST") {
+    return jsonResponse({ error: "Method not allowed" }, 405);
+  }
+
+  const apiKey = Deno.env.get("GEMINI_API_KEY");
+  if (!apiKey) {
+    return jsonResponse(
+      {
+        error:
+          "GEMINI_API_KEY is not configured. Add it as a Supabase Edge Function secret.",
+      },
+      500,
+    );
+  }
+
+  const model = Deno.env.get("GEMINI_MODEL") ?? "gemini-3.5-flash";
+  const body = (await request.json()) as EvidenceRequest;
+  const note = body.note?.trim() ?? "";
+  const dimension = body.dimension ?? "mobility_access";
+
+  const geminiResponse = await fetch(
+    "https://generativelanguage.googleapis.com/v1beta/interactions",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": apiKey,
+      },
+      body: JSON.stringify({
+        model,
+        input: buildPrompt({
+          dimension,
+          note,
+          imagePath: body.imagePath,
+          hasImageBytes: Boolean(body.imageBase64 && body.imageMimeType),
+        }),
+        response_format: {
+          type: "text",
+          mime_type: "application/json",
+          schema: {
+            type: "object",
+            properties: {
+              dimension: { type: "string" },
+              issueType: { type: "string" },
+              observedFeatures: {
+                type: "array",
+                items: { type: "string" },
+              },
+              possibleBarrier: { type: "string" },
+              missingEvidence: {
+                type: "array",
+                items: { type: "string" },
+              },
+              confidence: { type: "number" },
+              summary: { type: "string" },
+              recommendedAction: { type: "string" },
+              explanation: { type: "string" },
+            },
+            required: [
+              "dimension",
+              "issueType",
+              "observedFeatures",
+              "possibleBarrier",
+              "missingEvidence",
+              "confidence",
+              "summary",
+              "recommendedAction",
+              "explanation",
+            ],
+          },
+        },
+      }),
+    },
+  );
+
+  if (!geminiResponse.ok) {
+    const errorText = await geminiResponse.text();
+    return jsonResponse(
+      {
+        error: "Gemini request failed",
+        status: geminiResponse.status,
+        detail: errorText,
+      },
+      502,
+    );
+  }
+
+  const data = await geminiResponse.json();
+  const text = extractOutputText(data);
+  if (typeof text !== "string") {
+    return jsonResponse(
+      { error: "Gemini response did not include structured text" },
+      502,
+    );
+  }
+
+  const parsed = normalizeAssessment(JSON.parse(text));
+  return jsonResponse(parsed);
+});
+
+function buildPrompt(input: {
+  dimension: string;
+  note: string;
+  imagePath?: string;
+  hasImageBytes: boolean;
+}) {
+  return `
+You are AccessPulse's Accessibility Copilot for the hackathon MVP.
+
+Scope:
+- Dimension: ${input.dimension}
+- Place type: public service building
+- Scenario: entrance/ramp usability for independent wheelchair access
+
+User note:
+${input.note || "(No note provided.)"}
+
+Image reference:
+${input.imagePath || "(No uploaded image bytes were provided.)"}
+
+Image bytes:
+${
+    input.hasImageBytes
+      ? "Image bytes were received by the wrapper, but this structured-output pass should not claim visual details that are not supported by the user's note."
+      : "(No image bytes were provided.)"
+  }
+
+Return only JSON matching the requested schema.
+
+Rules:
+- Structure evidence for institutional review.
+- Identify visible or described features relevant to mobility access.
+- Explain uncertainty and missing context.
+- Recommend a next action such as "lgu_review" when appropriate.
+- Never state legal non-compliance.
+- Never mark a place officially verified.
+- Never overrule a human verifier.
+- If evidence is weak, say what is missing and lower confidence.
+`;
+}
+
+function normalizeAssessment(value: Record<string, unknown>) {
+  return {
+    dimension: stringValue(value.dimension, "mobility_access"),
+    issueType: stringValue(value.issueType, "entrance_ramp_usability"),
+    observedFeatures: stringList(value.observedFeatures),
+    possibleBarrier: stringValue(
+      value.possibleBarrier,
+      "independent wheelchair access may be unreliable",
+    ),
+    missingEvidence: stringList(value.missingEvidence),
+    confidence: numberValue(value.confidence, 0.5),
+    summary: stringValue(value.summary, "Evidence needs human review."),
+    recommendedAction: stringValue(value.recommendedAction, "lgu_review"),
+    explanation: stringValue(
+      value.explanation,
+      "AI structured this signal but did not make an official judgment.",
+    ),
+  };
+}
+
+function extractOutputText(data: unknown) {
+  if (!data || typeof data !== "object") {
+    return null;
+  }
+  const record = data as Record<string, unknown>;
+  if (typeof record.output_text === "string") {
+    return record.output_text;
+  }
+  if (!Array.isArray(record.steps)) {
+    return null;
+  }
+  for (const step of record.steps) {
+    if (!step || typeof step !== "object") {
+      continue;
+    }
+    const stepRecord = step as Record<string, unknown>;
+    if (!Array.isArray(stepRecord.content)) {
+      continue;
+    }
+    for (const content of stepRecord.content) {
+      if (!content || typeof content !== "object") {
+        continue;
+      }
+      const contentRecord = content as Record<string, unknown>;
+      if (typeof contentRecord.text === "string") {
+        return contentRecord.text;
+      }
+    }
+  }
+  return null;
+}
+
+function jsonResponse(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: {
+      ...corsHeaders,
+      "Content-Type": "application/json",
+    },
+  });
+}
+
+function stringValue(value: unknown, fallback: string) {
+  return typeof value === "string" && value.trim().length > 0
+    ? value
+    : fallback;
+}
+
+function stringList(value: unknown) {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string")
+    : [];
+}
+
+function numberValue(value: unknown, fallback: number) {
+  if (typeof value !== "number" || Number.isNaN(value)) {
+    return fallback;
+  }
+  return Math.max(0, Math.min(1, value));
+}
