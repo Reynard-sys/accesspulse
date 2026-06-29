@@ -25,9 +25,12 @@ class PulseService {
     final observationScore = (observations.length * 0.14).clamp(0, 0.34);
     final verificationScore = recentVerification ? 0.24 : 0.0;
     final contradictionPenalty = contradictionFlag ? 0.24 : 0.0;
-    final score = (recencyScore + observationScore + verificationScore -
-            contradictionPenalty)
-        .clamp(0.0, 1.0);
+    final score =
+        (recencyScore +
+                observationScore +
+                verificationScore -
+                contradictionPenalty)
+            .clamp(0.0, 1.0);
     final level = switch (score) {
       >= 0.72 => DimensionPulseLevel.strong,
       >= 0.40 => DimensionPulseLevel.moderate,
@@ -85,14 +88,18 @@ class PulseService {
     if (latestObservation == null) {
       parts.add('No recent visit confirmation is available.');
     } else {
-      parts.add('Latest visit signal was captured on ${_date(latestObservation.createdAt)}.');
+      parts.add(
+        'Latest visit signal was captured on ${_date(latestObservation.createdAt)}.',
+      );
     }
 
     if (hasRecentVerification) {
       parts.add('A recent human verification strengthens current knowledge.');
     }
     if (contradictionFlag) {
-      parts.add('Contradictory signals reduce confidence in current knowledge.');
+      parts.add(
+        'Contradictory signals reduce confidence in current knowledge.',
+      );
     }
 
     return parts.join(' ');

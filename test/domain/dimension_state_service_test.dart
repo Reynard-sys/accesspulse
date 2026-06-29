@@ -8,48 +8,54 @@ void main() {
   const reviewerId = '20000000-0000-4000-8000-000000000002';
   const inspectorId = '20000000-0000-4000-8000-000000000003';
 
-  test('seeded repository preserves place dimension state, pulse, and memory', () async {
-    final repository = InMemoryAccessPulseRepository.seeded();
+  test(
+    'seeded repository preserves place dimension state, pulse, and memory',
+    () async {
+      final repository = InMemoryAccessPulseRepository.seeded();
 
-    final places = await repository.listPlaces();
-    final state = await repository.getDimensionState(stalePlaceDimensionId);
-    final pulse = await repository.getDimensionPulse(stalePlaceDimensionId);
-    final memory = await repository.listMemoryEvents(stalePlaceDimensionId);
+      final places = await repository.listPlaces();
+      final state = await repository.getDimensionState(stalePlaceDimensionId);
+      final pulse = await repository.getDimensionPulse(stalePlaceDimensionId);
+      final memory = await repository.listMemoryEvents(stalePlaceDimensionId);
 
-    expect(places, hasLength(3));
-    expect(state.state, DimensionStateValue.claimedAccessible);
-    expect(pulse.level, DimensionPulseLevel.moderate);
-    expect(memory.single.eventType, MemoryEventType.stateSeeded);
-  });
+      expect(places, hasLength(3));
+      expect(state.state, DimensionStateValue.claimedAccessible);
+      expect(pulse.level, DimensionPulseLevel.moderate);
+      expect(memory.single.eventType, MemoryEventType.stateSeeded);
+    },
+  );
 
-  test('positive visit can move claimed accessible state to reliable', () async {
-    final repository = InMemoryAccessPulseRepository.seeded();
-    final service = DimensionStateService(
-      repository: repository,
-      idFactory: _deterministicIds(),
-    );
+  test(
+    'positive visit can move claimed accessible state to reliable',
+    () async {
+      final repository = InMemoryAccessPulseRepository.seeded();
+      final service = DimensionStateService(
+        repository: repository,
+        idFactory: _deterministicIds(),
+      );
 
-    final result = await service.confirmVisit(
-      placeDimensionId: stalePlaceDimensionId,
-      submittedBy: communityUserId,
-      entranceUsableIndependently: true,
-      rampUsable: true,
-      neededAssistance: false,
-      completedPurpose: true,
-      note: 'Entrance and ramp were usable independently today.',
-      now: DateTime(2026, 6, 29, 10),
-    );
+      final result = await service.confirmVisit(
+        placeDimensionId: stalePlaceDimensionId,
+        submittedBy: communityUserId,
+        entranceUsableIndependently: true,
+        rampUsable: true,
+        neededAssistance: false,
+        completedPurpose: true,
+        note: 'Entrance and ramp were usable independently today.',
+        now: DateTime(2026, 6, 29, 10),
+      );
 
-    final memory = await repository.listMemoryEvents(stalePlaceDimensionId);
+      final memory = await repository.listMemoryEvents(stalePlaceDimensionId);
 
-    expect(result.previousState.state, DimensionStateValue.claimedAccessible);
-    expect(result.currentState.state, DimensionStateValue.reliable);
-    expect(result.currentPulse.supportingObservationsCount, 2);
-    expect(
-      memory.any((event) => event.eventType == MemoryEventType.stateChanged),
-      isTrue,
-    );
-  });
+      expect(result.previousState.state, DimensionStateValue.claimedAccessible);
+      expect(result.currentState.state, DimensionStateValue.reliable);
+      expect(result.currentPulse.supportingObservationsCount, 2);
+      expect(
+        memory.any((event) => event.eventType == MemoryEventType.stateChanged),
+        isTrue,
+      );
+    },
+  );
 
   test('failed visit degrades the living accessibility state', () async {
     final repository = InMemoryAccessPulseRepository.seeded();
@@ -69,7 +75,9 @@ void main() {
       now: DateTime(2026, 6, 29, 10),
     );
 
-    final savedState = await repository.getDimensionState(stalePlaceDimensionId);
+    final savedState = await repository.getDimensionState(
+      stalePlaceDimensionId,
+    );
     final memory = await repository.listMemoryEvents(stalePlaceDimensionId);
 
     expect(result.observation.outcome, ObservationOutcome.negative);
@@ -85,42 +93,47 @@ void main() {
     );
   });
 
-  test('AI structured evidence opens an LGU review case without official verification', () async {
-    final repository = InMemoryAccessPulseRepository.seeded();
-    final service = DimensionStateService(
-      repository: repository,
-      idFactory: _deterministicIds(),
-    );
-    const aiService = MockAiEvidenceService();
-    final assessment = await aiService.analyzeMobilityEvidence(
-      note: 'The entrance has steps and the ramp required assistance.',
-      imagePath: 'demo/entrance.jpg',
-    );
+  test(
+    'AI structured evidence opens an LGU review case without official verification',
+    () async {
+      final repository = InMemoryAccessPulseRepository.seeded();
+      final service = DimensionStateService(
+        repository: repository,
+        idFactory: _deterministicIds(),
+      );
+      const aiService = MockAiEvidenceService();
+      final assessment = await aiService.analyzeMobilityEvidence(
+        note: 'The entrance has steps and the ramp required assistance.',
+        imagePath: 'demo/entrance.jpg',
+      );
 
-    final result = await service.submitStructuredEvidence(
-      placeDimensionId: stalePlaceDimensionId,
-      submittedBy: communityUserId,
-      assessment: assessment,
-      imagePath: 'demo/entrance.jpg',
-      note: 'Photo of the main entrance.',
-      now: DateTime(2026, 6, 29, 10, 5),
-    );
+      final result = await service.submitStructuredEvidence(
+        placeDimensionId: stalePlaceDimensionId,
+        submittedBy: communityUserId,
+        assessment: assessment,
+        imagePath: 'demo/entrance.jpg',
+        note: 'Photo of the main entrance.',
+        now: DateTime(2026, 6, 29, 10, 5),
+      );
 
-    final cases = await repository.listCases(status: CaseStatus.open);
-    final memory = await repository.listMemoryEvents(stalePlaceDimensionId);
+      final cases = await repository.listCases(status: CaseStatus.open);
+      final memory = await repository.listMemoryEvents(stalePlaceDimensionId);
 
-    expect(result.currentState.state, DimensionStateValue.degraded);
-    expect(result.signal.recommendedAction, 'lgu_review');
-    expect(cases.single.placeDimensionId, stalePlaceDimensionId);
-    expect(
-      memory.any((event) => event.eventType == MemoryEventType.aiSignalCreated),
-      isTrue,
-    );
-    expect(
-      result.currentState.state,
-      isNot(DimensionStateValue.officiallyVerifiedDegraded),
-    );
-  });
+      expect(result.currentState.state, DimensionStateValue.degraded);
+      expect(result.signal.recommendedAction, 'lgu_review');
+      expect(cases.single.placeDimensionId, stalePlaceDimensionId);
+      expect(
+        memory.any(
+          (event) => event.eventType == MemoryEventType.aiSignalCreated,
+        ),
+        isTrue,
+      );
+      expect(
+        result.currentState.state,
+        isNot(DimensionStateValue.officiallyVerifiedDegraded),
+      );
+    },
+  );
 
   test('only inspector verification makes degraded state official', () async {
     final repository = InMemoryAccessPulseRepository.seeded();

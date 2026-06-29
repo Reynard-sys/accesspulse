@@ -100,8 +100,8 @@ class _PublicHomeScreenState extends State<PublicHomeScreen> {
                         place: place,
                         onTap: () async {
                           await Navigator.of(context).push(
-                            MaterialPageRoute<void>(
-                              builder: (_) => PlaceDetailScreen(
+                            _accessPulseRoute<void>(
+                              PlaceDetailScreen(
                                 repository: widget.repository,
                                 stateService: widget.stateService,
                                 aiService: widget.aiService,
@@ -200,55 +200,35 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
                       pulse: detail.pulse,
                     ),
                     const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: FilledButton.icon(
-                            icon: const Icon(Icons.how_to_reg),
-                            label: const Text('I visited this place'),
-                            onPressed: () async {
-                              await Navigator.of(context).push(
-                                MaterialPageRoute<void>(
-                                  builder: (_) => ConfirmVisitScreen(
-                                    place: widget.place,
-                                    placeDimensionId:
-                                        detail.placeDimension.id,
-                                    stateService: widget.stateService,
-                                  ),
-                                ),
-                              );
-                              _refresh();
-                            },
+                    _DetailActions(
+                      onConfirmVisit: () async {
+                        await Navigator.of(context).push(
+                          _accessPulseRoute<void>(
+                            ConfirmVisitScreen(
+                              place: widget.place,
+                              placeDimensionId: detail.placeDimension.id,
+                              stateService: widget.stateService,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            icon: const Icon(Icons.add_a_photo),
-                            label: const Text('Add evidence'),
-                            onPressed: () async {
-                              await Navigator.of(context).push(
-                                MaterialPageRoute<void>(
-                                  builder: (_) => EvidenceFlowScreen(
-                                    place: widget.place,
-                                    placeDimensionId:
-                                        detail.placeDimension.id,
-                                    stateService: widget.stateService,
-                                    aiService: widget.aiService,
-                                  ),
-                                ),
-                              );
-                              _refresh();
-                            },
+                        );
+                        _refresh();
+                      },
+                      onAddEvidence: () async {
+                        await Navigator.of(context).push(
+                          _accessPulseRoute<void>(
+                            EvidenceFlowScreen(
+                              place: widget.place,
+                              placeDimensionId: detail.placeDimension.id,
+                              stateService: widget.stateService,
+                              aiService: widget.aiService,
+                            ),
                           ),
-                        ),
-                      ],
+                        );
+                        _refresh();
+                      },
                     ),
                     const SizedBox(height: 20),
-                    _SectionHeader(
-                      icon: Icons.history,
-                      title: 'Place memory',
-                    ),
+                    _SectionHeader(icon: Icons.history, title: 'Place memory'),
                     const SizedBox(height: 8),
                     for (final event in detail.memory.take(5))
                       Padding(
@@ -313,8 +293,8 @@ class _ConfirmVisitScreenState extends State<ConfirmVisitScreen> {
       return;
     }
     await Navigator.of(context).pushReplacement(
-      MaterialPageRoute<void>(
-        builder: (_) => SubmissionResultScreen(
+      _accessPulseRoute<void>(
+        SubmissionResultScreen(
           place: widget.place,
           title: 'Your visit updated this place',
           message:
@@ -345,8 +325,9 @@ class _ConfirmVisitScreenState extends State<ConfirmVisitScreen> {
               children: [
                 Text(
                   widget.place.name,
-                  style: Theme.of(context).textTheme.titleLarge
-                      ?.copyWith(fontWeight: FontWeight.w700),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 8),
                 const Text(
@@ -471,8 +452,8 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
       return;
     }
     await Navigator.of(context).pushReplacement(
-      MaterialPageRoute<void>(
-        builder: (_) => SubmissionResultScreen(
+      _accessPulseRoute<void>(
+        SubmissionResultScreen(
           place: widget.place,
           title: 'Evidence strengthened this place memory',
           message:
@@ -500,8 +481,9 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
               children: [
                 Text(
                   widget.place.name,
-                  style: Theme.of(context).textTheme.titleLarge
-                      ?.copyWith(fontWeight: FontWeight.w700),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 8),
                 const Text(
@@ -564,7 +546,8 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                if (_assessment != null) _AiResultPanel(assessment: _assessment!),
+                if (_assessment != null)
+                  _AiResultPanel(assessment: _assessment!),
                 if (_assessment != null) ...[
                   const SizedBox(height: 16),
                   FilledButton.icon(
@@ -621,17 +604,26 @@ class SubmissionResultScreen extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.all(20),
               children: [
-                Icon(
-                  Icons.check_circle_outline,
-                  size: 56,
-                  color: Theme.of(context).colorScheme.primary,
+                TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0.82, end: 1),
+                  duration: const Duration(milliseconds: 500),
+                  curve: Curves.easeOutBack,
+                  builder: (context, scale, child) {
+                    return Transform.scale(scale: scale, child: child);
+                  },
+                  child: Icon(
+                    Icons.check_circle_outline,
+                    size: 56,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 Text(
                   title,
                   textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.headlineSmall
-                      ?.copyWith(fontWeight: FontWeight.w700),
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -676,8 +668,8 @@ class SubmissionResultScreen extends StatelessWidget {
                     label: const Text('Add evidence'),
                     onPressed: () {
                       Navigator.of(context).pushReplacement(
-                        MaterialPageRoute<void>(
-                          builder: (_) => EvidenceFlowScreen(
+                        _accessPulseRoute<void>(
+                          EvidenceFlowScreen(
                             place: place,
                             placeDimensionId: nextAction!.placeDimensionId,
                             stateService: nextAction!.stateService,
@@ -747,6 +739,62 @@ class _PlaceListTile extends StatelessWidget {
   }
 }
 
+class _DetailActions extends StatelessWidget {
+  const _DetailActions({
+    required this.onConfirmVisit,
+    required this.onAddEvidence,
+  });
+
+  final VoidCallback onConfirmVisit;
+  final VoidCallback onAddEvidence;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final narrow = constraints.maxWidth < 560;
+        final confirmButton = Semantics(
+          label: 'Confirm a recent visit for this place',
+          button: true,
+          child: FilledButton.icon(
+            icon: const Icon(Icons.how_to_reg),
+            label: const Text('I visited this place'),
+            onPressed: onConfirmVisit,
+          ),
+        );
+        final evidenceButton = Semantics(
+          label: 'Add mobility access evidence for this place',
+          button: true,
+          child: OutlinedButton.icon(
+            icon: const Icon(Icons.add_a_photo),
+            label: const Text('Add evidence'),
+            onPressed: onAddEvidence,
+          ),
+        );
+
+        if (narrow) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              confirmButton,
+              const SizedBox(height: 10),
+              evidenceButton,
+            ],
+          );
+        }
+
+        return Row(
+          children: [
+            Expanded(child: confirmButton),
+            const SizedBox(width: 12),
+            Expanded(child: evidenceButton),
+          ],
+        );
+      },
+    );
+  }
+}
+
 class _StateCard extends StatelessWidget {
   const _StateCard({
     required this.placeName,
@@ -760,55 +808,58 @@ class _StateCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              placeName,
-              style: Theme.of(context).textTheme.headlineSmall
-                  ?.copyWith(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 12),
-            const Text('For you: Mobility Access'),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _StatusPill(
-                  icon: Icons.accessible_forward,
-                  label: state.state.label,
-                  color: state.state.color,
+    return _FadeSlideIn(
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                placeName,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
                 ),
-                _StatusPill(
-                  icon: Icons.monitor_heart_outlined,
-                  label: '${pulse.level.label} pulse',
-                  color: pulse.level.color,
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            _MetricRow(
-              label: 'Confidence',
-              value: '${(state.confidence * 100).round()}%',
-            ),
-            _MetricRow(
-              label: 'Last confirmed',
-              value: state.lastConfirmedAt == null
-                  ? 'Unknown'
-                  : _formatDate(state.lastConfirmedAt!),
-            ),
-            const Divider(height: 24),
-            Text(state.explanation),
-            const SizedBox(height: 8),
-            Text(
-              pulse.explanation,
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-          ],
+              ),
+              const SizedBox(height: 12),
+              const Text('For you: Mobility Access'),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _StatusPill(
+                    icon: Icons.accessible_forward,
+                    label: state.state.label,
+                    color: state.state.color,
+                  ),
+                  _StatusPill(
+                    icon: Icons.monitor_heart_outlined,
+                    label: '${pulse.level.label} pulse',
+                    color: pulse.level.color,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              _MetricRow(
+                label: 'Confidence',
+                value: '${(state.confidence * 100).round()}%',
+              ),
+              _MetricRow(
+                label: 'Last confirmed',
+                value: state.lastConfirmedAt == null
+                    ? 'Unknown'
+                    : _formatDate(state.lastConfirmedAt!),
+              ),
+              const Divider(height: 24),
+              Text(state.explanation),
+              const SizedBox(height: 8),
+              Text(
+                pulse.explanation,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -844,10 +895,7 @@ class _AiResultPanel extends StatelessWidget {
             const SizedBox(height: 8),
             Text(assessment.summary),
             const SizedBox(height: 12),
-            Text(
-              'Observed',
-              style: Theme.of(context).textTheme.labelLarge,
-            ),
+            Text('Observed', style: Theme.of(context).textTheme.labelLarge),
             const SizedBox(height: 4),
             Wrap(
               spacing: 8,
@@ -961,8 +1009,9 @@ class _SectionHeader extends StatelessWidget {
         const SizedBox(width: 8),
         Text(
           title,
-          style: Theme.of(context).textTheme.titleMedium
-              ?.copyWith(fontWeight: FontWeight.w700),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
         ),
       ],
     );
@@ -984,7 +1033,9 @@ class _StatusPill extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       label: label,
-      child: DecoratedBox(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(8),
@@ -997,11 +1048,12 @@ class _StatusPill extends StatelessWidget {
             children: [
               Icon(icon, color: color, size: 18),
               const SizedBox(width: 6),
-              Text(
-                label,
-                style: TextStyle(
-                  color: color,
-                  fontWeight: FontWeight.w700,
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 180),
+                child: Text(
+                  label,
+                  key: ValueKey(label),
+                  style: TextStyle(color: color, fontWeight: FontWeight.w700),
                 ),
               ),
             ],
@@ -1025,12 +1077,40 @@ class _MetricRow extends StatelessWidget {
       child: Row(
         children: [
           Expanded(child: Text(label)),
-          Text(
-            value,
-            style: const TextStyle(fontWeight: FontWeight.w700),
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _FadeSlideIn extends StatelessWidget {
+  const _FadeSlideIn({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 280),
+      curve: Curves.easeOutCubic,
+      builder: (context, value, child) {
+        return Opacity(
+          opacity: value,
+          child: Transform.translate(
+            offset: Offset(0, (1 - value) * 10),
+            child: child,
+          ),
+        );
+      },
+      child: child,
     );
   }
 }
@@ -1185,4 +1265,27 @@ String _formatDate(DateTime dateTime) {
   final month = dateTime.month.toString().padLeft(2, '0');
   final day = dateTime.day.toString().padLeft(2, '0');
   return '${dateTime.year}-$month-$day';
+}
+
+Route<T> _accessPulseRoute<T>(Widget child) {
+  return PageRouteBuilder<T>(
+    pageBuilder: (context, animation, secondaryAnimation) => child,
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      final curved = CurvedAnimation(
+        parent: animation,
+        curve: Curves.easeOutCubic,
+        reverseCurve: Curves.easeInCubic,
+      );
+      return FadeTransition(
+        opacity: curved,
+        child: SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0.02, 0.02),
+            end: Offset.zero,
+          ).animate(curved),
+          child: child,
+        ),
+      );
+    },
+  );
 }

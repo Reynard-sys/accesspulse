@@ -1,17 +1,54 @@
-# accesspulse
+# AccessPulse MVP
 
-A new Flutter project.
+AccessPulse is a Flutter MVP for living accessibility intelligence. The demo
+focuses on Mobility Access for public service buildings and shows how community
+signals, AI-structured evidence, LGU review, and inspector verification update a
+shared accessibility state.
 
-## Getting Started
+## Local Setup
 
-This project is a starting point for a Flutter application.
+1. Install Flutter and run `flutter pub get`.
+2. Create a local `.env` file from `.env.example`.
+3. Put your local values in `.env`. Keep `.env.example` as placeholders only.
+4. Apply the Supabase schema and seed data using `SETUP_DB.md`.
+5. Configure the Gemini-backed Supabase Edge Function using `SETUP_AI.md`.
 
-A few resources to get you started if this is your first Flutter project:
+Load the local `.env` values into the current PowerShell session:
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+```powershell
+Get-Content .env | Where-Object { $_ -match '^[^#].+=' } | ForEach-Object {
+  $name, $value = $_ -split '=', 2
+  Set-Item -Path "Env:$name" -Value $value
+}
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Then run the Flutter web app with:
+
+```powershell
+flutter run -d chrome `
+  --dart-define=ACCESSPULSE_AI_FUNCTION_URL=$env:ACCESSPULSE_AI_FUNCTION_URL `
+  --dart-define=ACCESSPULSE_SUPABASE_ANON_KEY=$env:ACCESSPULSE_SUPABASE_ANON_KEY
+```
+
+If you prefer, pass the values directly instead of loading them from your shell
+environment.
+
+## Demo Flow
+
+1. Open the Public tab and choose a seeded public service building.
+2. Confirm a visit to show a community signal changing state and pulse.
+3. Add evidence to exercise Gemini-backed evidence structuring.
+4. Switch to LGU and request inspection for a review case.
+5. Switch to Inspector and submit a verification outcome.
+6. Return to Public to see the updated state reflected in the place memory.
+
+## Verification
+
+The milestone test pass uses:
+
+```powershell
+dart format .
+flutter analyze
+flutter test
+flutter build web
+```
