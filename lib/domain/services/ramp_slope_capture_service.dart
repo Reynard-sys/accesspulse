@@ -3,7 +3,7 @@ import 'dart:math' as math;
 
 import 'package:sensors_plus/sensors_plus.dart';
 
-enum RampSlopeMeasurementStatus { captured, lowQuality, failed, fallback }
+import '../models/accesspulse_models.dart';
 
 class RampSlopeMeasurement {
   const RampSlopeMeasurement({
@@ -23,15 +23,15 @@ class RampSlopeMeasurement {
   final String qualityLabel;
   final int captureDurationMs;
   final int sampleCount;
-  final RampSlopeMeasurementStatus status;
+  final RampMeasurementStatus status;
   final DateTime capturedAt;
   final bool usedFallback;
   final String? failureReason;
 
   bool get isUsable {
-    return status == RampSlopeMeasurementStatus.captured ||
-        status == RampSlopeMeasurementStatus.lowQuality ||
-        status == RampSlopeMeasurementStatus.fallback;
+    return status == RampMeasurementStatus.captured ||
+        status == RampMeasurementStatus.lowQuality ||
+        status == RampMeasurementStatus.fallback;
   }
 
   String get sourceLabel {
@@ -122,7 +122,7 @@ class RampSlopeCaptureService {
       minimumAccelerometerSamples: minimumAccelerometerSamples,
     );
 
-    if (measurement.status == RampSlopeMeasurementStatus.failed &&
+    if (measurement.status == RampMeasurementStatus.failed &&
         accelerometerSamples.isEmpty) {
       return _fallbackOrFailed(
         'Live motion sensors did not provide enough samples.',
@@ -140,7 +140,7 @@ class RampSlopeCaptureService {
         qualityLabel: 'Low stability',
         captureDurationMs: captureDuration.inMilliseconds,
         sampleCount: 0,
-        status: RampSlopeMeasurementStatus.failed,
+        status: RampMeasurementStatus.failed,
         capturedAt: DateTime.now(),
         usedFallback: false,
         failureReason: reason,
@@ -163,7 +163,7 @@ class RampSlopeCaptureService {
       qualityLabel: 'Moderate stability',
       captureDurationMs: captureDuration.inMilliseconds,
       sampleCount: 48,
-      status: RampSlopeMeasurementStatus.fallback,
+      status: RampMeasurementStatus.fallback,
       capturedAt: capturedAt ?? DateTime.now(),
       usedFallback: true,
       failureReason:
@@ -185,7 +185,7 @@ class RampSlopeCaptureService {
         qualityLabel: 'Low stability',
         captureDurationMs: captureDuration.inMilliseconds,
         sampleCount: accelerometerSamples.length,
-        status: RampSlopeMeasurementStatus.failed,
+        status: RampMeasurementStatus.failed,
         capturedAt: capturedAt,
         usedFallback: false,
         failureReason:
@@ -209,9 +209,9 @@ class RampSlopeCaptureService {
       _ => 'Low stability',
     };
     final status = switch (roundedScore) {
-      >= 50 => RampSlopeMeasurementStatus.captured,
-      >= 25 => RampSlopeMeasurementStatus.lowQuality,
-      _ => RampSlopeMeasurementStatus.failed,
+      >= 50 => RampMeasurementStatus.captured,
+      >= 25 => RampMeasurementStatus.lowQuality,
+      _ => RampMeasurementStatus.failed,
     };
 
     return RampSlopeMeasurement(
@@ -223,7 +223,7 @@ class RampSlopeCaptureService {
       status: status,
       capturedAt: capturedAt,
       usedFallback: false,
-      failureReason: status == RampSlopeMeasurementStatus.failed
+      failureReason: status == RampMeasurementStatus.failed
           ? 'The phone moved too much to trust this ramp reading.'
           : null,
     );

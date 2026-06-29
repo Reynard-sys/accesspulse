@@ -113,14 +113,34 @@ void main() {
         assessment: assessment,
         imagePath: 'demo/entrance.jpg',
         note: 'Photo of the main entrance.',
+        rampSlopeMeasurement: RampSlopeMeasurement(
+          estimatedAngleDegrees: 14.8,
+          qualityScore: 64,
+          qualityLabel: 'Moderate stability',
+          captureDurationMs: 3200,
+          sampleCount: 48,
+          status: RampMeasurementStatus.captured,
+          capturedAt: DateTime(2026, 6, 29, 10, 4),
+          usedFallback: false,
+        ),
         now: DateTime(2026, 6, 29, 10, 5),
       );
 
       final cases = await repository.listCases(status: CaseStatus.open);
       final memory = await repository.listMemoryEvents(stalePlaceDimensionId);
+      final savedMeasurement = await repository.getRampMeasurementForEvidence(
+        result.evidence.id,
+      );
 
       expect(result.currentState.state, DimensionStateValue.degraded);
       expect(result.signal.recommendedAction, 'lgu_review');
+      expect(result.rampMeasurement, isNotNull);
+      expect(result.rampMeasurement!.estimatedAngleDegrees, 14.8);
+      expect(result.evidence.metadata['rampMeasurementId'], isNotNull);
+      expect(result.evidence.metadata['estimatedRampAngleDegrees'], 14.8);
+      expect(savedMeasurement?.id, result.rampMeasurement!.id);
+      expect(savedMeasurement?.evidenceId, result.evidence.id);
+      expect(savedMeasurement?.status, RampMeasurementStatus.captured);
       expect(cases.single.placeDimensionId, stalePlaceDimensionId);
       expect(
         memory.any(

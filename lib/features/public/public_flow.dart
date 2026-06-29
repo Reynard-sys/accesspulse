@@ -484,6 +484,7 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
       assessment: assessment,
       imagePath: _demoPhotoSelected ? 'demo/main-entrance.jpg' : null,
       note: _noteController.text,
+      rampSlopeMeasurement: _rampSlopeMeasurement,
     );
     if (!mounted) {
       return;
@@ -764,15 +765,13 @@ class _RampSlopeSuccessState extends StatelessWidget {
         ),
         _MetricRow(label: 'Samples', value: '${measurement.sampleCount}'),
         const SizedBox(height: 10),
-        const Text(
-          'This estimated reading is ready to include with your report.',
-        ),
+        const Text('This estimated reading will be attached to your report.'),
         const SizedBox(height: 8),
         Text(
           'Estimated field measurement only. It does not prove legal non-compliance.',
           style: Theme.of(context).textTheme.bodySmall,
         ),
-        if (measurement.status == RampSlopeMeasurementStatus.lowQuality) ...[
+        if (measurement.status == RampMeasurementStatus.lowQuality) ...[
           const SizedBox(height: 8),
           const Text(
             'We captured a reading, but the phone moved too much to trust it strongly. You can retry for a better result.',

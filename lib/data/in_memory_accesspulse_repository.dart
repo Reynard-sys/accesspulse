@@ -42,6 +42,8 @@ class InMemoryAccessPulseRepository implements AccessPulseRepository {
   final Map<String, DimensionPulseRecord> _pulses;
   final Map<String, Observation> _observations;
   final Map<String, Evidence> _evidence = <String, Evidence>{};
+  final Map<String, RampMeasurement> _rampMeasurements =
+      <String, RampMeasurement>{};
   final Map<String, BarrierSignal> _signals = <String, BarrierSignal>{};
   final Map<String, AccessCase> _cases = <String, AccessCase>{};
   final Map<String, Verification> _verifications = <String, Verification>{};
@@ -154,6 +156,40 @@ class InMemoryAccessPulseRepository implements AccessPulseRepository {
       throw StateError('No evidence found for $evidenceId.');
     }
     return evidence;
+  }
+
+  @override
+  Future<RampMeasurement> addRampMeasurement(
+    RampMeasurement measurement,
+  ) async {
+    _rampMeasurements[measurement.id] = measurement;
+    return measurement;
+  }
+
+  @override
+  Future<RampMeasurement?> getRampMeasurementForEvidence(
+    String evidenceId,
+  ) async {
+    for (final measurement in _rampMeasurements.values) {
+      if (measurement.evidenceId == evidenceId) {
+        return measurement;
+      }
+    }
+    return null;
+  }
+
+  @override
+  Future<List<RampMeasurement>> listRampMeasurements(
+    String placeDimensionId,
+  ) async {
+    final measurements =
+        _rampMeasurements.values
+            .where(
+              (measurement) => measurement.placeDimensionId == placeDimensionId,
+            )
+            .toList()
+          ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return measurements;
   }
 
   @override
