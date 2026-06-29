@@ -64,14 +64,15 @@ void main() {
 
     expect(find.text('Capturing ramp slope'), findsOneWidget);
 
-    await tester.pump(const Duration(milliseconds: 900));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 3600));
+    await tester.pump(const Duration(milliseconds: 250));
 
     expect(find.text('Ramp slope captured'), findsOneWidget);
     expect(find.text('Estimated angle'), findsOneWidget);
     expect(find.text('14.8 deg'), findsOneWidget);
     expect(find.text('Quality'), findsOneWidget);
     expect(find.text('Moderate stability'), findsOneWidget);
+    expect(find.text('Demo fallback'), findsOneWidget);
 
     await tester.scrollUntilVisible(
       find.text('Retry measurement'),
@@ -79,13 +80,13 @@ void main() {
       scrollable: evidenceScrollable,
     );
     await tester.drag(evidenceScrollable, const Offset(0, -80));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 250));
     await tester.tap(find.text('Retry measurement'));
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 900));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 3600));
+    await tester.pump(const Duration(milliseconds: 250));
 
-    expect(find.text('13.9 deg'), findsOneWidget);
+    expect(find.text('Ramp slope captured'), findsOneWidget);
 
     await tester.scrollUntilVisible(
       find.text('Analyze evidence'),

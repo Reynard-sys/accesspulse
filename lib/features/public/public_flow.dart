@@ -414,8 +414,9 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
   bool _rampSlopeCaptureFailed = false;
   bool _isAnalyzing = false;
   bool _isSubmitting = false;
-  int _rampSlopeCaptureAttempt = 0;
-  _MockRampSlopeMeasurement? _rampSlopeMeasurement;
+  final _rampSlopeCaptureService = const RampSlopeCaptureService();
+  RampSlopeMeasurement? _rampSlopeMeasurement;
+  String? _rampSlopeFailureMessage;
   AiEvidenceAssessment? _assessment;
 
   @override
@@ -438,23 +439,21 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
     setState(() {
       _isCapturingRampSlope = true;
       _rampSlopeCaptureFailed = false;
-      _rampSlopeCaptureAttempt += 1;
+      _rampSlopeFailureMessage = null;
     });
-    await Future<void>.delayed(const Duration(milliseconds: 850));
+    final measurement = await _rampSlopeCaptureService.capture();
     if (!mounted) {
       return;
     }
     setState(() {
       _isCapturingRampSlope = false;
-      _rampSlopeMeasurement = _MockRampSlopeMeasurement(
-        estimatedAngleDegrees: _rampSlopeCaptureAttempt.isOdd ? 14.8 : 13.9,
-        qualityLabel: _rampSlopeCaptureAttempt.isOdd
-            ? 'Moderate stability'
-            : 'High stability',
-        captureDurationMs: 3200,
-        sampleCount: 48,
-        capturedAt: DateTime.now(),
-      );
+      if (measurement.isUsable) {
+        _rampSlopeMeasurement = measurement;
+      } else {
+        _rampSlopeMeasurement = null;
+        _rampSlopeCaptureFailed = true;
+        _rampSlopeFailureMessage = measurement.failureReason;
+      }
     });
   }
 
@@ -572,6 +571,7 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
                             measurement: _rampSlopeMeasurement,
                             isCapturing: _isCapturingRampSlope,
                             captureFailed: _rampSlopeCaptureFailed,
+                            failureMessage: _rampSlopeFailureMessage,
                             onStart: _captureRampSlope,
                             onRetry: _captureRampSlope,
                           ),
@@ -625,13 +625,15 @@ class _RampSlopeCapturePanel extends StatelessWidget {
     required this.measurement,
     required this.isCapturing,
     required this.captureFailed,
+    required this.failureMessage,
     required this.onStart,
     required this.onRetry,
   });
 
-  final _MockRampSlopeMeasurement? measurement;
+  final RampSlopeMeasurement? measurement;
   final bool isCapturing;
   final bool captureFailed;
+  final String? failureMessage;
   final VoidCallback onStart;
   final VoidCallback onRetry;
 
@@ -658,7 +660,10 @@ class _RampSlopeCapturePanel extends StatelessWidget {
                   onRetry: onRetry,
                 )
               : captureFailed
-              ? _RampSlopeFailureState(onRetry: onRetry)
+              ? _RampSlopeFailureState(
+                  message: failureMessage,
+                  onRetry: onRetry,
+                )
               : _RampSlopeEntryState(onStart: onStart),
         ),
       ),
@@ -719,7 +724,7 @@ class _RampSlopeCapturingState extends StatelessWidget {
         LinearProgressIndicator(),
         SizedBox(height: 12),
         Text(
-          'Keep the phone still while AccessPulse captures an estimated demo reading.',
+          'Keep the phone still while AccessPulse captures motion sensor samples.',
         ),
       ],
     );
@@ -733,7 +738,7 @@ class _RampSlopeSuccessState extends StatelessWidget {
     super.key,
   });
 
-  final _MockRampSlopeMeasurement measurement;
+  final RampSlopeMeasurement measurement;
   final VoidCallback onRetry;
 
   @override
@@ -751,6 +756,7 @@ class _RampSlopeSuccessState extends StatelessWidget {
           value: '${measurement.estimatedAngleDegrees.toStringAsFixed(1)} deg',
         ),
         _MetricRow(label: 'Quality', value: measurement.qualityLabel),
+        _MetricRow(label: 'Source', value: measurement.sourceLabel),
         _MetricRow(
           label: 'Capture window',
           value:
@@ -766,6 +772,18 @@ class _RampSlopeSuccessState extends StatelessWidget {
           'Estimated field measurement only. It does not prove legal non-compliance.',
           style: Theme.of(context).textTheme.bodySmall,
         ),
+        if (measurement.status == RampSlopeMeasurementStatus.lowQuality) ...[
+          const SizedBox(height: 8),
+          const Text(
+            'We captured a reading, but the phone moved too much to trust it strongly. You can retry for a better result.',
+          ),
+        ],
+        if (measurement.usedFallback) ...[
+          const SizedBox(height: 8),
+          const Text(
+            'Demo fallback mode was used because live sensor capture was unavailable in this environment.',
+          ),
+        ],
         const SizedBox(height: 12),
         OutlinedButton.icon(
           icon: const Icon(Icons.refresh),
@@ -778,8 +796,9 @@ class _RampSlopeSuccessState extends StatelessWidget {
 }
 
 class _RampSlopeFailureState extends StatelessWidget {
-  const _RampSlopeFailureState({required this.onRetry});
+  const _RampSlopeFailureState({required this.message, required this.onRetry});
 
+  final String? message;
   final VoidCallback onRetry;
 
   @override
@@ -796,6 +815,10 @@ class _RampSlopeFailureState extends StatelessWidget {
         const Text(
           'We could not capture a stable ramp reading. Please place your phone flat on the ramp and try again.',
         ),
+        if (message != null) ...[
+          const SizedBox(height: 8),
+          Text(message!, style: Theme.of(context).textTheme.bodySmall),
+        ],
         const SizedBox(height: 12),
         OutlinedButton.icon(
           icon: const Icon(Icons.refresh),
@@ -805,22 +828,6 @@ class _RampSlopeFailureState extends StatelessWidget {
       ],
     );
   }
-}
-
-class _MockRampSlopeMeasurement {
-  const _MockRampSlopeMeasurement({
-    required this.estimatedAngleDegrees,
-    required this.qualityLabel,
-    required this.captureDurationMs,
-    required this.sampleCount,
-    required this.capturedAt,
-  });
-
-  final double estimatedAngleDegrees;
-  final String qualityLabel;
-  final int captureDurationMs;
-  final int sampleCount;
-  final DateTime capturedAt;
 }
 
 class SubmissionResultScreen extends StatelessWidget {
