@@ -410,14 +410,52 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
     text: 'The entrance has steps and the ramp required assistance.',
   );
   bool _demoPhotoSelected = false;
+  bool _isCapturingRampSlope = false;
+  bool _rampSlopeCaptureFailed = false;
   bool _isAnalyzing = false;
   bool _isSubmitting = false;
+  int _rampSlopeCaptureAttempt = 0;
+  _MockRampSlopeMeasurement? _rampSlopeMeasurement;
   AiEvidenceAssessment? _assessment;
 
   @override
   void dispose() {
     _noteController.dispose();
     super.dispose();
+  }
+
+  bool get _shouldOfferRampSlopeCapture {
+    final note = _noteController.text.toLowerCase();
+    return note.contains('ramp') ||
+        note.contains('steep') ||
+        note.contains('incline') ||
+        note.contains('slope') ||
+        note.contains('unsafe') ||
+        note.contains('wheelchair entrance');
+  }
+
+  Future<void> _captureRampSlope() async {
+    setState(() {
+      _isCapturingRampSlope = true;
+      _rampSlopeCaptureFailed = false;
+      _rampSlopeCaptureAttempt += 1;
+    });
+    await Future<void>.delayed(const Duration(milliseconds: 850));
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _isCapturingRampSlope = false;
+      _rampSlopeMeasurement = _MockRampSlopeMeasurement(
+        estimatedAngleDegrees: _rampSlopeCaptureAttempt.isOdd ? 14.8 : 13.9,
+        qualityLabel: _rampSlopeCaptureAttempt.isOdd
+            ? 'Moderate stability'
+            : 'High stability',
+        captureDurationMs: 3200,
+        sampleCount: 48,
+        capturedAt: DateTime.now(),
+      );
+    });
   }
 
   Future<void> _analyze() async {
@@ -526,8 +564,19 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
                             labelText: 'Evidence note',
                             alignLabelWithHint: true,
                           ),
+                          onChanged: (_) => setState(() {}),
                         ),
                         const SizedBox(height: 12),
+                        if (_shouldOfferRampSlopeCapture) ...[
+                          _RampSlopeCapturePanel(
+                            measurement: _rampSlopeMeasurement,
+                            isCapturing: _isCapturingRampSlope,
+                            captureFailed: _rampSlopeCaptureFailed,
+                            onStart: _captureRampSlope,
+                            onRetry: _captureRampSlope,
+                          ),
+                          const SizedBox(height: 12),
+                        ],
                         FilledButton.icon(
                           icon: _isAnalyzing
                               ? const SizedBox(
@@ -569,6 +618,209 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
       ),
     );
   }
+}
+
+class _RampSlopeCapturePanel extends StatelessWidget {
+  const _RampSlopeCapturePanel({
+    required this.measurement,
+    required this.isCapturing,
+    required this.captureFailed,
+    required this.onStart,
+    required this.onRetry,
+  });
+
+  final _MockRampSlopeMeasurement? measurement;
+  final bool isCapturing;
+  final bool captureFailed;
+  final VoidCallback onStart;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final measurement = this.measurement;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border.all(color: colorScheme.outlineVariant),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 200),
+          child: isCapturing
+              ? const _RampSlopeCapturingState()
+              : measurement != null
+              ? _RampSlopeSuccessState(
+                  key: ValueKey(measurement.capturedAt),
+                  measurement: measurement,
+                  onRetry: onRetry,
+                )
+              : captureFailed
+              ? _RampSlopeFailureState(onRetry: onRetry)
+              : _RampSlopeEntryState(onStart: onStart),
+        ),
+      ),
+    );
+  }
+}
+
+class _RampSlopeEntryState extends StatelessWidget {
+  const _RampSlopeEntryState({required this.onStart});
+
+  final VoidCallback onStart;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      key: const ValueKey('ramp-slope-entry'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _SectionHeader(
+          icon: Icons.straighten,
+          title: 'Optional: Measure ramp slope',
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'Add an estimated incline reading to strengthen this report.',
+        ),
+        const SizedBox(height: 12),
+        const Text(
+          'Place your phone flat on the ramp surface and point it in the direction someone would move up or down the ramp. Hold it still for a few seconds.',
+        ),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          icon: const Icon(Icons.speed),
+          label: const Text('Start slope capture'),
+          onPressed: onStart,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'This is an estimated field measurement to support review. Official verification may still be required.',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+      ],
+    );
+  }
+}
+
+class _RampSlopeCapturingState extends StatelessWidget {
+  const _RampSlopeCapturingState();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      key: ValueKey('ramp-slope-capturing'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionHeader(icon: Icons.speed, title: 'Capturing ramp slope'),
+        SizedBox(height: 12),
+        LinearProgressIndicator(),
+        SizedBox(height: 12),
+        Text(
+          'Keep the phone still while AccessPulse captures an estimated demo reading.',
+        ),
+      ],
+    );
+  }
+}
+
+class _RampSlopeSuccessState extends StatelessWidget {
+  const _RampSlopeSuccessState({
+    required this.measurement,
+    required this.onRetry,
+    super.key,
+  });
+
+  final _MockRampSlopeMeasurement measurement;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _SectionHeader(
+          icon: Icons.task_alt,
+          title: 'Ramp slope captured',
+        ),
+        const SizedBox(height: 10),
+        _MetricRow(
+          label: 'Estimated angle',
+          value: '${measurement.estimatedAngleDegrees.toStringAsFixed(1)} deg',
+        ),
+        _MetricRow(label: 'Quality', value: measurement.qualityLabel),
+        _MetricRow(
+          label: 'Capture window',
+          value:
+              '${(measurement.captureDurationMs / 1000).toStringAsFixed(1)}s',
+        ),
+        _MetricRow(label: 'Samples', value: '${measurement.sampleCount}'),
+        const SizedBox(height: 10),
+        const Text(
+          'This estimated reading is ready to include with your report.',
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Estimated field measurement only. It does not prove legal non-compliance.',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          icon: const Icon(Icons.refresh),
+          label: const Text('Retry measurement'),
+          onPressed: onRetry,
+        ),
+      ],
+    );
+  }
+}
+
+class _RampSlopeFailureState extends StatelessWidget {
+  const _RampSlopeFailureState({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      key: const ValueKey('ramp-slope-failure'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _SectionHeader(
+          icon: Icons.error_outline,
+          title: 'Ramp reading not stable',
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'We could not capture a stable ramp reading. Please place your phone flat on the ramp and try again.',
+        ),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          icon: const Icon(Icons.refresh),
+          label: const Text('Retry measurement'),
+          onPressed: onRetry,
+        ),
+      ],
+    );
+  }
+}
+
+class _MockRampSlopeMeasurement {
+  const _MockRampSlopeMeasurement({
+    required this.estimatedAngleDegrees,
+    required this.qualityLabel,
+    required this.captureDurationMs,
+    required this.sampleCount,
+    required this.capturedAt,
+  });
+
+  final double estimatedAngleDegrees;
+  final String qualityLabel;
+  final int captureDurationMs;
+  final int sampleCount;
+  final DateTime capturedAt;
 }
 
 class SubmissionResultScreen extends StatelessWidget {
