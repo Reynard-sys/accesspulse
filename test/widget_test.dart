@@ -1,30 +1,74 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
+import 'package:accesspulse/main.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:accesspulse/main.dart';
-
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
+  testWidgets('public flow shows seeded living accessibility states', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(const MyApp());
+    await tester.pumpAndSettle();
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    expect(find.text('AccessPulse'), findsOneWidget);
+    expect(find.text('Current accessibility state'), findsOneWidget);
+    expect(find.text('Quezon City Hall Main Entrance'), findsOneWidget);
+    expect(find.textContaining('Claimed accessible'), findsOneWidget);
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    await tester.tap(find.text('Quezon City Hall Main Entrance'));
+    await tester.pumpAndSettle();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(find.text('For you: Mobility Access'), findsOneWidget);
+    expect(find.text('Place memory'), findsOneWidget);
+    expect(find.text('I visited this place'), findsOneWidget);
+    expect(find.text('Add evidence'), findsOneWidget);
+  });
+
+  testWidgets('confirm visit visibly updates a place state', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const MyApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Quezon City Hall Main Entrance'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('I visited this place'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Update living state'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Your visit updated this place'), findsOneWidget);
+    expect(find.text('Claimed accessible'), findsOneWidget);
+    expect(find.text('Degraded'), findsOneWidget);
+  });
+
+  testWidgets('evidence flow shows AI structure and submits a signal', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const MyApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Quezon City Hall Main Entrance'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Add evidence'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Analyze evidence'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('AI evidence structure'), findsOneWidget);
+    expect(find.text('Missing evidence'), findsOneWidget);
+
+    await tester.scrollUntilVisible(
+      find.text('Submit structured signal'),
+      300,
+      scrollable: find.descendant(
+        of: find.byKey(const ValueKey('evidence-flow-scroll')),
+        matching: find.byType(Scrollable),
+      ).first,
+    );
+    await tester.tap(find.text('Submit structured signal'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Evidence strengthened this place memory'), findsOneWidget);
+    expect(find.text('Degraded'), findsOneWidget);
   });
 }
