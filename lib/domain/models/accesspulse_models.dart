@@ -26,6 +26,8 @@ enum ObservationOutcome { positive, negative, mixed, unknown }
 
 enum EvidenceType { image, textNote, structuredResponse }
 
+enum RampMeasurementStatus { captured, lowQuality, failed, fallback, discarded }
+
 enum CaseSeverity { low, medium, high }
 
 enum VerificationOutcome { confirmed, disputed, insufficientEvidence }
@@ -243,6 +245,40 @@ class Evidence {
   final String? publicUrl;
   final String? note;
   final Map<String, Object?> metadata;
+  final DateTime createdAt;
+}
+
+class RampMeasurement {
+  const RampMeasurement({
+    required this.id,
+    required this.placeDimensionId,
+    required this.evidenceId,
+    required this.estimatedAngleDegrees,
+    required this.qualityScore,
+    required this.qualityLabel,
+    required this.captureDurationMs,
+    required this.sampleCount,
+    required this.status,
+    required this.source,
+    required this.capturedAt,
+    required this.createdAt,
+    this.observationId,
+    this.submittedBy,
+  });
+
+  final String id;
+  final String placeDimensionId;
+  final String evidenceId;
+  final String? observationId;
+  final String? submittedBy;
+  final double estimatedAngleDegrees;
+  final int qualityScore;
+  final String qualityLabel;
+  final int captureDurationMs;
+  final int sampleCount;
+  final RampMeasurementStatus status;
+  final String source;
+  final DateTime capturedAt;
   final DateTime createdAt;
 }
 

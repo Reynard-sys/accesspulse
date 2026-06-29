@@ -1,6 +1,7 @@
 import '../models/accesspulse_models.dart';
 import '../repositories/accesspulse_repository.dart';
 import 'pulse_service.dart';
+import 'ramp_slope_capture_service.dart';
 
 typedef IdFactory = String Function(String prefix);
 
@@ -29,11 +30,13 @@ class EvidenceSignalResult {
     required this.currentState,
     required this.previousPulse,
     required this.currentPulse,
+    this.rampMeasurement,
   });
 
   final Evidence evidence;
   final BarrierSignal signal;
   final AccessCase accessCase;
+  final RampMeasurement? rampMeasurement;
   final DimensionStateRecord previousState;
   final DimensionStateRecord currentState;
   final DimensionPulseRecord previousPulse;
@@ -183,11 +186,16 @@ class DimensionStateService {
     String? observationId,
     String? imagePath,
     String? note,
+    RampSlopeMeasurement? rampSlopeMeasurement,
     DateTime? now,
   }) async {
     final timestamp = now ?? DateTime.now();
     final previousState = await _repository.getDimensionState(placeDimensionId);
     final previousPulse = await _repository.getDimensionPulse(placeDimensionId);
+    final capturedRampMeasurement = rampSlopeMeasurement;
+    final rampMeasurementId = capturedRampMeasurement == null
+        ? null
+        : _idFactory('ramp_measurement');
     final evidence = Evidence(
       id: _idFactory('evidence'),
       observationId: observationId,
@@ -199,10 +207,39 @@ class DimensionStateService {
       metadata: <String, Object?>{
         'dimension': assessment.dimension,
         'aiSummary': assessment.summary,
+        if (capturedRampMeasurement != null && rampMeasurementId != null) ...{
+          'rampMeasurementId': rampMeasurementId,
+          'rampMeasurementStatus': capturedRampMeasurement.status.name,
+          'estimatedRampAngleDegrees':
+              capturedRampMeasurement.estimatedAngleDegrees,
+          'rampMeasurementQuality': capturedRampMeasurement.qualityLabel,
+        },
       },
       createdAt: timestamp,
     );
     await _repository.addEvidence(evidence);
+
+    final rampMeasurement = capturedRampMeasurement == null
+        ? null
+        : await _repository.addRampMeasurement(
+            RampMeasurement(
+              id: rampMeasurementId!,
+              placeDimensionId: placeDimensionId,
+              evidenceId: evidence.id,
+              observationId: observationId,
+              submittedBy: submittedBy,
+              estimatedAngleDegrees:
+                  capturedRampMeasurement.estimatedAngleDegrees,
+              qualityScore: capturedRampMeasurement.qualityScore,
+              qualityLabel: capturedRampMeasurement.qualityLabel,
+              captureDurationMs: capturedRampMeasurement.captureDurationMs,
+              sampleCount: capturedRampMeasurement.sampleCount,
+              status: capturedRampMeasurement.status,
+              source: capturedRampMeasurement.sourceLabel,
+              capturedAt: capturedRampMeasurement.capturedAt,
+              createdAt: timestamp,
+            ),
+          );
 
     final signal = BarrierSignal(
       id: _idFactory('barrier_signal'),
@@ -314,6 +351,7 @@ class DimensionStateService {
       currentState: currentState,
       previousPulse: previousPulse,
       currentPulse: currentPulse,
+      rampMeasurement: rampMeasurement,
     );
   }
 

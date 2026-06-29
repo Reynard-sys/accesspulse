@@ -27,7 +27,7 @@ void main() {
       capturedAt: capturedAt,
     );
 
-    expect(measurement.status, RampSlopeMeasurementStatus.captured);
+    expect(measurement.status, RampMeasurementStatus.captured);
     expect(measurement.estimatedAngleDegrees, closeTo(14.8, 0.2));
     expect(measurement.qualityLabel, 'High stability');
     expect(measurement.usedFallback, isFalse);
@@ -55,7 +55,7 @@ void main() {
       capturedAt: capturedAt,
     );
 
-    expect(measurement.status, RampSlopeMeasurementStatus.failed);
+    expect(measurement.status, RampMeasurementStatus.failed);
     expect(measurement.qualityLabel, 'Low stability');
     expect(measurement.failureReason, isNotNull);
   });
@@ -66,7 +66,7 @@ void main() {
       capturedAt: DateTime(2026, 6, 30, 9),
     );
 
-    expect(measurement.status, RampSlopeMeasurementStatus.fallback);
+    expect(measurement.status, RampMeasurementStatus.fallback);
     expect(measurement.usedFallback, isTrue);
     expect(measurement.sourceLabel, 'Demo fallback');
     expect(measurement.estimatedAngleDegrees, 14.8);

@@ -28,6 +28,12 @@ abstract class AccessPulseRepository {
 
   Future<Evidence> getEvidence(String evidenceId);
 
+  Future<RampMeasurement> addRampMeasurement(RampMeasurement measurement);
+
+  Future<RampMeasurement?> getRampMeasurementForEvidence(String evidenceId);
+
+  Future<List<RampMeasurement>> listRampMeasurements(String placeDimensionId);
+
   Future<BarrierSignal> addBarrierSignal(BarrierSignal signal);
 
   Future<BarrierSignal> getBarrierSignal(String signalId);
