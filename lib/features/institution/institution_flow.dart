@@ -132,8 +132,8 @@ class _InstitutionDashboardScreenState
                           summary: summary,
                           onTap: () async {
                             await Navigator.of(context).push(
-                              MaterialPageRoute<void>(
-                                builder: (_) => _CaseDetailScreen(
+                              _institutionRoute<void>(
+                                _CaseDetailScreen(
                                   repository: widget.repository,
                                   stateService: widget.stateService,
                                   summary: summary,
@@ -260,8 +260,8 @@ class _CaseDetailScreenState extends State<_CaseDetailScreen> {
 
   Future<void> _openVerification(_CaseDetailData detail) async {
     await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => _InspectorVerificationScreen(
+      _institutionRoute<void>(
+        _InspectorVerificationScreen(
           place: widget.summary.place,
           detail: detail,
           stateService: widget.stateService,
@@ -389,9 +389,8 @@ class _InspectorVerificationScreenState
       return;
     }
     await Navigator.of(context).pushReplacement(
-      MaterialPageRoute<void>(
-        builder: (_) =>
-            _VerificationResultScreen(place: widget.place, result: result),
+      _institutionRoute<void>(
+        _VerificationResultScreen(place: widget.place, result: result),
       ),
     );
   }
@@ -489,10 +488,18 @@ class _VerificationResultScreen extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.all(20),
               children: [
-                Icon(
-                  Icons.verified_outlined,
-                  size: 56,
-                  color: Theme.of(context).colorScheme.primary,
+                TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0.82, end: 1),
+                  duration: const Duration(milliseconds: 260),
+                  curve: Curves.easeOutBack,
+                  builder: (context, value, child) {
+                    return Transform.scale(scale: value, child: child);
+                  },
+                  child: Icon(
+                    Icons.verified_outlined,
+                    size: 56,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 Text(
@@ -517,10 +524,9 @@ class _VerificationResultScreen extends StatelessWidget {
                           after: result.currentState.state.label,
                         ),
                         const Divider(height: 24),
-                        _TransitionRow(
+                        _MetricRow(
                           label: 'Case status',
-                          before: result.accessCase.status.label,
-                          after: result.accessCase.status.label,
+                          value: result.accessCase.status.label,
                         ),
                         const Divider(height: 24),
                         _TransitionRow(
@@ -962,6 +968,29 @@ class _CaseDetailData {
   final BarrierSignal? signal;
   final Evidence? evidence;
   final List<MemoryEvent> memory;
+}
+
+Route<T> _institutionRoute<T>(Widget child) {
+  return PageRouteBuilder<T>(
+    pageBuilder: (context, animation, secondaryAnimation) => child,
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      final curved = CurvedAnimation(
+        parent: animation,
+        curve: Curves.easeOutCubic,
+        reverseCurve: Curves.easeInCubic,
+      );
+      return FadeTransition(
+        opacity: curved,
+        child: SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0.02, 0.02),
+            end: Offset.zero,
+          ).animate(curved),
+          child: child,
+        ),
+      );
+    },
+  );
 }
 
 extension on DimensionStateValue {

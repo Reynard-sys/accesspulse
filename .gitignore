@@ -15,6 +15,7 @@ migrate_working_dir/
 .env.*
 !.env.example
 !**/.env.example
+supabase/.temp/
 
 # IntelliJ related
 *.iml
