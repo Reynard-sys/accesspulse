@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../config/ai_config.dart';
 import '../data/in_memory_accesspulse_repository.dart';
 import '../domain/accesspulse_domain.dart';
 import '../features/institution/institution_flow.dart';
@@ -22,7 +23,12 @@ class _AccessPulseAppState extends State<AccessPulseApp> {
     super.initState();
     _repository = InMemoryAccessPulseRepository.seeded();
     _stateService = DimensionStateService(repository: _repository);
-    _aiService = const MockAiEvidenceService();
+    _aiService = AiConfig.fromEnvironment.hasServerWrapper
+        ? GeminiServerEvidenceService(
+            functionUri: Uri.parse(AiConfig.fromEnvironment.functionUrl),
+            supabaseAnonKey: AiConfig.fromEnvironment.supabaseAnonKey,
+          )
+        : const MockAiEvidenceService();
   }
 
   @override
