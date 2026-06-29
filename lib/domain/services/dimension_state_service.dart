@@ -82,12 +82,8 @@ class DimensionStateService {
     DateTime? now,
   }) async {
     final timestamp = now ?? DateTime.now();
-    final previousState = await _repository.getDimensionState(
-      placeDimensionId,
-    );
-    final previousPulse = await _repository.getDimensionPulse(
-      placeDimensionId,
-    );
+    final previousState = await _repository.getDimensionState(placeDimensionId);
+    final previousPulse = await _repository.getDimensionPulse(placeDimensionId);
     final outcome = _visitOutcome(
       entranceUsableIndependently: entranceUsableIndependently,
       rampUsable: rampUsable,
@@ -109,10 +105,7 @@ class DimensionStateService {
     );
     await _repository.addObservation(observation);
 
-    final nextState = _stateAfterObservation(
-      previousState.state,
-      outcome,
-    );
+    final nextState = _stateAfterObservation(previousState.state, outcome);
     final currentState = previousState.copyWith(
       state: nextState,
       confidence: _confidenceAfterObservation(
@@ -193,12 +186,8 @@ class DimensionStateService {
     DateTime? now,
   }) async {
     final timestamp = now ?? DateTime.now();
-    final previousState = await _repository.getDimensionState(
-      placeDimensionId,
-    );
-    final previousPulse = await _repository.getDimensionPulse(
-      placeDimensionId,
-    );
+    final previousState = await _repository.getDimensionState(placeDimensionId);
+    final previousPulse = await _repository.getDimensionPulse(placeDimensionId);
     final evidence = Evidence(
       id: _idFactory('evidence'),
       observationId: observationId,
@@ -374,6 +363,57 @@ class DimensionStateService {
     return nextCase;
   }
 
+  Future<AccessCase> triageCase({
+    required String caseId,
+    required String reviewerId,
+    DateTime? now,
+  }) async {
+    final timestamp = now ?? DateTime.now();
+    final accessCase = await _repository.getCase(caseId);
+    final nextCase = accessCase.copyWith(
+      status: CaseStatus.triaging,
+      updatedAt: timestamp,
+    );
+    await _repository.saveCase(nextCase);
+    await _appendMemory(
+      placeDimensionId: accessCase.placeDimensionId,
+      eventType: MemoryEventType.caseTriaged,
+      actorType: 'lgu_reviewer',
+      actorId: reviewerId,
+      caseId: caseId,
+      summary:
+          'LGU reviewer triaged the Mobility Access case for institutional follow-up.',
+      createdAt: timestamp,
+    );
+    return nextCase;
+  }
+
+  Future<AccessCase> closeCase({
+    required String caseId,
+    required String reviewerId,
+    required String note,
+    DateTime? now,
+  }) async {
+    final timestamp = now ?? DateTime.now();
+    final accessCase = await _repository.getCase(caseId);
+    final nextCase = accessCase.copyWith(
+      status: CaseStatus.closed,
+      updatedAt: timestamp,
+      closedAt: timestamp,
+    );
+    await _repository.saveCase(nextCase);
+    await _appendMemory(
+      placeDimensionId: accessCase.placeDimensionId,
+      eventType: MemoryEventType.caseClosed,
+      actorType: 'lgu_reviewer',
+      actorId: reviewerId,
+      caseId: caseId,
+      summary: 'LGU reviewer closed the case: $note',
+      createdAt: timestamp,
+    );
+    return nextCase;
+  }
+
   Future<VerificationResult> submitVerification({
     required String caseId,
     required String inspectorId,
@@ -478,9 +518,7 @@ class DimensionStateService {
     bool contradictionFlag = false,
   }) async {
     final observations = await _repository.listObservations(placeDimensionId);
-    final verifications = await _repository.listVerifications(
-      placeDimensionId,
-    );
+    final verifications = await _repository.listVerifications(placeDimensionId);
     final pulse = _pulseService.calculate(
       id: previousPulse.id,
       placeDimensionId: placeDimensionId,
@@ -531,9 +569,7 @@ class DimensionStateService {
     return previous;
   }
 
-  DimensionStateValue _stateAfterBarrierSignal(
-    DimensionStateValue previous,
-  ) {
+  DimensionStateValue _stateAfterBarrierSignal(DimensionStateValue previous) {
     if (previous == DimensionStateValue.claimedAccessible ||
         previous == DimensionStateValue.reliable ||
         previous == DimensionStateValue.unknown) {

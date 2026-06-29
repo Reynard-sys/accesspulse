@@ -60,15 +60,20 @@ void main() {
     await tester.scrollUntilVisible(
       find.text('Submit structured signal'),
       300,
-      scrollable: find.descendant(
-        of: find.byKey(const ValueKey('evidence-flow-scroll')),
-        matching: find.byType(Scrollable),
-      ).first,
+      scrollable: find
+          .descendant(
+            of: find.byKey(const ValueKey('evidence-flow-scroll')),
+            matching: find.byType(Scrollable),
+          )
+          .first,
     );
     await tester.tap(find.text('Submit structured signal'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Evidence strengthened this place memory'), findsOneWidget);
+    expect(
+      find.text('Evidence strengthened this place memory'),
+      findsOneWidget,
+    );
     expect(find.text('Degraded'), findsOneWidget);
   });
 }

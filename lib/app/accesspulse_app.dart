@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/in_memory_accesspulse_repository.dart';
 import '../domain/accesspulse_domain.dart';
+import '../features/institution/institution_flow.dart';
 import '../features/public/public_flow.dart';
 
 class AccessPulseApp extends StatefulWidget {
@@ -50,10 +51,71 @@ class _AccessPulseAppState extends State<AccessPulseApp> {
           ),
         ),
       ),
-      home: PublicHomeScreen(
+      home: _AccessPulseRoleShell(
         repository: _repository,
         stateService: _stateService,
         aiService: _aiService,
+      ),
+    );
+  }
+}
+
+class _AccessPulseRoleShell extends StatefulWidget {
+  const _AccessPulseRoleShell({
+    required this.repository,
+    required this.stateService,
+    required this.aiService,
+  });
+
+  final AccessPulseRepository repository;
+  final DimensionStateService stateService;
+  final AiEvidenceService aiService;
+
+  @override
+  State<_AccessPulseRoleShell> createState() => _AccessPulseRoleShellState();
+}
+
+class _AccessPulseRoleShellState extends State<_AccessPulseRoleShell> {
+  var _selectedIndex = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final body = switch (_selectedIndex) {
+      0 => PublicHomeScreen(
+        repository: widget.repository,
+        stateService: widget.stateService,
+        aiService: widget.aiService,
+      ),
+      1 => InstitutionDashboardScreen(
+        repository: widget.repository,
+        stateService: widget.stateService,
+        role: InstitutionRole.lguReviewer,
+      ),
+      _ => InstitutionDashboardScreen(
+        repository: widget.repository,
+        stateService: widget.stateService,
+        role: InstitutionRole.inspector,
+      ),
+    };
+
+    return Scaffold(
+      body: body,
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _selectedIndex,
+        onDestinationSelected: (index) {
+          setState(() => _selectedIndex = index);
+        },
+        destinations: const [
+          NavigationDestination(icon: Icon(Icons.public), label: 'Public'),
+          NavigationDestination(
+            icon: Icon(Icons.dashboard_outlined),
+            label: 'LGU',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.verified_user_outlined),
+            label: 'Inspector',
+          ),
+        ],
       ),
     );
   }
