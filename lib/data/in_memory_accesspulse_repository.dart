@@ -128,8 +128,7 @@ class InMemoryAccessPulseRepository implements AccessPulseRepository {
     final observations =
         _observations.values
             .where(
-              (observation) =>
-                  observation.placeDimensionId == placeDimensionId,
+              (observation) => observation.placeDimensionId == placeDimensionId,
             )
             .toList()
           ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
@@ -149,8 +148,26 @@ class InMemoryAccessPulseRepository implements AccessPulseRepository {
   }
 
   @override
+  Future<Evidence> getEvidence(String evidenceId) async {
+    final evidence = _evidence[evidenceId];
+    if (evidence == null) {
+      throw StateError('No evidence found for $evidenceId.');
+    }
+    return evidence;
+  }
+
+  @override
   Future<BarrierSignal> addBarrierSignal(BarrierSignal signal) async {
     _signals[signal.id] = signal;
+    return signal;
+  }
+
+  @override
+  Future<BarrierSignal> getBarrierSignal(String signalId) async {
+    final signal = _signals[signalId];
+    if (signal == null) {
+      throw StateError('No barrier signal found for $signalId.');
+    }
     return signal;
   }
 

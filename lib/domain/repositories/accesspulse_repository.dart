@@ -26,7 +26,11 @@ abstract class AccessPulseRepository {
 
   Future<Evidence> addEvidence(Evidence evidence);
 
+  Future<Evidence> getEvidence(String evidenceId);
+
   Future<BarrierSignal> addBarrierSignal(BarrierSignal signal);
+
+  Future<BarrierSignal> getBarrierSignal(String signalId);
 
   Future<AccessCase> addCase(AccessCase accessCase);
 
