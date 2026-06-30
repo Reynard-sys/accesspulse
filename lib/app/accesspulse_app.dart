@@ -4,10 +4,16 @@ import '../config/ai_config.dart';
 import '../data/in_memory_accesspulse_repository.dart';
 import '../domain/accesspulse_domain.dart';
 import '../features/institution/institution_flow.dart';
+import '../features/onboarding/onboarding_screen.dart';
 import '../features/public/public_flow.dart';
 
 class AccessPulseApp extends StatefulWidget {
-  const AccessPulseApp({super.key});
+  const AccessPulseApp({
+    this.showOnboarding = true,
+    super.key,
+  });
+
+  final bool showOnboarding;
 
   @override
   State<AccessPulseApp> createState() => _AccessPulseAppState();
@@ -17,10 +23,12 @@ class _AccessPulseAppState extends State<AccessPulseApp> {
   late final InMemoryAccessPulseRepository _repository;
   late final DimensionStateService _stateService;
   late final AiEvidenceService _aiService;
+  late bool _showOnboarding;
 
   @override
   void initState() {
     super.initState();
+    _showOnboarding = widget.showOnboarding;
     _repository = InMemoryAccessPulseRepository.seeded();
     _stateService = DimensionStateService(repository: _repository);
     _aiService = AiConfig.fromEnvironment.hasServerWrapper
@@ -57,11 +65,19 @@ class _AccessPulseAppState extends State<AccessPulseApp> {
           ),
         ),
       ),
-      home: _AccessPulseRoleShell(
-        repository: _repository,
-        stateService: _stateService,
-        aiService: _aiService,
-      ),
+      home: _showOnboarding
+          ? OnboardingScreen(
+              onCompleted: () {
+                setState(() {
+                  _showOnboarding = false;
+                });
+              },
+            )
+          : _AccessPulseRoleShell(
+              repository: _repository,
+              stateService: _stateService,
+              aiService: _aiService,
+            ),
     );
   }
 }
