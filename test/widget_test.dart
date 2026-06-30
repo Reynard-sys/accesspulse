@@ -21,6 +21,12 @@ void main() {
     expect(find.text('For you: Mobility Access'), findsOneWidget);
     expect(find.text('Freshness / pulse'), findsOneWidget);
     expect(find.text('Reliable, aging'), findsWidgets);
+    final placeDetailScrollable = find.byType(Scrollable).first;
+    await tester.scrollUntilVisible(
+      find.text('Place memory'),
+      300,
+      scrollable: placeDetailScrollable,
+    );
     expect(find.text('Place memory'), findsOneWidget);
     expect(find.text('I visited this place'), findsOneWidget);
     expect(find.text('Add evidence'), findsOneWidget);

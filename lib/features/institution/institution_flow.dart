@@ -724,6 +724,10 @@ class _InstitutionStateCard extends StatelessWidget {
               label: 'Current state confidence',
               value: _confidenceLevelFromScore(state.confidence).label,
             ),
+            Text(
+              _confidenceExplanationFromScore(accessCase.confidence),
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
             const Divider(height: 24),
             Text(pulseDisplay.explanation),
             if (pulseDisplay.verificationContext != null) ...[
@@ -1366,6 +1370,17 @@ ConfidenceLevel _confidenceLevelFromScore(double confidence) {
     return ConfidenceLevel.moderate;
   }
   return ConfidenceLevel.low;
+}
+
+String _confidenceExplanationFromScore(double confidence) {
+  return switch (_confidenceLevelFromScore(confidence)) {
+    ConfidenceLevel.high =>
+      'Evidence is strong enough to support institutional review.',
+    ConfidenceLevel.moderate =>
+      'Evidence supports review, with some uncertainty still visible.',
+    ConfidenceLevel.low =>
+      'Evidence is limited and may need more context before action.',
+  };
 }
 
 ConfidenceLevel _signalConfidenceLevel(BarrierSignal signal) {
