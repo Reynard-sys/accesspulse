@@ -415,6 +415,8 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
   bool _rampSlopeCaptureFailed = false;
   bool _isAnalyzing = false;
   bool _isSubmitting = false;
+  bool _guidanceSkipped = false;
+  bool _guidanceContinued = false;
   final _rampSlopeCaptureService = const RampSlopeCaptureService();
   RampSlopeMeasurement? _rampSlopeMeasurement;
   String? _rampSlopeFailureMessage;
@@ -446,6 +448,8 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
       _analysisError = null;
       _submitError = null;
       _assessment = null;
+      _guidanceSkipped = false;
+      _guidanceContinued = false;
     });
     final measurement = _useDemoRampFallback
         ? await _captureDemoRampSlope()
@@ -501,6 +505,32 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
         _isAnalyzing = false;
       });
     }
+  }
+
+  Future<void> _addAnotherPhotoFromGuidance() async {
+    setState(() {
+      _demoPhotoSelected = true;
+      _guidanceSkipped = false;
+      _guidanceContinued = false;
+      _submitError = null;
+    });
+    await _analyze();
+  }
+
+  void _continueAnyway() {
+    setState(() {
+      _guidanceContinued = true;
+      _guidanceSkipped = false;
+      _submitError = null;
+    });
+  }
+
+  void _skipGuidance() {
+    setState(() {
+      _guidanceSkipped = true;
+      _guidanceContinued = false;
+      _submitError = null;
+    });
   }
 
   Future<void> _submit() async {
@@ -599,6 +629,8 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
                                   _demoPhotoSelected = true;
                                   _assessment = null;
                                   _submitError = null;
+                                  _guidanceSkipped = false;
+                                  _guidanceContinued = false;
                                 });
                               },
                             ),
@@ -618,6 +650,8 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
                               _assessment = null;
                               _analysisError = null;
                               _submitError = null;
+                              _guidanceSkipped = false;
+                              _guidanceContinued = false;
                             });
                           },
                         ),
@@ -640,6 +674,8 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
                                       _analysisError = null;
                                       _submitError = null;
                                       _assessment = null;
+                                      _guidanceSkipped = false;
+                                      _guidanceContinued = false;
                                     });
                                   },
                             onStart: _captureRampSlope,
@@ -677,15 +713,33 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
                 ),
                 const SizedBox(height: 16),
                 if (_assessment != null) ...[
+                  if (!_guidanceSkipped) ...[
+                    _AiGuidanceCard(
+                      assessment: _assessment!,
+                      onAddAnotherPhoto: _isAnalyzing
+                          ? null
+                          : _addAnotherPhotoFromGuidance,
+                      onContinueAnyway: _continueAnyway,
+                      onSkipGuidance: _skipGuidance,
+                    ),
+                    const SizedBox(height: 16),
+                  ],
                   _AiResultPanel(assessment: _assessment!),
-                  const SizedBox(height: 16),
-                  _ReviewPacketPanel(
-                    assessment: _assessment!,
-                    hasPhoto: _demoPhotoSelected,
-                    hasRampMeasurement: _rampSlopeMeasurement != null,
-                  ),
+                  if (_assessment!.institutionReady ||
+                      _guidanceContinued ||
+                      _guidanceSkipped) ...[
+                    const SizedBox(height: 16),
+                    _ReviewPacketPanel(
+                      assessment: _assessment!,
+                      hasPhoto: _demoPhotoSelected,
+                      hasRampMeasurement: _rampSlopeMeasurement != null,
+                    ),
+                  ],
                 ],
-                if (_assessment != null) ...[
+                if (_assessment != null &&
+                    (_assessment!.institutionReady ||
+                        _guidanceContinued ||
+                        _guidanceSkipped)) ...[
                   const SizedBox(height: 16),
                   if (_submitError != null) ...[
                     _InlineNotice(
@@ -1352,6 +1406,91 @@ class _AiResultPanel extends StatelessWidget {
               ),
             const Divider(height: 24),
             Text(assessment.explanation),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AiGuidanceCard extends StatelessWidget {
+  const _AiGuidanceCard({
+    required this.assessment,
+    required this.onAddAnotherPhoto,
+    required this.onContinueAnyway,
+    required this.onSkipGuidance,
+  });
+
+  final AiEvidenceAssessment assessment;
+  final VoidCallback? onAddAnotherPhoto;
+  final VoidCallback onContinueAnyway;
+  final VoidCallback onSkipGuidance;
+
+  @override
+  Widget build(BuildContext context) {
+    final missing = assessment.missingEvidence.isEmpty
+        ? 'No major missing evidence.'
+        : assessment.missingEvidence.first;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const _SectionHeader(
+              icon: Icons.tips_and_updates_outlined,
+              title: 'AI Guidance',
+            ),
+            const SizedBox(height: 12),
+            Text('Observed', style: Theme.of(context).textTheme.labelLarge),
+            const SizedBox(height: 4),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final feature in assessment.observedFeatures)
+                  Chip(label: Text(feature)),
+              ],
+            ),
+            const SizedBox(height: 12),
+            _MetricRow(label: 'Missing', value: missing),
+            _MetricRow(
+              label: 'Confidence',
+              value: assessment.confidenceLevel.label,
+            ),
+            _MetricRow(
+              label: 'Evidence readiness',
+              value: assessment.evidenceReadiness.label,
+            ),
+            const Divider(height: 24),
+            Text(
+              'Recommended next step',
+              style: Theme.of(context).textTheme.labelLarge,
+            ),
+            const SizedBox(height: 4),
+            Text(assessment.nextBestAction),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.add_a_photo_outlined),
+                  label: const Text('Add another photo'),
+                  onPressed: onAddAnotherPhoto,
+                ),
+                FilledButton.icon(
+                  icon: const Icon(Icons.arrow_forward),
+                  label: const Text('Continue anyway'),
+                  onPressed: onContinueAnyway,
+                ),
+                TextButton.icon(
+                  icon: const Icon(Icons.visibility_off_outlined),
+                  label: const Text('Skip AI guidance'),
+                  onPressed: onSkipGuidance,
+                ),
+              ],
+            ),
           ],
         ),
       ),

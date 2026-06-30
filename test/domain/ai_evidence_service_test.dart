@@ -40,6 +40,7 @@ void main() {
   "institutionReady": true,
   "summary": "The evidence suggests entrance access may require assistance.",
   "recommendedAction": "lgu_review",
+  "nextBestAction": "Submit for review.",
   "explanation": "AI structured the evidence but did not make an official judgment."
 }
 ''',
@@ -67,6 +68,7 @@ void main() {
       expect(assessment.evidenceReadiness, EvidenceReadiness.institutionReady);
       expect(assessment.institutionReady, isTrue);
       expect(assessment.recommendedAction, 'lgu_review');
+      expect(assessment.nextBestAction, 'Submit for review.');
     },
   );
 
@@ -89,6 +91,7 @@ void main() {
       expect(assessment.confidenceLevel, ConfidenceLevel.high);
       expect(assessment.evidenceReadiness, EvidenceReadiness.institutionReady);
       expect(assessment.institutionReady, isTrue);
+      expect(assessment.nextBestAction, 'Submit for review.');
       expect(
         assessment.missingEvidence,
         contains('official on-site ramp measurement'),
@@ -115,6 +118,7 @@ void main() {
   "confidence": 0.9,
   "summary": "Violation confirmed. The reading proves non-compliance.",
   "recommendedAction": "lgu_review",
+  "nextBestAction": "Submit for review.",
   "explanation": "This confirms the ramp is illegal."
 }
 ''',
@@ -159,6 +163,7 @@ void main() {
       expect(assessment.confidenceLevel, ConfidenceLevel.high);
       expect(assessment.evidenceReadiness, EvidenceReadiness.almostReady);
       expect(assessment.institutionReady, isFalse);
+      expect(assessment.nextBestAction, contains('Add a wider photo'));
       expect(
         assessment.explanation,
         contains('cannot determine legal compliance'),

@@ -141,10 +141,15 @@ void main() {
       expect(result.evidence.metadata['confidenceLevel'], 'high');
       expect(result.evidence.metadata['evidenceReadiness'], 'institutionReady');
       expect(result.evidence.metadata['institutionReady'], isTrue);
+      expect(result.evidence.metadata['nextBestAction'], 'Submit for review.');
       expect(result.signal.aiExplanation['confidenceLevel'], 'high');
       expect(
         result.signal.aiExplanation['evidenceReadiness'],
         'institutionReady',
+      );
+      expect(
+        result.signal.aiExplanation['nextBestAction'],
+        'Submit for review.',
       );
       expect(savedMeasurement?.id, result.rampMeasurement!.id);
       expect(savedMeasurement?.evidenceId, result.evidence.id);
@@ -186,6 +191,7 @@ void main() {
         summary:
             'The visible entrance suggests mobility access may require assistance.',
         recommendedAction: 'lgu_review',
+        nextBestAction: 'Submit for review.',
         explanation:
             'I can describe visible features, but I cannot officially verify the site.',
         institutionReady: true,

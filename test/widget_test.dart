@@ -1,5 +1,5 @@
 import 'package:accesspulse/main.dart';
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -105,12 +105,36 @@ void main() {
       300,
       scrollable: evidenceScrollable,
     );
-    await tester.tap(find.text('Analyze evidence'));
+    final analyzeButton = find.widgetWithText(FilledButton, 'Analyze evidence');
+    await tester.scrollUntilVisible(
+      analyzeButton,
+      300,
+      scrollable: evidenceScrollable,
+    );
+    await tester.drag(evidenceScrollable, const Offset(0, -80));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(analyzeButton);
+    await tester.tap(analyzeButton);
     await tester.pumpAndSettle();
 
+    await tester.scrollUntilVisible(
+      find.text('AI Guidance'),
+      300,
+      scrollable: evidenceScrollable,
+    );
+    expect(find.text('AI Guidance'), findsOneWidget);
+    expect(find.text('Recommended next step'), findsOneWidget);
+    expect(find.text('Add another photo'), findsOneWidget);
+    expect(find.text('Continue anyway'), findsOneWidget);
+    expect(find.text('Skip AI guidance'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('AI evidence structure'),
+      300,
+      scrollable: evidenceScrollable,
+    );
     expect(find.text('AI evidence structure'), findsOneWidget);
-    expect(find.text('Evidence readiness'), findsOneWidget);
-    expect(find.text('Institution Ready'), findsOneWidget);
+    expect(find.text('Evidence readiness'), findsWidgets);
+    expect(find.text('Institution Ready'), findsWidgets);
     expect(find.text('Missing evidence'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.text('Review packet'),
@@ -135,5 +159,83 @@ void main() {
     );
     expect(find.text('Degraded'), findsOneWidget);
     expect(find.text('Under review'), findsOneWidget);
+  });
+
+  testWidgets('AI guidance card re-evaluates after adding another photo', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const MyApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Quezon City Hall Main Entrance'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Add evidence'));
+    await tester.pumpAndSettle();
+    final evidenceScrollable = find
+        .descendant(
+          of: find.byKey(const ValueKey('evidence-flow-scroll')),
+          matching: find.byType(Scrollable),
+        )
+        .first;
+
+    await tester.scrollUntilVisible(
+      find.text('Analyze evidence'),
+      300,
+      scrollable: evidenceScrollable,
+    );
+    final analyzeButton = find.widgetWithText(FilledButton, 'Analyze evidence');
+    await tester.scrollUntilVisible(
+      analyzeButton,
+      300,
+      scrollable: evidenceScrollable,
+    );
+    await tester.drag(evidenceScrollable, const Offset(0, -120));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(analyzeButton);
+    await tester.tap(analyzeButton);
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.text('AI Guidance'),
+      300,
+      scrollable: evidenceScrollable,
+    );
+    expect(find.text('AI Guidance'), findsOneWidget);
+    expect(find.text('Almost Ready'), findsWidgets);
+    expect(find.text('Recommended next step'), findsOneWidget);
+    expect(find.text('Add another photo'), findsOneWidget);
+    expect(find.text('Continue anyway'), findsOneWidget);
+    expect(find.text('Skip AI guidance'), findsOneWidget);
+    expect(find.text('Review packet'), findsNothing);
+
+    final addAnotherPhotoButton = find.widgetWithText(
+      OutlinedButton,
+      'Add another photo',
+    );
+    await tester.scrollUntilVisible(
+      addAnotherPhotoButton,
+      300,
+      scrollable: evidenceScrollable,
+    );
+    await tester.drag(evidenceScrollable, const Offset(0, -360));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(addAnotherPhotoButton);
+    await tester.tap(addAnotherPhotoButton);
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.text('Institution Ready').first,
+      300,
+      scrollable: evidenceScrollable,
+    );
+    expect(find.text('uploaded photo'), findsWidgets);
+    expect(find.text('Institution Ready'), findsWidgets);
+    expect(find.text('Submit for review.'), findsWidgets);
+    await tester.scrollUntilVisible(
+      find.text('Review packet'),
+      300,
+      scrollable: evidenceScrollable,
+    );
+    expect(find.text('Review packet'), findsOneWidget);
   });
 }

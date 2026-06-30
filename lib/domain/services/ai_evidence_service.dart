@@ -75,6 +75,12 @@ class MockAiEvidenceService implements AiEvidenceService {
           ? 'The evidence suggests Mobility Access at the entrance may be unreliable, but a human reviewer should confirm the site context.'
           : 'The evidence suggests Mobility Access at the entrance may be unreliable. An estimated ${measurement.estimatedAngleDegrees.toStringAsFixed(1)} degree ramp incline reading with ${measurement.qualityLabel.toLowerCase()} supports the reported concern, but a human reviewer should confirm the site context.',
       recommendedAction: 'lgu_review',
+      nextBestAction: _nextBestAction(
+        readiness: readiness,
+        hasPhoto: imagePath != null,
+        hasMeasurement: measurement != null,
+        mentionsRamp: mentionsRamp,
+      ),
       explanation: measurement == null
           ? 'I can structure visible and described mobility-access signals, but I cannot determine legal compliance or official verification.'
           : 'I can use the estimated incline reading as supporting evidence, but it is not an official measurement and does not determine legal compliance.',
@@ -110,6 +116,24 @@ class MockAiEvidenceService implements AiEvidenceService {
       ConfidenceLevel.low =>
         'The evidence is too limited to understand the entrance access issue clearly.',
     };
+  }
+
+  static String _nextBestAction({
+    required EvidenceReadiness readiness,
+    required bool hasPhoto,
+    required bool hasMeasurement,
+    required bool mentionsRamp,
+  }) {
+    if (readiness == EvidenceReadiness.institutionReady) {
+      return 'Submit for review.';
+    }
+    if (!hasPhoto) {
+      return 'Add a wider photo that shows the full path from sidewalk to entrance.';
+    }
+    if (mentionsRamp && !hasMeasurement) {
+      return 'Add a side angle or ramp reading that shows the ramp slope and top landing.';
+    }
+    return 'Add one clearer detail about the entrance route before review.';
   }
 }
 
@@ -209,6 +233,9 @@ class GeminiServerEvidenceService implements AiEvidenceService {
         recommendedAction: _stringValue(
           decoded['recommendedAction'],
           'lgu_review',
+        ),
+        nextBestAction: _safeText(
+          _stringValue(decoded['nextBestAction'], 'Submit for review.'),
         ),
         explanation: _safeText(
           _stringValue(

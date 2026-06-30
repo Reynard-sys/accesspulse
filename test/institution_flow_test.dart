@@ -30,6 +30,7 @@ void main() {
         summary:
             'The visible entrance suggests mobility access may require assistance.',
         recommendedAction: 'lgu_review',
+        nextBestAction: 'Submit for review.',
         explanation:
             'AI structured evidence for review but did not make an official judgment.',
         institutionReady: true,
