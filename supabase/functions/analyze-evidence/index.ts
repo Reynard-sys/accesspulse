@@ -96,6 +96,7 @@ Deno.serve(async (request) => {
               institutionReady: { type: "boolean" },
               summary: { type: "string" },
               recommendedAction: { type: "string" },
+              nextBestAction: { type: "string" },
               explanation: { type: "string" },
             },
             required: [
@@ -111,6 +112,7 @@ Deno.serve(async (request) => {
               "institutionReady",
               "summary",
               "recommendedAction",
+              "nextBestAction",
               "explanation",
             ],
           },
@@ -197,6 +199,7 @@ Rules:
 - Use evidenceReadiness as draft, almostReady, or institutionReady.
 - Set institutionReady true only when the evidence is sufficient for LGU review.
 - Always include a short confidenceExplanation.
+- Include nextBestAction as one plain-language next step for the contributor.
 `;
 }
 
@@ -266,6 +269,7 @@ function normalizeAssessment(value: Record<string, unknown>) {
     ),
     summary: stringValue(value.summary, "Evidence needs human review."),
     recommendedAction: stringValue(value.recommendedAction, "lgu_review"),
+    nextBestAction: stringValue(value.nextBestAction, "Submit for review."),
     explanation: stringValue(
       value.explanation,
       "AI structured this signal but did not make an official judgment.",

@@ -211,6 +211,7 @@ class DimensionStateService {
         'confidenceExplanation': assessment.confidenceExplanation,
         'evidenceReadiness': assessment.evidenceReadiness.name,
         'institutionReady': assessment.institutionReady,
+        'nextBestAction': assessment.nextBestAction,
         if (capturedRampMeasurement != null && rampMeasurementId != null) ...{
           'rampMeasurementId': rampMeasurementId,
           'rampMeasurementStatus': capturedRampMeasurement.status.name,
@@ -264,6 +265,7 @@ class DimensionStateService {
         'confidenceExplanation': assessment.confidenceExplanation,
         'evidenceReadiness': assessment.evidenceReadiness.name,
         'institutionReady': assessment.institutionReady,
+        'nextBestAction': assessment.nextBestAction,
       },
       createdAt: timestamp,
     );

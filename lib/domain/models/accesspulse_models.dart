@@ -458,6 +458,7 @@ class AiEvidenceAssessment {
     required this.evidenceReadiness,
     required this.summary,
     required this.recommendedAction,
+    required this.nextBestAction,
     required this.explanation,
     required this.institutionReady,
   });
@@ -473,6 +474,7 @@ class AiEvidenceAssessment {
   final EvidenceReadiness evidenceReadiness;
   final String summary;
   final String recommendedAction;
+  final String nextBestAction;
   final String explanation;
   final bool institutionReady;
 }
