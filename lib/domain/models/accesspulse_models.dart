@@ -12,6 +12,10 @@ enum DimensionStateValue {
 
 enum DimensionPulseLevel { weak, moderate, strong }
 
+enum ConfidenceLevel { low, moderate, high }
+
+enum EvidenceReadiness { draft, almostReady, institutionReady }
+
 enum PlacePulseStatus {
   reliable,
   reliableAging,
@@ -449,9 +453,13 @@ class AiEvidenceAssessment {
     required this.possibleBarrier,
     required this.missingEvidence,
     required this.confidence,
+    required this.confidenceLevel,
+    required this.confidenceExplanation,
+    required this.evidenceReadiness,
     required this.summary,
     required this.recommendedAction,
     required this.explanation,
+    required this.institutionReady,
   });
 
   final String dimension;
@@ -460,7 +468,11 @@ class AiEvidenceAssessment {
   final String possibleBarrier;
   final List<String> missingEvidence;
   final double confidence;
+  final ConfidenceLevel confidenceLevel;
+  final String confidenceExplanation;
+  final EvidenceReadiness evidenceReadiness;
   final String summary;
   final String recommendedAction;
   final String explanation;
+  final bool institutionReady;
 }

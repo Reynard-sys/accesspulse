@@ -717,12 +717,12 @@ class _InstitutionStateCard extends StatelessWidget {
             _MetricRow(label: 'Freshness / pulse', value: pulseDisplay.label),
             _MetricRow(
               label: 'Case confidence',
-              value: '${(accessCase.confidence * 100).round()}%',
+              value: _confidenceLevelFromScore(accessCase.confidence).label,
             ),
             _MetricRow(label: 'Severity', value: accessCase.severity.label),
             _MetricRow(
               label: 'Current state confidence',
-              value: '${(state.confidence * 100).round()}%',
+              value: _confidenceLevelFromScore(state.confidence).label,
             ),
             const Divider(height: 24),
             Text(pulseDisplay.explanation),
@@ -753,6 +753,9 @@ class _SignalPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final confidenceLevel = _signalConfidenceLevel(signal);
+    final confidenceExplanation = _signalConfidenceExplanation(signal);
+    final readiness = _signalEvidenceReadiness(signal);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -768,10 +771,8 @@ class _SignalPanel extends StatelessWidget {
               label: 'Issue type',
               value: signal.issueType.replaceAll('_', ' '),
             ),
-            _MetricRow(
-              label: 'AI confidence',
-              value: '${(signal.confidence * 100).round()}%',
-            ),
+            _MetricRow(label: 'AI confidence', value: confidenceLevel.label),
+            _MetricRow(label: 'Evidence readiness', value: readiness.label),
             _MetricRow(
               label: 'Recommended action',
               value: signal.recommendedAction.replaceAll('_', ' '),
@@ -783,6 +784,8 @@ class _SignalPanel extends StatelessWidget {
               _RampMeasurementBlock(measurement: rampMeasurement!),
             ],
             const Divider(height: 24),
+            Text(confidenceExplanation),
+            const SizedBox(height: 8),
             Text(signal.structuredSummary),
             const SizedBox(height: 12),
             Text(
@@ -1333,6 +1336,87 @@ extension on PlacePulseStatus {
       PlacePulseStatus.recentlyRefreshed => const Color(0xff17643a),
     };
   }
+}
+
+extension on ConfidenceLevel {
+  String get label {
+    return switch (this) {
+      ConfidenceLevel.low => 'Low',
+      ConfidenceLevel.moderate => 'Moderate',
+      ConfidenceLevel.high => 'High',
+    };
+  }
+}
+
+extension on EvidenceReadiness {
+  String get label {
+    return switch (this) {
+      EvidenceReadiness.draft => 'Draft',
+      EvidenceReadiness.almostReady => 'Almost Ready',
+      EvidenceReadiness.institutionReady => 'Institution Ready',
+    };
+  }
+}
+
+ConfidenceLevel _confidenceLevelFromScore(double confidence) {
+  if (confidence >= 0.8) {
+    return ConfidenceLevel.high;
+  }
+  if (confidence >= 0.5) {
+    return ConfidenceLevel.moderate;
+  }
+  return ConfidenceLevel.low;
+}
+
+ConfidenceLevel _signalConfidenceLevel(BarrierSignal signal) {
+  final value = signal.aiExplanation['confidenceLevel'];
+  if (value is String) {
+    final normalized = value.toLowerCase();
+    if (normalized == ConfidenceLevel.high.name) {
+      return ConfidenceLevel.high;
+    }
+    if (normalized == ConfidenceLevel.moderate.name) {
+      return ConfidenceLevel.moderate;
+    }
+    if (normalized == ConfidenceLevel.low.name) {
+      return ConfidenceLevel.low;
+    }
+  }
+  return _confidenceLevelFromScore(signal.confidence);
+}
+
+String _signalConfidenceExplanation(BarrierSignal signal) {
+  final value = signal.aiExplanation['confidenceExplanation'];
+  if (value is String && value.trim().isNotEmpty) {
+    return value;
+  }
+  return switch (_signalConfidenceLevel(signal)) {
+    ConfidenceLevel.high =>
+      'The evidence strongly supports the mobility-access concern.',
+    ConfidenceLevel.moderate =>
+      'The evidence supports the concern, but some context is still missing.',
+    ConfidenceLevel.low =>
+      'The evidence is too limited for a strong review signal.',
+  };
+}
+
+EvidenceReadiness _signalEvidenceReadiness(BarrierSignal signal) {
+  final value = signal.aiExplanation['evidenceReadiness'];
+  if (value is String) {
+    final normalized = value.toLowerCase();
+    if (normalized == EvidenceReadiness.institutionReady.name) {
+      return EvidenceReadiness.institutionReady;
+    }
+    if (normalized == EvidenceReadiness.almostReady.name) {
+      return EvidenceReadiness.almostReady;
+    }
+    if (normalized == EvidenceReadiness.draft.name) {
+      return EvidenceReadiness.draft;
+    }
+  }
+  return signal.aiExplanation['institutionReady'] == true
+      ? EvidenceReadiness.institutionReady
+      : EvidenceReadiness.almostReady;
 }
 
 extension on CaseStatus {

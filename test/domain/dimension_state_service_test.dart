@@ -138,6 +138,14 @@ void main() {
       expect(result.rampMeasurement!.estimatedAngleDegrees, 14.8);
       expect(result.evidence.metadata['rampMeasurementId'], isNotNull);
       expect(result.evidence.metadata['estimatedRampAngleDegrees'], 14.8);
+      expect(result.evidence.metadata['confidenceLevel'], 'high');
+      expect(result.evidence.metadata['evidenceReadiness'], 'institutionReady');
+      expect(result.evidence.metadata['institutionReady'], isTrue);
+      expect(result.signal.aiExplanation['confidenceLevel'], 'high');
+      expect(
+        result.signal.aiExplanation['evidenceReadiness'],
+        'institutionReady',
+      );
       expect(savedMeasurement?.id, result.rampMeasurement!.id);
       expect(savedMeasurement?.evidenceId, result.evidence.id);
       expect(savedMeasurement?.status, RampMeasurementStatus.captured);
@@ -171,11 +179,16 @@ void main() {
         possibleBarrier: 'independent wheelchair access may be unreliable',
         missingEvidence: <String>['full side view of ramp'],
         confidence: 0.82,
+        confidenceLevel: ConfidenceLevel.high,
+        confidenceExplanation:
+            'The entrance evidence and contributor note strongly align.',
+        evidenceReadiness: EvidenceReadiness.institutionReady,
         summary:
             'The visible entrance suggests mobility access may require assistance.',
         recommendedAction: 'lgu_review',
         explanation:
             'I can describe visible features, but I cannot officially verify the site.',
+        institutionReady: true,
       ),
       imagePath: 'demo/entrance.jpg',
       now: DateTime(2026, 6, 29, 10, 5),

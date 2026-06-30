@@ -207,6 +207,10 @@ class DimensionStateService {
       metadata: <String, Object?>{
         'dimension': assessment.dimension,
         'aiSummary': assessment.summary,
+        'confidenceLevel': assessment.confidenceLevel.name,
+        'confidenceExplanation': assessment.confidenceExplanation,
+        'evidenceReadiness': assessment.evidenceReadiness.name,
+        'institutionReady': assessment.institutionReady,
         if (capturedRampMeasurement != null && rampMeasurementId != null) ...{
           'rampMeasurementId': rampMeasurementId,
           'rampMeasurementStatus': capturedRampMeasurement.status.name,
@@ -254,7 +258,13 @@ class DimensionStateService {
       structuredSummary: assessment.summary,
       recommendedAction: assessment.recommendedAction,
       aiModel: 'mock_accessibility_copilot',
-      aiExplanation: <String, Object?>{'explanation': assessment.explanation},
+      aiExplanation: <String, Object?>{
+        'explanation': assessment.explanation,
+        'confidenceLevel': assessment.confidenceLevel.name,
+        'confidenceExplanation': assessment.confidenceExplanation,
+        'evidenceReadiness': assessment.evidenceReadiness.name,
+        'institutionReady': assessment.institutionReady,
+      },
       createdAt: timestamp,
     );
     await _repository.addBarrierSignal(signal);

@@ -680,6 +680,7 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
                   _AiResultPanel(assessment: _assessment!),
                   const SizedBox(height: 16),
                   _ReviewPacketPanel(
+                    assessment: _assessment!,
                     hasPhoto: _demoPhotoSelected,
                     hasRampMeasurement: _rampSlopeMeasurement != null,
                   ),
@@ -1254,7 +1255,7 @@ class _StateCard extends StatelessWidget {
               _MetricRow(label: 'Freshness / pulse', value: pulseDisplay.label),
               _MetricRow(
                 label: 'Confidence',
-                value: '${(state.confidence * 100).round()}%',
+                value: _confidenceLevelFromScore(state.confidence).label,
               ),
               _MetricRow(
                 label: 'Last confirmed',
@@ -1310,8 +1311,14 @@ class _AiResultPanel extends StatelessWidget {
             ),
             _MetricRow(
               label: 'Confidence',
-              value: '${(assessment.confidence * 100).round()}%',
+              value: assessment.confidenceLevel.label,
             ),
+            _MetricRow(
+              label: 'Evidence readiness',
+              value: assessment.evidenceReadiness.label,
+            ),
+            const SizedBox(height: 8),
+            Text(assessment.confidenceExplanation),
             const SizedBox(height: 8),
             Text(assessment.summary),
             const SizedBox(height: 12),
@@ -1354,10 +1361,12 @@ class _AiResultPanel extends StatelessWidget {
 
 class _ReviewPacketPanel extends StatelessWidget {
   const _ReviewPacketPanel({
+    required this.assessment,
     required this.hasPhoto,
     required this.hasRampMeasurement,
   });
 
+  final AiEvidenceAssessment assessment;
   final bool hasPhoto;
   final bool hasRampMeasurement;
 
@@ -1388,6 +1397,13 @@ class _ReviewPacketPanel extends StatelessWidget {
               body:
                   'AccessPulse opens a review case, updates the living state, and keeps official verification separate.',
             ),
+            const SizedBox(height: 10),
+            _PacketStep(
+              icon: Icons.verified_outlined,
+              title: 'Evidence readiness',
+              body:
+                  '${assessment.evidenceReadiness.label}: ${assessment.institutionReady ? 'sufficient evidence collected for LGU review.' : 'useful evidence, with missing context kept visible.'}',
+            ),
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,
@@ -1395,6 +1411,12 @@ class _ReviewPacketPanel extends StatelessWidget {
               children: [
                 const Chip(label: Text('Note included')),
                 Chip(label: Text(hasPhoto ? 'Photo included' : 'No photo yet')),
+                Chip(label: Text(assessment.evidenceReadiness.label)),
+                Chip(
+                  label: Text(
+                    'Confidence: ${assessment.confidenceLevel.label}',
+                  ),
+                ),
                 Chip(
                   label: Text(
                     hasRampMeasurement
@@ -1775,6 +1797,36 @@ extension on PlacePulseStatus {
       PlacePulseStatus.recentlyRefreshed => const Color(0xff17643a),
     };
   }
+}
+
+extension on ConfidenceLevel {
+  String get label {
+    return switch (this) {
+      ConfidenceLevel.low => 'Low',
+      ConfidenceLevel.moderate => 'Moderate',
+      ConfidenceLevel.high => 'High',
+    };
+  }
+}
+
+extension on EvidenceReadiness {
+  String get label {
+    return switch (this) {
+      EvidenceReadiness.draft => 'Draft',
+      EvidenceReadiness.almostReady => 'Almost Ready',
+      EvidenceReadiness.institutionReady => 'Institution Ready',
+    };
+  }
+}
+
+ConfidenceLevel _confidenceLevelFromScore(double confidence) {
+  if (confidence >= 0.8) {
+    return ConfidenceLevel.high;
+  }
+  if (confidence >= 0.5) {
+    return ConfidenceLevel.moderate;
+  }
+  return ConfidenceLevel.low;
 }
 
 extension on MemoryEventType {

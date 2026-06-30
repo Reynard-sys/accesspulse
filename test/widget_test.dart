@@ -109,6 +109,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('AI evidence structure'), findsOneWidget);
+    expect(find.text('Evidence readiness'), findsOneWidget);
+    expect(find.text('Institution Ready'), findsOneWidget);
     expect(find.text('Missing evidence'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.text('Review packet'),
@@ -116,6 +118,7 @@ void main() {
       scrollable: evidenceScrollable,
     );
     expect(find.text('Review packet'), findsOneWidget);
+    expect(find.text('Confidence: High'), findsOneWidget);
     expect(find.text('Ramp reading included'), findsOneWidget);
 
     await tester.scrollUntilVisible(
