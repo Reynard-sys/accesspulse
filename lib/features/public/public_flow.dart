@@ -415,6 +415,8 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
   bool _rampSlopeCaptureFailed = false;
   bool _isAnalyzing = false;
   bool _isSubmitting = false;
+  bool _guidanceSkipped = false;
+  bool _guidanceContinued = false;
   final _rampSlopeCaptureService = const RampSlopeCaptureService();
   RampSlopeMeasurement? _rampSlopeMeasurement;
   String? _rampSlopeFailureMessage;
@@ -446,6 +448,8 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
       _analysisError = null;
       _submitError = null;
       _assessment = null;
+      _guidanceSkipped = false;
+      _guidanceContinued = false;
     });
     final measurement = _useDemoRampFallback
         ? await _captureDemoRampSlope()
@@ -501,6 +505,32 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
         _isAnalyzing = false;
       });
     }
+  }
+
+  Future<void> _addAnotherPhotoFromGuidance() async {
+    setState(() {
+      _demoPhotoSelected = true;
+      _guidanceSkipped = false;
+      _guidanceContinued = false;
+      _submitError = null;
+    });
+    await _analyze();
+  }
+
+  void _continueAnyway() {
+    setState(() {
+      _guidanceContinued = true;
+      _guidanceSkipped = false;
+      _submitError = null;
+    });
+  }
+
+  void _skipGuidance() {
+    setState(() {
+      _guidanceSkipped = true;
+      _guidanceContinued = false;
+      _submitError = null;
+    });
   }
 
   Future<void> _submit() async {
@@ -599,6 +629,8 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
                                   _demoPhotoSelected = true;
                                   _assessment = null;
                                   _submitError = null;
+                                  _guidanceSkipped = false;
+                                  _guidanceContinued = false;
                                 });
                               },
                             ),
@@ -618,6 +650,8 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
                               _assessment = null;
                               _analysisError = null;
                               _submitError = null;
+                              _guidanceSkipped = false;
+                              _guidanceContinued = false;
                             });
                           },
                         ),
@@ -640,6 +674,8 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
                                       _analysisError = null;
                                       _submitError = null;
                                       _assessment = null;
+                                      _guidanceSkipped = false;
+                                      _guidanceContinued = false;
                                     });
                                   },
                             onStart: _captureRampSlope,
@@ -677,14 +713,33 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
                 ),
                 const SizedBox(height: 16),
                 if (_assessment != null) ...[
+                  if (!_guidanceSkipped) ...[
+                    _AiGuidanceCard(
+                      assessment: _assessment!,
+                      onAddAnotherPhoto: _isAnalyzing
+                          ? null
+                          : _addAnotherPhotoFromGuidance,
+                      onContinueAnyway: _continueAnyway,
+                      onSkipGuidance: _skipGuidance,
+                    ),
+                    const SizedBox(height: 16),
+                  ],
                   _AiResultPanel(assessment: _assessment!),
-                  const SizedBox(height: 16),
-                  _ReviewPacketPanel(
-                    hasPhoto: _demoPhotoSelected,
-                    hasRampMeasurement: _rampSlopeMeasurement != null,
-                  ),
+                  if (_assessment!.institutionReady ||
+                      _guidanceContinued ||
+                      _guidanceSkipped) ...[
+                    const SizedBox(height: 16),
+                    _ReviewPacketPanel(
+                      assessment: _assessment!,
+                      hasPhoto: _demoPhotoSelected,
+                      hasRampMeasurement: _rampSlopeMeasurement != null,
+                    ),
+                  ],
                 ],
-                if (_assessment != null) ...[
+                if (_assessment != null &&
+                    (_assessment!.institutionReady ||
+                        _guidanceContinued ||
+                        _guidanceSkipped)) ...[
                   const SizedBox(height: 16),
                   if (_submitError != null) ...[
                     _InlineNotice(
@@ -982,6 +1037,14 @@ class SubmissionResultScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final previousPulseDisplay = const PulseService().describePlacePulse(
+      state: previousState,
+      pulse: previousPulse,
+    );
+    final currentPulseDisplay = const PulseService().describePlacePulse(
+      state: currentState,
+      pulse: currentPulse,
+    );
     return Scaffold(
       appBar: AppBar(title: const Text('State update')),
       body: SafeArea(
@@ -1038,12 +1101,17 @@ class SubmissionResultScreen extends StatelessWidget {
                         ),
                         const Divider(height: 24),
                         _TransitionRow(
-                          label: 'Pulse',
-                          before: previousPulse.level.label,
-                          after: currentPulse.level.label,
+                          label: 'Pulse / freshness',
+                          before: previousPulseDisplay.label,
+                          after: currentPulseDisplay.label,
                         ),
                         const SizedBox(height: 12),
                         Text(currentState.explanation),
+                        const SizedBox(height: 8),
+                        Text(
+                          currentPulseDisplay.explanation,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
                       ],
                     ),
                   ),
@@ -1098,15 +1166,19 @@ class _PlaceListTile extends StatelessWidget {
       future: _load(),
       builder: (context, snapshot) {
         final data = snapshot.data;
+        final pulseDisplay = data == null
+            ? null
+            : const PulseService().describePlacePulse(
+                state: data.state,
+                pulse: data.pulse,
+              );
         return Card(
           child: ListTile(
             leading: const CircleAvatar(child: Icon(Icons.location_city)),
             title: Text(place.name),
             subtitle: data == null
                 ? const Text('Loading living accessibility state')
-                : Text(
-                    '${data.state.state.label} - ${data.pulse.level.label} pulse',
-                  ),
+                : Text('${data.state.state.label} - ${pulseDisplay!.label}'),
             trailing: const Icon(Icons.chevron_right),
             onTap: data == null ? null : onTap,
           ),
@@ -1195,6 +1267,10 @@ class _StateCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final pulseDisplay = const PulseService().describePlacePulse(
+      state: state,
+      pulse: pulse,
+    );
     return _FadeSlideIn(
       child: Card(
         child: Padding(
@@ -1222,15 +1298,22 @@ class _StateCard extends StatelessWidget {
                   ),
                   _StatusPill(
                     icon: Icons.monitor_heart_outlined,
-                    label: '${pulse.level.label} pulse',
-                    color: pulse.level.color,
+                    label: pulseDisplay.label,
+                    color: pulseDisplay.status.color,
                   ),
                 ],
               ),
               const SizedBox(height: 12),
+              _MetricRow(label: 'Dimension', value: 'Mobility Access'),
+              _MetricRow(label: 'Current state', value: state.state.label),
+              _MetricRow(label: 'Freshness / pulse', value: pulseDisplay.label),
               _MetricRow(
                 label: 'Confidence',
-                value: '${(state.confidence * 100).round()}%',
+                value: _confidenceLevelFromScore(state.confidence).label,
+              ),
+              Text(
+                _confidenceExplanationFromScore(state.confidence),
+                style: Theme.of(context).textTheme.bodySmall,
               ),
               _MetricRow(
                 label: 'Last confirmed',
@@ -1240,6 +1323,15 @@ class _StateCard extends StatelessWidget {
               ),
               const Divider(height: 24),
               Text(state.explanation),
+              const SizedBox(height: 8),
+              Text(pulseDisplay.explanation),
+              if (pulseDisplay.verificationContext != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  pulseDisplay.verificationContext!,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
               const SizedBox(height: 8),
               Text(
                 pulse.explanation,
@@ -1277,8 +1369,14 @@ class _AiResultPanel extends StatelessWidget {
             ),
             _MetricRow(
               label: 'Confidence',
-              value: '${(assessment.confidence * 100).round()}%',
+              value: assessment.confidenceLevel.label,
             ),
+            _MetricRow(
+              label: 'Evidence readiness',
+              value: assessment.evidenceReadiness.label,
+            ),
+            const SizedBox(height: 8),
+            Text(assessment.confidenceExplanation),
             const SizedBox(height: 8),
             Text(assessment.summary),
             const SizedBox(height: 12),
@@ -1319,12 +1417,101 @@ class _AiResultPanel extends StatelessWidget {
   }
 }
 
+class _AiGuidanceCard extends StatelessWidget {
+  const _AiGuidanceCard({
+    required this.assessment,
+    required this.onAddAnotherPhoto,
+    required this.onContinueAnyway,
+    required this.onSkipGuidance,
+  });
+
+  final AiEvidenceAssessment assessment;
+  final VoidCallback? onAddAnotherPhoto;
+  final VoidCallback onContinueAnyway;
+  final VoidCallback onSkipGuidance;
+
+  @override
+  Widget build(BuildContext context) {
+    final missing = assessment.missingEvidence.isEmpty
+        ? 'No major missing evidence.'
+        : assessment.missingEvidence.first;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const _SectionHeader(
+              icon: Icons.tips_and_updates_outlined,
+              title: 'AI Guidance',
+            ),
+            const SizedBox(height: 12),
+            Text('Observed', style: Theme.of(context).textTheme.labelLarge),
+            const SizedBox(height: 4),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final feature in assessment.observedFeatures)
+                  Chip(label: Text(feature)),
+              ],
+            ),
+            const SizedBox(height: 12),
+            _MetricRow(label: 'Missing', value: missing),
+            _MetricRow(
+              label: 'Confidence',
+              value: assessment.confidenceLevel.label,
+            ),
+            _MetricRow(
+              label: 'Evidence readiness',
+              value: assessment.evidenceReadiness.label,
+            ),
+            const SizedBox(height: 8),
+            Text(assessment.confidenceExplanation),
+            const Divider(height: 24),
+            Text(
+              'Recommended next step',
+              style: Theme.of(context).textTheme.labelLarge,
+            ),
+            const SizedBox(height: 4),
+            Text(assessment.nextBestAction),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.add_a_photo_outlined),
+                  label: const Text('Add another photo'),
+                  onPressed: onAddAnotherPhoto,
+                ),
+                FilledButton.icon(
+                  icon: const Icon(Icons.arrow_forward),
+                  label: const Text('Continue anyway'),
+                  onPressed: onContinueAnyway,
+                ),
+                TextButton.icon(
+                  icon: const Icon(Icons.visibility_off_outlined),
+                  label: const Text('Skip AI guidance'),
+                  onPressed: onSkipGuidance,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _ReviewPacketPanel extends StatelessWidget {
   const _ReviewPacketPanel({
+    required this.assessment,
     required this.hasPhoto,
     required this.hasRampMeasurement,
   });
 
+  final AiEvidenceAssessment assessment;
   final bool hasPhoto;
   final bool hasRampMeasurement;
 
@@ -1355,6 +1542,20 @@ class _ReviewPacketPanel extends StatelessWidget {
               body:
                   'AccessPulse opens a review case, updates the living state, and keeps official verification separate.',
             ),
+            const SizedBox(height: 10),
+            _PacketStep(
+              icon: Icons.psychology_alt_outlined,
+              title: 'Confidence',
+              body:
+                  '${assessment.confidenceLevel.label}: ${assessment.confidenceExplanation}',
+            ),
+            const SizedBox(height: 10),
+            _PacketStep(
+              icon: Icons.verified_outlined,
+              title: 'Evidence readiness',
+              body:
+                  '${assessment.evidenceReadiness.label}: ${assessment.institutionReady ? 'sufficient evidence collected for LGU review.' : 'useful evidence, with missing context kept visible.'}',
+            ),
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,
@@ -1362,6 +1563,12 @@ class _ReviewPacketPanel extends StatelessWidget {
               children: [
                 const Chip(label: Text('Note included')),
                 Chip(label: Text(hasPhoto ? 'Photo included' : 'No photo yet')),
+                Chip(label: Text(assessment.evidenceReadiness.label)),
+                Chip(
+                  label: Text(
+                    'Confidence: ${assessment.confidenceLevel.label}',
+                  ),
+                ),
                 Chip(
                   label: Text(
                     hasRampMeasurement
@@ -1732,22 +1939,57 @@ extension on DimensionStateValue {
   }
 }
 
-extension on DimensionPulseLevel {
-  String get label {
-    return switch (this) {
-      DimensionPulseLevel.weak => 'Weak',
-      DimensionPulseLevel.moderate => 'Moderate',
-      DimensionPulseLevel.strong => 'Strong',
-    };
-  }
-
+extension on PlacePulseStatus {
   Color get color {
     return switch (this) {
-      DimensionPulseLevel.weak => const Color(0xff7a4d00),
-      DimensionPulseLevel.moderate => const Color(0xff1765a6),
-      DimensionPulseLevel.strong => const Color(0xff17643a),
+      PlacePulseStatus.reliable => const Color(0xff17643a),
+      PlacePulseStatus.reliableAging => const Color(0xff8a6d00),
+      PlacePulseStatus.unknown => const Color(0xff52616b),
+      PlacePulseStatus.underReview => const Color(0xff1765a6),
+      PlacePulseStatus.recentlyRefreshed => const Color(0xff17643a),
     };
   }
+}
+
+extension on ConfidenceLevel {
+  String get label {
+    return switch (this) {
+      ConfidenceLevel.low => 'Low',
+      ConfidenceLevel.moderate => 'Moderate',
+      ConfidenceLevel.high => 'High',
+    };
+  }
+}
+
+extension on EvidenceReadiness {
+  String get label {
+    return switch (this) {
+      EvidenceReadiness.draft => 'Draft',
+      EvidenceReadiness.almostReady => 'Almost Ready',
+      EvidenceReadiness.institutionReady => 'Institution Ready',
+    };
+  }
+}
+
+ConfidenceLevel _confidenceLevelFromScore(double confidence) {
+  if (confidence >= 0.8) {
+    return ConfidenceLevel.high;
+  }
+  if (confidence >= 0.5) {
+    return ConfidenceLevel.moderate;
+  }
+  return ConfidenceLevel.low;
+}
+
+String _confidenceExplanationFromScore(double confidence) {
+  return switch (_confidenceLevelFromScore(confidence)) {
+    ConfidenceLevel.high =>
+      'Recent evidence strongly supports the current Mobility Access state.',
+    ConfidenceLevel.moderate =>
+      'The current state is supported, but some context should still be refreshed.',
+    ConfidenceLevel.low =>
+      'Current evidence is limited, so this state should be treated cautiously.',
+  };
 }
 
 extension on MemoryEventType {

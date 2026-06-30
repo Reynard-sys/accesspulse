@@ -23,11 +23,17 @@ void main() {
         possibleBarrier: 'independent wheelchair access may be unreliable',
         missingEvidence: ['full side view of ramp'],
         confidence: 0.82,
+        confidenceLevel: ConfidenceLevel.high,
+        confidenceExplanation:
+            'The entrance evidence and contributor note strongly align.',
+        evidenceReadiness: EvidenceReadiness.institutionReady,
         summary:
             'The visible entrance suggests mobility access may require assistance.',
         recommendedAction: 'lgu_review',
+        nextBestAction: 'Submit for review.',
         explanation:
             'AI structured evidence for review but did not make an official judgment.',
+        institutionReady: true,
       ),
       imagePath: 'demo/main-entrance.jpg',
       rampSlopeMeasurement: RampSlopeMeasurement(
@@ -57,11 +63,45 @@ void main() {
     expect(find.text('LGU dashboard'), findsOneWidget);
     expect(find.text('Quezon City Hall Main Entrance'), findsOneWidget);
     expect(find.textContaining('Degraded'), findsOneWidget);
+    expect(
+      find.textContaining(
+        'Priority: Public service building; Request inspection',
+      ),
+      findsOneWidget,
+    );
 
     await tester.tap(find.text('Quezon City Hall Main Entrance'));
     await tester.pumpAndSettle();
+    final caseDetailScrollable = find
+        .descendant(
+          of: find.byKey(const ValueKey('case-detail-scroll')),
+          matching: find.byType(Scrollable),
+        )
+        .first;
 
+    expect(find.text('Why This Case Matters'), findsOneWidget);
+    expect(find.text('Why this matters'), findsOneWidget);
+    expect(find.text('Public service building'), findsOneWidget);
+    expect(find.text('Public service entrance affected'), findsOneWidget);
+    expect(find.text('Mobility access affected'), findsOneWidget);
+    expect(find.text('Assistance may be required'), findsOneWidget);
+    expect(find.text('Why now'), findsOneWidget);
+    expect(find.text('Recent evidence updated place state'), findsOneWidget);
+    expect(find.text('State just degraded'), findsOneWidget);
+    expect(find.text('AI confidence: High'), findsOneWidget);
+    expect(find.text('Suggested next action'), findsOneWidget);
+    expect(find.text('Request inspection'), findsWidgets);
+    await tester.scrollUntilVisible(
+      find.text('Evidence bundle'),
+      300,
+      scrollable: caseDetailScrollable,
+    );
     expect(find.text('Evidence bundle'), findsOneWidget);
+    expect(find.text('AI confidence'), findsOneWidget);
+    expect(find.text('Evidence readiness'), findsOneWidget);
+    expect(find.text('Institution Ready'), findsOneWidget);
+    expect(find.text('Freshness / pulse'), findsOneWidget);
+    expect(find.text('Under review'), findsWidgets);
     expect(find.text('Ramp Measurement'), findsOneWidget);
     expect(find.text('Estimated angle'), findsOneWidget);
     expect(find.text('14.8 deg'), findsOneWidget);
@@ -74,19 +114,20 @@ void main() {
       ),
       findsOneWidget,
     );
-    await tester.scrollUntilVisible(
-      find.text('Request inspection'),
-      300,
-      scrollable: find
-          .descendant(
-            of: find.byKey(const ValueKey('case-detail-scroll')),
-            matching: find.byType(Scrollable),
-          )
-          .first,
+    final requestInspectionButton = find.widgetWithText(
+      FilledButton,
+      'Request inspection',
     );
-    expect(find.text('Request inspection'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      requestInspectionButton,
+      300,
+      scrollable: caseDetailScrollable,
+    );
+    await tester.ensureVisible(requestInspectionButton);
+    await tester.pumpAndSettle();
+    expect(requestInspectionButton, findsOneWidget);
 
-    await tester.tap(find.text('Request inspection'));
+    await tester.tap(requestInspectionButton);
     await tester.pumpAndSettle();
 
     final underReviewState = await repository.getDimensionState(
