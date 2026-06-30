@@ -59,6 +59,14 @@ void main() {
         .first;
 
     expect(find.text('Optional: Measure ramp slope'), findsOneWidget);
+    expect(find.text('Demo-safe capture'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Start slope capture'),
+      300,
+      scrollable: evidenceScrollable,
+    );
+    await tester.drag(evidenceScrollable, const Offset(0, -120));
+    await tester.pump(const Duration(milliseconds: 250));
     await tester.tap(find.text('Start slope capture'));
     await tester.pump();
 
@@ -98,13 +106,20 @@ void main() {
 
     expect(find.text('AI evidence structure'), findsOneWidget);
     expect(find.text('Missing evidence'), findsOneWidget);
-
     await tester.scrollUntilVisible(
-      find.text('Submit structured signal'),
+      find.text('Review packet'),
       300,
       scrollable: evidenceScrollable,
     );
-    await tester.tap(find.text('Submit structured signal'));
+    expect(find.text('Review packet'), findsOneWidget);
+    expect(find.text('Ramp reading included'), findsOneWidget);
+
+    await tester.scrollUntilVisible(
+      find.text('Submit review packet'),
+      300,
+      scrollable: evidenceScrollable,
+    );
+    await tester.tap(find.text('Submit review packet'));
     await tester.pumpAndSettle();
 
     expect(
