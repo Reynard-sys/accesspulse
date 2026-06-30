@@ -410,6 +410,7 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
     text: 'The entrance has steps and the ramp required assistance.',
   );
   bool _demoPhotoSelected = false;
+  bool _useDemoRampFallback = true;
   bool _isCapturingRampSlope = false;
   bool _rampSlopeCaptureFailed = false;
   bool _isAnalyzing = false;
@@ -417,6 +418,8 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
   final _rampSlopeCaptureService = const RampSlopeCaptureService();
   RampSlopeMeasurement? _rampSlopeMeasurement;
   String? _rampSlopeFailureMessage;
+  String? _analysisError;
+  String? _submitError;
   AiEvidenceAssessment? _assessment;
 
   @override
@@ -440,8 +443,13 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
       _isCapturingRampSlope = true;
       _rampSlopeCaptureFailed = false;
       _rampSlopeFailureMessage = null;
+      _analysisError = null;
+      _submitError = null;
+      _assessment = null;
     });
-    final measurement = await _rampSlopeCaptureService.capture();
+    final measurement = _useDemoRampFallback
+        ? await _captureDemoRampSlope()
+        : await _rampSlopeCaptureService.capture();
     if (!mounted) {
       return;
     }
@@ -457,20 +465,42 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
     });
   }
 
-  Future<void> _analyze() async {
-    setState(() => _isAnalyzing = true);
-    final assessment = await widget.aiService.analyzeMobilityEvidence(
-      note: _noteController.text,
-      imagePath: _demoPhotoSelected ? 'demo/main-entrance.jpg' : null,
-      rampSlopeMeasurement: _rampSlopeMeasurement,
+  Future<RampSlopeMeasurement> _captureDemoRampSlope() async {
+    await Future<void>.delayed(const Duration(milliseconds: 900));
+    return RampSlopeCaptureService.fallbackMeasurement(
+      capturedAt: DateTime.now(),
     );
-    if (!mounted) {
-      return;
-    }
+  }
+
+  Future<void> _analyze() async {
     setState(() {
-      _assessment = assessment;
-      _isAnalyzing = false;
+      _isAnalyzing = true;
+      _analysisError = null;
+      _submitError = null;
     });
+    try {
+      final assessment = await widget.aiService.analyzeMobilityEvidence(
+        note: _noteController.text,
+        imagePath: _demoPhotoSelected ? 'demo/main-entrance.jpg' : null,
+        rampSlopeMeasurement: _rampSlopeMeasurement,
+      );
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _assessment = assessment;
+        _isAnalyzing = false;
+      });
+    } on Object {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _analysisError =
+            'AccessPulse could not structure this evidence. You can retry, or keep the note and measurement for manual review.';
+        _isAnalyzing = false;
+      });
+    }
   }
 
   Future<void> _submit() async {
@@ -478,32 +508,46 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
     if (assessment == null) {
       return;
     }
-    setState(() => _isSubmitting = true);
-    final result = await widget.stateService.submitStructuredEvidence(
-      placeDimensionId: widget.placeDimensionId,
-      submittedBy: _demoUserId,
-      assessment: assessment,
-      imagePath: _demoPhotoSelected ? 'demo/main-entrance.jpg' : null,
-      note: _noteController.text,
-      rampSlopeMeasurement: _rampSlopeMeasurement,
-    );
-    if (!mounted) {
-      return;
-    }
-    await Navigator.of(context).pushReplacement(
-      _accessPulseRoute<void>(
-        SubmissionResultScreen(
-          place: widget.place,
-          title: 'Evidence strengthened this place memory',
-          message:
-              'AI structured the signal for institutional review while keeping uncertainty visible.',
-          previousState: result.previousState,
-          currentState: result.currentState,
-          previousPulse: result.previousPulse,
-          currentPulse: result.currentPulse,
+    setState(() {
+      _isSubmitting = true;
+      _submitError = null;
+    });
+    try {
+      final result = await widget.stateService.submitStructuredEvidence(
+        placeDimensionId: widget.placeDimensionId,
+        submittedBy: _demoUserId,
+        assessment: assessment,
+        imagePath: _demoPhotoSelected ? 'demo/main-entrance.jpg' : null,
+        note: _noteController.text,
+        rampSlopeMeasurement: _rampSlopeMeasurement,
+      );
+      if (!mounted) {
+        return;
+      }
+      await Navigator.of(context).pushReplacement(
+        _accessPulseRoute<void>(
+          SubmissionResultScreen(
+            place: widget.place,
+            title: 'Evidence strengthened this place memory',
+            message:
+                'The report now carries the note, optional photo, measured incline, and AI summary into LGU review.',
+            previousState: result.previousState,
+            currentState: result.currentState,
+            previousPulse: result.previousPulse,
+            currentPulse: result.currentPulse,
+          ),
         ),
-      ),
-    );
+      );
+    } on Object {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _submitError =
+            'The review packet was not submitted. Please retry while the note and measurement are still on this screen.';
+        _isSubmitting = false;
+      });
+    }
   }
 
   @override
@@ -526,7 +570,7 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Add a photo or note so AI can structure the evidence for review.',
+                  'Create a review packet with the note, optional photo, ramp reading, and AI summary.',
                 ),
                 const SizedBox(height: 16),
                 Card(
@@ -551,7 +595,11 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
                               icon: const Icon(Icons.upload),
                               label: const Text('Use demo photo'),
                               onPressed: () {
-                                setState(() => _demoPhotoSelected = true);
+                                setState(() {
+                                  _demoPhotoSelected = true;
+                                  _assessment = null;
+                                  _submitError = null;
+                                });
                               },
                             ),
                           ],
@@ -565,7 +613,13 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
                             labelText: 'Evidence note',
                             alignLabelWithHint: true,
                           ),
-                          onChanged: (_) => setState(() {}),
+                          onChanged: (_) {
+                            setState(() {
+                              _assessment = null;
+                              _analysisError = null;
+                              _submitError = null;
+                            });
+                          },
                         ),
                         const SizedBox(height: 12),
                         if (_shouldOfferRampSlopeCapture) ...[
@@ -574,6 +628,20 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
                             isCapturing: _isCapturingRampSlope,
                             captureFailed: _rampSlopeCaptureFailed,
                             failureMessage: _rampSlopeFailureMessage,
+                            useDemoFallback: _useDemoRampFallback,
+                            onDemoFallbackChanged: _isCapturingRampSlope
+                                ? null
+                                : (value) {
+                                    setState(() {
+                                      _useDemoRampFallback = value;
+                                      _rampSlopeMeasurement = null;
+                                      _rampSlopeCaptureFailed = false;
+                                      _rampSlopeFailureMessage = null;
+                                      _analysisError = null;
+                                      _submitError = null;
+                                      _assessment = null;
+                                    });
+                                  },
                             onStart: _captureRampSlope,
                             onRetry: _captureRampSlope,
                           ),
@@ -589,18 +657,42 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
                                   ),
                                 )
                               : const Icon(Icons.auto_awesome),
-                          label: const Text('Analyze evidence'),
+                          label: Text(
+                            _isAnalyzing
+                                ? 'Structuring evidence...'
+                                : 'Analyze evidence',
+                          ),
                           onPressed: _isAnalyzing ? null : _analyze,
                         ),
+                        if (_analysisError != null) ...[
+                          const SizedBox(height: 12),
+                          _InlineNotice(
+                            icon: Icons.error_outline,
+                            message: _analysisError!,
+                          ),
+                        ],
                       ],
                     ),
                   ),
                 ),
                 const SizedBox(height: 16),
-                if (_assessment != null)
+                if (_assessment != null) ...[
                   _AiResultPanel(assessment: _assessment!),
+                  const SizedBox(height: 16),
+                  _ReviewPacketPanel(
+                    hasPhoto: _demoPhotoSelected,
+                    hasRampMeasurement: _rampSlopeMeasurement != null,
+                  ),
+                ],
                 if (_assessment != null) ...[
                   const SizedBox(height: 16),
+                  if (_submitError != null) ...[
+                    _InlineNotice(
+                      icon: Icons.error_outline,
+                      message: _submitError!,
+                    ),
+                    const SizedBox(height: 12),
+                  ],
                   FilledButton.icon(
                     icon: _isSubmitting
                         ? const SizedBox(
@@ -609,7 +701,11 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(Icons.fact_check_outlined),
-                    label: const Text('Submit structured signal'),
+                    label: Text(
+                      _isSubmitting
+                          ? 'Submitting review packet...'
+                          : 'Submit review packet',
+                    ),
                     onPressed: _isSubmitting ? null : _submit,
                   ),
                 ],
@@ -628,6 +724,8 @@ class _RampSlopeCapturePanel extends StatelessWidget {
     required this.isCapturing,
     required this.captureFailed,
     required this.failureMessage,
+    required this.useDemoFallback,
+    required this.onDemoFallbackChanged,
     required this.onStart,
     required this.onRetry,
   });
@@ -636,6 +734,8 @@ class _RampSlopeCapturePanel extends StatelessWidget {
   final bool isCapturing;
   final bool captureFailed;
   final String? failureMessage;
+  final bool useDemoFallback;
+  final ValueChanged<bool>? onDemoFallbackChanged;
   final VoidCallback onStart;
   final VoidCallback onRetry;
 
@@ -651,22 +751,40 @@ class _RampSlopeCapturePanel extends StatelessWidget {
       ),
       child: Padding(
         padding: const EdgeInsets.all(14),
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 200),
-          child: isCapturing
-              ? const _RampSlopeCapturingState()
-              : measurement != null
-              ? _RampSlopeSuccessState(
-                  key: ValueKey(measurement.capturedAt),
-                  measurement: measurement,
-                  onRetry: onRetry,
-                )
-              : captureFailed
-              ? _RampSlopeFailureState(
-                  message: failureMessage,
-                  onRetry: onRetry,
-                )
-              : _RampSlopeEntryState(onStart: onStart),
+        child: Column(
+          children: [
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              secondary: const Icon(Icons.science_outlined),
+              title: const Text('Demo-safe capture'),
+              subtitle: const Text(
+                'Use the seeded 14.8 deg sample for a reliable live demo.',
+              ),
+              value: useDemoFallback,
+              onChanged: onDemoFallbackChanged,
+            ),
+            const SizedBox(height: 8),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              child: isCapturing
+                  ? _RampSlopeCapturingState(useDemoFallback: useDemoFallback)
+                  : measurement != null
+                  ? _RampSlopeSuccessState(
+                      key: ValueKey(measurement.capturedAt),
+                      measurement: measurement,
+                      onRetry: onRetry,
+                    )
+                  : captureFailed
+                  ? _RampSlopeFailureState(
+                      message: failureMessage,
+                      onRetry: onRetry,
+                    )
+                  : _RampSlopeEntryState(
+                      useDemoFallback: useDemoFallback,
+                      onStart: onStart,
+                    ),
+            ),
+          ],
         ),
       ),
     );
@@ -674,8 +792,12 @@ class _RampSlopeCapturePanel extends StatelessWidget {
 }
 
 class _RampSlopeEntryState extends StatelessWidget {
-  const _RampSlopeEntryState({required this.onStart});
+  const _RampSlopeEntryState({
+    required this.useDemoFallback,
+    required this.onStart,
+  });
 
+  final bool useDemoFallback;
   final VoidCallback onStart;
 
   @override
@@ -690,11 +812,13 @@ class _RampSlopeEntryState extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         const Text(
-          'Add an estimated incline reading to strengthen this report.',
+          'Add an estimated incline reading so reviewers see the reported ramp condition with more context.',
         ),
         const SizedBox(height: 12),
-        const Text(
-          'Place your phone flat on the ramp surface and point it in the direction someone would move up or down the ramp. Hold it still for a few seconds.',
+        Text(
+          useDemoFallback
+              ? 'Demo-safe mode is on, so this capture will use a clearly labeled sample reading.'
+              : 'Place your phone flat on the ramp surface and point it in the direction someone would move up or down the ramp. Hold it still for a few seconds.',
         ),
         const SizedBox(height: 12),
         OutlinedButton.icon(
@@ -713,20 +837,24 @@ class _RampSlopeEntryState extends StatelessWidget {
 }
 
 class _RampSlopeCapturingState extends StatelessWidget {
-  const _RampSlopeCapturingState();
+  const _RampSlopeCapturingState({required this.useDemoFallback});
+
+  final bool useDemoFallback;
 
   @override
   Widget build(BuildContext context) {
-    return const Column(
-      key: ValueKey('ramp-slope-capturing'),
+    return Column(
+      key: const ValueKey('ramp-slope-capturing'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _SectionHeader(icon: Icons.speed, title: 'Capturing ramp slope'),
-        SizedBox(height: 12),
-        LinearProgressIndicator(),
-        SizedBox(height: 12),
+        const _SectionHeader(icon: Icons.speed, title: 'Capturing ramp slope'),
+        const SizedBox(height: 12),
+        const LinearProgressIndicator(),
+        const SizedBox(height: 12),
         Text(
-          'Keep the phone still while AccessPulse captures motion sensor samples.',
+          useDemoFallback
+              ? 'Loading the demo-safe measurement sample.'
+              : 'Keep the phone still while AccessPulse captures motion sensor samples.',
         ),
       ],
     );
@@ -1184,6 +1312,128 @@ class _AiResultPanel extends StatelessWidget {
               ),
             const Divider(height: 24),
             Text(assessment.explanation),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ReviewPacketPanel extends StatelessWidget {
+  const _ReviewPacketPanel({
+    required this.hasPhoto,
+    required this.hasRampMeasurement,
+  });
+
+  final bool hasPhoto;
+  final bool hasRampMeasurement;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const _SectionHeader(
+              icon: Icons.assignment_turned_in_outlined,
+              title: 'Review packet',
+            ),
+            const SizedBox(height: 12),
+            _PacketStep(
+              icon: Icons.edit_note,
+              title: 'Before review',
+              body: hasRampMeasurement
+                  ? 'Your note and measured incline are ready for the LGU queue.'
+                  : 'Your note is ready. A ramp reading can still be added before submission.',
+            ),
+            const SizedBox(height: 10),
+            _PacketStep(
+              icon: Icons.fact_check_outlined,
+              title: 'After submission',
+              body:
+                  'AccessPulse opens a review case, updates the living state, and keeps official verification separate.',
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                const Chip(label: Text('Note included')),
+                Chip(label: Text(hasPhoto ? 'Photo included' : 'No photo yet')),
+                Chip(
+                  label: Text(
+                    hasRampMeasurement
+                        ? 'Ramp reading included'
+                        : 'No ramp reading yet',
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PacketStep extends StatelessWidget {
+  const _PacketStep({
+    required this.icon,
+    required this.title,
+    required this.body,
+  });
+
+  final IconData icon;
+  final String title;
+  final String body;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 20),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: Theme.of(context).textTheme.labelLarge),
+              const SizedBox(height: 2),
+              Text(body),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _InlineNotice extends StatelessWidget {
+  const _InlineNotice({required this.icon, required this.message});
+
+  final IconData icon;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colorScheme.errorContainer.withValues(alpha: 0.35),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: colorScheme.error.withValues(alpha: 0.35)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: colorScheme.error, size: 20),
+            const SizedBox(width: 10),
+            Expanded(child: Text(message)),
           ],
         ),
       ),
