@@ -7,10 +7,15 @@ void main() {
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  const MyApp({
+    this.showOnboarding = true,
+    super.key,
+  });
+
+  final bool showOnboarding;
 
   @override
   Widget build(BuildContext context) {
-    return const AccessPulseApp();
+    return AccessPulseApp(showOnboarding: showOnboarding);
   }
 }
