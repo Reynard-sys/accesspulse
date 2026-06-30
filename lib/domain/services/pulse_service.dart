@@ -1,7 +1,88 @@
 import '../models/accesspulse_models.dart';
 
+class PlacePulseDisplay {
+  const PlacePulseDisplay({
+    required this.status,
+    required this.label,
+    required this.explanation,
+    this.verificationContext,
+  });
+
+  final PlacePulseStatus status;
+  final String label;
+  final String explanation;
+  final String? verificationContext;
+}
+
 class PulseService {
   const PulseService();
+
+  PlacePulseDisplay describePlacePulse({
+    required DimensionStateRecord state,
+    required DimensionPulseRecord pulse,
+    DateTime? now,
+  }) {
+    final referenceTime = now ?? DateTime.now();
+    final lastConfirmedAt = state.lastConfirmedAt;
+    final refreshedRecently =
+        lastConfirmedAt != null &&
+        referenceTime.difference(lastConfirmedAt).inDays <= 1;
+
+    if (state.state == DimensionStateValue.unknown) {
+      return const PlacePulseDisplay(
+        status: PlacePulseStatus.unknown,
+        label: 'Unknown',
+        explanation:
+            'We do not currently have enough recent evidence for this place.',
+      );
+    }
+
+    if (state.state == DimensionStateValue.underReview ||
+        state.source == 'ai_structured_barrier_signal') {
+      return PlacePulseDisplay(
+        status: PlacePulseStatus.underReview,
+        label: 'Under review',
+        explanation:
+            'Recent evidence may change this place\'s current Mobility Access state.',
+        verificationContext: pulse.hasRecentVerification
+            ? 'A recent human verification is part of the current record.'
+            : 'Human review is still needed before this becomes an official outcome.',
+      );
+    }
+
+    if (refreshedRecently || state.source == 'community_visit_confirmation') {
+      return PlacePulseDisplay(
+        status: PlacePulseStatus.recentlyRefreshed,
+        label: 'Recently refreshed',
+        explanation: 'Updated today based on a recent visit confirmation.',
+        verificationContext: pulse.hasRecentVerification
+            ? 'A recent human verification also supports this record.'
+            : null,
+      );
+    }
+
+    if (state.state == DimensionStateValue.claimedAccessible ||
+        pulse.level == DimensionPulseLevel.moderate ||
+        pulse.level == DimensionPulseLevel.weak) {
+      return PlacePulseDisplay(
+        status: PlacePulseStatus.reliableAging,
+        label: 'Reliable, aging',
+        explanation: 'Previously reliable, but not confirmed recently.',
+        verificationContext: pulse.hasRecentVerification
+            ? 'A recent human verification supports this record, but the visit signal is aging.'
+            : null,
+      );
+    }
+
+    return PlacePulseDisplay(
+      status: PlacePulseStatus.reliable,
+      label: 'Reliable',
+      explanation: 'Recently confirmed as independently usable.',
+      verificationContext: pulse.hasRecentVerification
+          ? 'A recent human verification supports this record.'
+          : null,
+    );
+  }
 
   DimensionPulseRecord calculate({
     required String id,

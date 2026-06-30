@@ -62,6 +62,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Evidence bundle'), findsOneWidget);
+    expect(find.text('Freshness / pulse'), findsOneWidget);
+    expect(find.text('Under review'), findsWidgets);
     expect(find.text('Ramp Measurement'), findsOneWidget);
     expect(find.text('Estimated angle'), findsOneWidget);
     expect(find.text('14.8 deg'), findsOneWidget);

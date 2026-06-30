@@ -982,6 +982,14 @@ class SubmissionResultScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final previousPulseDisplay = const PulseService().describePlacePulse(
+      state: previousState,
+      pulse: previousPulse,
+    );
+    final currentPulseDisplay = const PulseService().describePlacePulse(
+      state: currentState,
+      pulse: currentPulse,
+    );
     return Scaffold(
       appBar: AppBar(title: const Text('State update')),
       body: SafeArea(
@@ -1038,12 +1046,17 @@ class SubmissionResultScreen extends StatelessWidget {
                         ),
                         const Divider(height: 24),
                         _TransitionRow(
-                          label: 'Pulse',
-                          before: previousPulse.level.label,
-                          after: currentPulse.level.label,
+                          label: 'Pulse / freshness',
+                          before: previousPulseDisplay.label,
+                          after: currentPulseDisplay.label,
                         ),
                         const SizedBox(height: 12),
                         Text(currentState.explanation),
+                        const SizedBox(height: 8),
+                        Text(
+                          currentPulseDisplay.explanation,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
                       ],
                     ),
                   ),
@@ -1098,15 +1111,19 @@ class _PlaceListTile extends StatelessWidget {
       future: _load(),
       builder: (context, snapshot) {
         final data = snapshot.data;
+        final pulseDisplay = data == null
+            ? null
+            : const PulseService().describePlacePulse(
+                state: data.state,
+                pulse: data.pulse,
+              );
         return Card(
           child: ListTile(
             leading: const CircleAvatar(child: Icon(Icons.location_city)),
             title: Text(place.name),
             subtitle: data == null
                 ? const Text('Loading living accessibility state')
-                : Text(
-                    '${data.state.state.label} - ${data.pulse.level.label} pulse',
-                  ),
+                : Text('${data.state.state.label} - ${pulseDisplay!.label}'),
             trailing: const Icon(Icons.chevron_right),
             onTap: data == null ? null : onTap,
           ),
@@ -1195,6 +1212,10 @@ class _StateCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final pulseDisplay = const PulseService().describePlacePulse(
+      state: state,
+      pulse: pulse,
+    );
     return _FadeSlideIn(
       child: Card(
         child: Padding(
@@ -1222,12 +1243,15 @@ class _StateCard extends StatelessWidget {
                   ),
                   _StatusPill(
                     icon: Icons.monitor_heart_outlined,
-                    label: '${pulse.level.label} pulse',
-                    color: pulse.level.color,
+                    label: pulseDisplay.label,
+                    color: pulseDisplay.status.color,
                   ),
                 ],
               ),
               const SizedBox(height: 12),
+              _MetricRow(label: 'Dimension', value: 'Mobility Access'),
+              _MetricRow(label: 'Current state', value: state.state.label),
+              _MetricRow(label: 'Freshness / pulse', value: pulseDisplay.label),
               _MetricRow(
                 label: 'Confidence',
                 value: '${(state.confidence * 100).round()}%',
@@ -1240,6 +1264,15 @@ class _StateCard extends StatelessWidget {
               ),
               const Divider(height: 24),
               Text(state.explanation),
+              const SizedBox(height: 8),
+              Text(pulseDisplay.explanation),
+              if (pulseDisplay.verificationContext != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  pulseDisplay.verificationContext!,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
               const SizedBox(height: 8),
               Text(
                 pulse.explanation,
@@ -1732,20 +1765,14 @@ extension on DimensionStateValue {
   }
 }
 
-extension on DimensionPulseLevel {
-  String get label {
-    return switch (this) {
-      DimensionPulseLevel.weak => 'Weak',
-      DimensionPulseLevel.moderate => 'Moderate',
-      DimensionPulseLevel.strong => 'Strong',
-    };
-  }
-
+extension on PlacePulseStatus {
   Color get color {
     return switch (this) {
-      DimensionPulseLevel.weak => const Color(0xff7a4d00),
-      DimensionPulseLevel.moderate => const Color(0xff1765a6),
-      DimensionPulseLevel.strong => const Color(0xff17643a),
+      PlacePulseStatus.reliable => const Color(0xff17643a),
+      PlacePulseStatus.reliableAging => const Color(0xff8a6d00),
+      PlacePulseStatus.unknown => const Color(0xff52616b),
+      PlacePulseStatus.underReview => const Color(0xff1765a6),
+      PlacePulseStatus.recentlyRefreshed => const Color(0xff17643a),
     };
   }
 }
