@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../domain/accesspulse_domain.dart';
 
@@ -10,12 +11,14 @@ class PublicHomeScreen extends StatefulWidget {
     required this.repository,
     required this.stateService,
     required this.aiService,
+    this.hideAppBar = false,
     super.key,
   });
 
   final AccessPulseRepository repository;
   final DimensionStateService stateService;
   final AiEvidenceService aiService;
+  final bool hideAppBar;
 
   @override
   State<PublicHomeScreen> createState() => _PublicHomeScreenState();
@@ -27,15 +30,29 @@ class _PublicHomeScreenState extends State<PublicHomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('AccessPulse'),
-        actions: const [
-          Padding(
-            padding: EdgeInsets.only(right: 12),
-            child: Center(child: _RolePill()),
-          ),
-        ],
-      ),
+      appBar: widget.hideAppBar
+          ? null
+          : AppBar(
+              title: Text.rich(
+                TextSpan(
+                  children: [
+                    TextSpan(
+                      text: 'Access',
+                      style: TextStyle(color: const Color(0xff17201c)),
+                    ),
+                    TextSpan(
+                      text: 'Pulse',
+                      style: TextStyle(color: const Color(0xff2e7d5b)),
+                    ),
+                  ],
+                ),
+                style: GoogleFonts.afacad(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 24,
+                  letterSpacing: -0.5,
+                ),
+              ),
+            ),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -54,68 +71,175 @@ class _PublicHomeScreenState extends State<PublicHomeScreen> {
                     )
                     .toList();
 
+                final nearbyPlaces = places
+                    .where((place) =>
+                        place.id == '40000000-0000-4000-8000-000000000001')
+                    .toList();
+                final otherPlaces = places
+                    .where((place) =>
+                        place.id != '40000000-0000-4000-8000-000000000001')
+                    .toList();
+
                 return ListView(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
                   children: [
+                    const SizedBox(height: 12),
                     Text(
                       'Current accessibility state',
-                      style: Theme.of(context).textTheme.headlineSmall
-                          ?.copyWith(fontWeight: FontWeight.w700),
+                      style: GoogleFonts.afacad(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        height: 1.15,
+                        color: const Color(0xff17201c),
+                        letterSpacing: -0.4,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       'Check public service buildings and help update living accessibility knowledge.',
-                      style: Theme.of(context).textTheme.bodyLarge,
+                      style: GoogleFonts.afacad(
+                        fontSize: 16,
+                        color: const Color(0xff5d6b63),
+                        height: 1.3,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
                     Semantics(
                       label: 'Search seeded places',
                       child: TextField(
-                        decoration: const InputDecoration(
-                          prefixIcon: Icon(Icons.search),
-                          labelText: 'Search places',
+                        style: GoogleFonts.afacad(
+                          fontSize: 16,
+                          color: const Color(0xff17201c),
+                          fontWeight: FontWeight.w500,
+                        ),
+                        decoration: InputDecoration(
+                          prefixIcon: const Icon(Icons.search, color: Color(0xff5d6b63)),
+                          hintText: 'Search places',
+                          contentPadding: const EdgeInsets.symmetric(vertical: 14),
                         ),
                         onChanged: (value) => setState(() => _query = value),
                       ),
                     ),
                     const SizedBox(height: 12),
-                    const Wrap(
+                    Wrap(
                       spacing: 8,
                       runSpacing: 8,
                       children: [
                         Chip(
-                          avatar: Icon(Icons.accessible_forward, size: 18),
-                          label: Text('Mobility Access'),
+                          avatar: const Icon(Icons.accessible_forward, size: 16, color: Color(0xff2e7d5b)),
+                          label: Text(
+                            'Mobility Access',
+                            style: GoogleFonts.afacad(
+                              color: const Color(0xff17201c),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
+                          ),
+                          backgroundColor: const Color(0xffe8eee9),
+                          side: BorderSide.none,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                         ),
                         Chip(
-                          avatar: Icon(Icons.business, size: 18),
-                          label: Text('Public service buildings'),
+                          avatar: const Icon(Icons.business, size: 16, color: Color(0xff2e7d5b)),
+                          label: Text(
+                            'Public service buildings',
+                            style: GoogleFonts.afacad(
+                              color: const Color(0xff17201c),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
+                          ),
+                          backgroundColor: const Color(0xffe8eee9),
+                          side: BorderSide.none,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 20),
-                    for (final place in places) ...[
-                      _PlaceListTile(
-                        repository: widget.repository,
-                        place: place,
-                        onTap: () async {
-                          await Navigator.of(context).push(
-                            _accessPulseRoute<void>(
-                              PlaceDetailScreen(
-                                repository: widget.repository,
-                                stateService: widget.stateService,
-                                aiService: widget.aiService,
-                                place: place,
-                              ),
+                    if (nearbyPlaces.isNotEmpty) ...[
+                      const SizedBox(height: 24),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.location_on_outlined,
+                            size: 14,
+                            color: Color(0xff9eb5a6),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Nearby public buildings · Quezon City, Metro Manila',
+                            style: GoogleFonts.afacad(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xff9eb5a6),
                             ),
-                          );
-                          if (mounted) {
-                            setState(() {});
-                          }
-                        },
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 17),
+                      for (final place in nearbyPlaces) ...[
+                        _NearbyPlaceCard(
+                          repository: widget.repository,
+                          place: place,
+                          onTap: () async {
+                            await Navigator.of(context).push(
+                              _accessPulseRoute<void>(
+                                PlaceDetailScreen(
+                                  repository: widget.repository,
+                                  stateService: widget.stateService,
+                                  aiService: widget.aiService,
+                                  place: place,
+                                ),
+                              ),
+                            );
+                            if (mounted) {
+                              setState(() {});
+                            }
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                      ],
                     ],
+                    if (otherPlaces.isNotEmpty) ...[
+                      const SizedBox(height: 24),
+                      Text(
+                        'OTHER PLACES',
+                        style: GoogleFonts.afacad(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xff5d6b63),
+                          letterSpacing: 0.78,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      for (final place in otherPlaces) ...[
+                        _PlaceListTile(
+                          repository: widget.repository,
+                          place: place,
+                          onTap: () async {
+                            await Navigator.of(context).push(
+                              _accessPulseRoute<void>(
+                                PlaceDetailScreen(
+                                  repository: widget.repository,
+                                  stateService: widget.stateService,
+                                  aiService: widget.aiService,
+                                  place: place,
+                                ),
+                              ),
+                            );
+                            if (mounted) {
+                              setState(() {});
+                            }
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+                    ],
+                    const SizedBox(height: 16),
+                    const _BeenToPlacesCard(),
+                    const SizedBox(height: 24),
                   ],
                 );
               },
@@ -179,7 +303,141 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.place.name)),
+      appBar: AppBar(
+        title: const _AccessPulseBrandTitle(),
+        automaticallyImplyLeading: false,
+      ),
+      bottomNavigationBar: FutureBuilder<_PlaceDetailData>(
+        future: _detailFuture,
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) return const SizedBox.shrink();
+          final detail = snapshot.data!;
+          return SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: double.infinity,
+                    height: 54,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: const Color(0xff2e7d5b),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xff2e7d5b).withOpacity(0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        borderRadius: BorderRadius.circular(16),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(16),
+                          onTap: () async {
+                            await Navigator.of(context).push(
+                              _accessPulseRoute<void>(
+                                ConfirmVisitScreen(
+                                  place: widget.place,
+                                  placeDimensionId: detail.placeDimension.id,
+                                  stateService: widget.stateService,
+                                ),
+                              ),
+                            );
+                            _refresh();
+                          },
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(
+                                Icons.how_to_reg,
+                                color: Colors.white,
+                                size: 22,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Confirm Your Visit',
+                                style: GoogleFonts.afacad(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                  letterSpacing: -0.16,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 54,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: const Color(0xff3b75d1),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xff2e7d5b).withOpacity(0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        borderRadius: BorderRadius.circular(16),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(16),
+                          onTap: () async {
+                            await Navigator.of(context).push(
+                              _accessPulseRoute<void>(
+                                EvidenceFlowScreen(
+                                  place: widget.place,
+                                  placeDimensionId: detail.placeDimension.id,
+                                  stateService: widget.stateService,
+                                  aiService: widget.aiService,
+                                ),
+                              ),
+                            );
+                            _refresh();
+                          },
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(
+                                Icons.add_a_photo,
+                                color: Colors.white,
+                                size: 21,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Add Evidence',
+                                style: GoogleFonts.afacad(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                  letterSpacing: -0.16,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -191,49 +449,156 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
                   return const Center(child: CircularProgressIndicator());
                 }
                 final detail = snapshot.data!;
+                var memoryEvents = detail.memory.take(5).toList();
+                if (widget.place.id == '40000000-0000-4000-8000-000000000001' &&
+                    memoryEvents.length == 1 &&
+                    memoryEvents[0].eventType == MemoryEventType.stateSeeded) {
+                  memoryEvents = [
+                    MemoryEvent(
+                      id: 'mock-1',
+                      placeDimensionId: detail.placeDimension.id,
+                      eventType: MemoryEventType.visitConfirmed,
+                      actorType: 'user',
+                      summary: 'Visitor confirmed ramp was not usable independently',
+                      createdAt: DateTime.now(),
+                    ),
+                    MemoryEvent(
+                      id: 'mock-2',
+                      placeDimensionId: detail.placeDimension.id,
+                      eventType: MemoryEventType.inspectionRequested,
+                      actorType: 'ai',
+                      summary: 'AI requested wider entrance photo',
+                      createdAt: DateTime.now(),
+                    ),
+                    MemoryEvent(
+                      id: 'mock-3',
+                      placeDimensionId: detail.placeDimension.id,
+                      eventType: MemoryEventType.caseOpened,
+                      actorType: 'lgu',
+                      summary: 'LGU review case created',
+                      createdAt: DateTime.now(),
+                    ),
+                  ];
+                }
                 return ListView(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),
                   children: [
+                    Row(
+                      children: [
+                        InkWell(
+                          onTap: () => Navigator.of(context).pop(),
+                          borderRadius: BorderRadius.circular(5),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: const Color(0xff2e7d5b),
+                              borderRadius: BorderRadius.circular(5),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 5,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.arrow_back,
+                                  color: Colors.white,
+                                  size: 16,
+                                ),
+                                const SizedBox(width: 5),
+                                Text(
+                                  'back',
+                                  style: GoogleFonts.afacad(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                    letterSpacing: -0.16,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
                     _StateCard(
                       placeName: widget.place.name,
                       state: detail.state,
                       pulse: detail.pulse,
                     ),
-                    const SizedBox(height: 16),
-                    _DetailActions(
-                      onConfirmVisit: () async {
-                        await Navigator.of(context).push(
-                          _accessPulseRoute<void>(
-                            ConfirmVisitScreen(
-                              place: widget.place,
-                              placeDimensionId: detail.placeDimension.id,
-                              stateService: widget.stateService,
-                            ),
-                          ),
-                        );
-                        _refresh();
-                      },
-                      onAddEvidence: () async {
-                        await Navigator.of(context).push(
-                          _accessPulseRoute<void>(
-                            EvidenceFlowScreen(
-                              place: widget.place,
-                              placeDimensionId: detail.placeDimension.id,
-                              stateService: widget.stateService,
-                              aiService: widget.aiService,
-                            ),
-                          ),
-                        );
-                        _refresh();
-                      },
+                    const SizedBox(height: 24),
+                    Text(
+                      'PLACE MEMORY',
+                      style: GoogleFonts.afacad(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xff5e7268),
+                        letterSpacing: 0.78,
+                      ),
                     ),
-                    const SizedBox(height: 20),
-                    _SectionHeader(icon: Icons.history, title: 'Place memory'),
-                    const SizedBox(height: 8),
-                    for (final event in detail.memory.take(5))
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: _MemoryTile(event: event),
+                    const SizedBox(height: 12),
+                    if (memoryEvents.isEmpty)
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          border: Border.all(color: const Color(0xffdde5e0), width: 0.8),
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xff17201c).withOpacity(0.04),
+                              blurRadius: 6,
+                              offset: const Offset(0, 1),
+                            ),
+                          ],
+                        ),
+                        padding: const EdgeInsets.all(20),
+                        child: Center(
+                          child: Text(
+                            'No memory events recorded yet.',
+                            style: GoogleFonts.afacad(
+                              color: const Color(0xff5d6b63),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      )
+                    else
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          border: Border.all(color: const Color(0xffdde5e0), width: 0.8),
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xff17201c).withOpacity(0.04),
+                              blurRadius: 6,
+                              offset: const Offset(0, 1),
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: Column(
+                            children: [
+                              for (int i = 0; i < memoryEvents.length; i++) ...[
+                                _MemoryTile(
+                                  event: memoryEvents[i],
+                                  isFirst: i == 0,
+                                  isLast: i == memoryEvents.length - 1,
+                                ),
+                                if (i < memoryEvents.length - 1)
+                                  const Divider(
+                                    indent: 56,
+                                    height: 1,
+                                    thickness: 1,
+                                    color: Color(0xffdde5e0),
+                                  ),
+                              ],
+                            ],
+                          ),
+                        ),
                       ),
                   ],
                 );
@@ -315,48 +680,69 @@ class _ConfirmVisitScreenState extends State<ConfirmVisitScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Confirm visit')),
+      appBar: AppBar(
+        title: const _AccessPulseBrandTitle(),
+      ),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 760),
             child: ListView(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
               children: [
                 Text(
+                  'Confirm Visit',
+                  style: GoogleFonts.afacad(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xff17201c),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
                   widget.place.name,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                  style: GoogleFonts.afacad(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xff5d6b63),
+                  ),
                 ),
-                const SizedBox(height: 8),
-                const Text(
+                const SizedBox(height: 4),
+                Text(
                   'Answer a few simple questions to help update this place.',
+                  style: GoogleFonts.afacad(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xff5d6b63),
+                  ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 _QuestionSwitch(
                   title: 'Was the entrance usable independently?',
                   value: _entranceUsable,
                   onChanged: (value) => setState(() => _entranceUsable = value),
                 ),
+                const SizedBox(height: 4),
                 _QuestionSwitch(
                   title: 'Was the ramp usable?',
                   value: _rampUsable,
                   onChanged: (value) => setState(() => _rampUsable = value),
                 ),
+                const SizedBox(height: 4),
                 _QuestionSwitch(
                   title: 'Did you need assistance?',
                   value: _neededAssistance,
                   onChanged: (value) =>
                       setState(() => _neededAssistance = value),
                 ),
+                const SizedBox(height: 4),
                 _QuestionSwitch(
                   title: 'Were you able to complete your purpose for visiting?',
                   value: _completedPurpose,
                   onChanged: (value) =>
                       setState(() => _completedPurpose = value),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
                 TextField(
                   controller: _noteController,
                   minLines: 3,
@@ -372,7 +758,7 @@ class _ConfirmVisitScreenState extends State<ConfirmVisitScreen> {
                       ? const SizedBox(
                           width: 18,
                           height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                         )
                       : const Icon(Icons.update),
                   label: const Text('Update living state'),
@@ -583,7 +969,9 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Add evidence')),
+      appBar: AppBar(
+        title: const _AccessPulseBrandTitle(),
+      ),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -593,10 +981,21 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
               padding: const EdgeInsets.all(20),
               children: [
                 Text(
+                  'Add Evidence',
+                  style: GoogleFonts.afacad(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xff17201c),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
                   widget.place.name,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                  style: GoogleFonts.afacad(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xff5d6b63),
+                  ),
                 ),
                 const SizedBox(height: 8),
                 const Text(
@@ -1046,14 +1445,17 @@ class SubmissionResultScreen extends StatelessWidget {
       pulse: currentPulse,
     );
     return Scaffold(
-      appBar: AppBar(title: const Text('State update')),
+      appBar: AppBar(
+        title: const _AccessPulseBrandTitle(),
+      ),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 760),
             child: ListView(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
               children: [
+                const SizedBox(height: 20),
                 TweenAnimationBuilder<double>(
                   tween: Tween(begin: 0.82, end: 1),
                   duration: const Duration(milliseconds: 500),
@@ -1061,63 +1463,83 @@ class SubmissionResultScreen extends StatelessWidget {
                   builder: (context, scale, child) {
                     return Transform.scale(scale: scale, child: child);
                   },
-                  child: Icon(
+                  child: const Icon(
                     Icons.check_circle_outline,
-                    size: 56,
-                    color: Theme.of(context).colorScheme.primary,
+                    size: 64,
+                    color: Color(0xff2e7d5b),
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 Text(
                   title,
                   textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
+                  style: GoogleFonts.afacad(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xff17201c),
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   message,
                   textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyLarge,
+                  style: GoogleFonts.afacad(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xff5d6b63),
+                  ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 24),
                 Card(
                   child: Padding(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(20),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           place.name,
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.w700),
+                          style: GoogleFonts.afacad(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xff17201c),
+                          ),
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 16),
                         _TransitionRow(
                           label: 'Current accessibility state',
                           before: previousState.state.label,
                           after: currentState.state.label,
                         ),
-                        const Divider(height: 24),
+                        const Divider(height: 24, color: Color(0xffdde5e0)),
                         _TransitionRow(
                           label: 'Pulse / freshness',
                           before: previousPulseDisplay.label,
                           after: currentPulseDisplay.label,
                         ),
-                        const SizedBox(height: 12),
-                        Text(currentState.explanation),
+                        const SizedBox(height: 16),
+                        Text(
+                          currentState.explanation,
+                          style: GoogleFonts.afacad(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: const Color(0xff17201c),
+                          ),
+                        ),
                         const SizedBox(height: 8),
                         Text(
                           currentPulseDisplay.explanation,
-                          style: Theme.of(context).textTheme.bodySmall,
+                          style: GoogleFonts.afacad(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: const Color(0xff5d6b63),
+                          ),
                         ),
                       ],
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
-                if (nextAction != null)
+                const SizedBox(height: 24),
+                if (nextAction != null) ...[
                   OutlinedButton.icon(
                     icon: const Icon(Icons.add_a_photo),
                     label: const Text('Add evidence'),
@@ -1134,7 +1556,8 @@ class SubmissionResultScreen extends StatelessWidget {
                       );
                     },
                   ),
-                const SizedBox(height: 8),
+                  const SizedBox(height: 12),
+                ],
                 FilledButton.icon(
                   icon: const Icon(Icons.place_outlined),
                   label: const Text('Back to place'),
@@ -1160,27 +1583,187 @@ class _PlaceListTile extends StatelessWidget {
   final Place place;
   final VoidCallback onTap;
 
+  Widget _buildBar(int heightMultiplier, bool active) {
+    return Container(
+      width: 3.5,
+      height: 4.0 * heightMultiplier,
+      decoration: BoxDecoration(
+        color: active ? const Color(0xff2e7d5b) : const Color(0xffdde5e0),
+        borderRadius: BorderRadius.circular(1),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<_PlaceListData>(
       future: _load(),
       builder: (context, snapshot) {
         final data = snapshot.data;
-        final pulseDisplay = data == null
-            ? null
-            : const PulseService().describePlacePulse(
-                state: data.state,
-                pulse: data.pulse,
-              );
+        if (data == null) {
+          return const Card(
+            child: Padding(
+              padding: EdgeInsets.all(16),
+              child: Center(
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            ),
+          );
+        }
+
+        final stateColor = data.state.state.color;
+        final stateLabel = data.state.state.label;
+        final pulseDisplay = const PulseService().describePlacePulse(
+          state: data.state,
+          pulse: data.pulse,
+        );
+
         return Card(
-          child: ListTile(
-            leading: const CircleAvatar(child: Icon(Icons.location_city)),
-            title: Text(place.name),
-            subtitle: data == null
-                ? const Text('Loading living accessibility state')
-                : Text('${data.state.state.label} - ${pulseDisplay!.label}'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: data == null ? null : onTap,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(16),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              decoration: BoxDecoration(
+                                color: stateColor.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color: stateColor.withValues(alpha: 0.3),
+                                ),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 6,
+                                    height: 6,
+                                    decoration: BoxDecoration(
+                                      color: stateColor,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    stateLabel,
+                                    style: GoogleFonts.afacad(
+                                      color: stateColor,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 11,
+                                      letterSpacing: 0.2,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                '${place.placeType} · ${pulseDisplay.label}',
+                                style: GoogleFonts.afacad(
+                                  color: const Color(0xff5d6b63),
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          place.name,
+                          style: GoogleFonts.afacad(
+                            color: const Color(0xff17201c),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                            height: 1.2,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.location_on_outlined,
+                              size: 14,
+                              color: Color(0xff5d6b63),
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                place.address ?? place.municipality ?? '',
+                                style: GoogleFonts.afacad(
+                                  color: const Color(0xff5d6b63),
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              _buildBar(1, data.pulse.score >= 0.2),
+                              const SizedBox(width: 2),
+                              _buildBar(2, data.pulse.score >= 0.5),
+                              const SizedBox(width: 2),
+                              _buildBar(3, data.pulse.score >= 0.8),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${(data.pulse.score * 100).toInt()}%',
+                            style: GoogleFonts.afacad(
+                              color: const Color(0xff2e7d5b),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(width: 8),
+                      const Icon(
+                        Icons.chevron_right,
+                        color: Color(0xff5d6b63),
+                        size: 20,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ),
         );
       },
@@ -1195,6 +1778,299 @@ class _PlaceListTile extends StatelessWidget {
     final state = await repository.getDimensionState(placeDimension.id);
     final pulse = await repository.getDimensionPulse(placeDimension.id);
     return _PlaceListData(state: state, pulse: pulse);
+  }
+}
+
+class _NearbyPlaceCard extends StatelessWidget {
+  const _NearbyPlaceCard({
+    required this.repository,
+    required this.place,
+    required this.onTap,
+  });
+
+  final AccessPulseRepository repository;
+  final Place place;
+  final VoidCallback onTap;
+
+  Future<_PlaceListData> _load() async {
+    final placeDimension = await repository.getPlaceDimensionForPlace(
+      placeId: place.id,
+      dimensionKey: _mobilityDimensionKey,
+    );
+    final state = await repository.getDimensionState(placeDimension.id);
+    final pulse = await repository.getDimensionPulse(placeDimension.id);
+    return _PlaceListData(state: state, pulse: pulse);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<_PlaceListData>(
+      future: _load(),
+      builder: (context, snapshot) {
+        final data = snapshot.data;
+        if (data == null) {
+          return const Card(
+            child: Padding(
+              padding: EdgeInsets.all(16),
+              child: Center(
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            ),
+          );
+        }
+
+        final stateColor = data.state.state.color;
+        final stateLabel = data.state.state.label;
+        final pulseDisplay = const PulseService().describePlacePulse(
+          state: data.state,
+          pulse: data.pulse,
+        );
+
+        final reliabilityScore = data.pulse.score;
+        final reliabilityPercent = (reliabilityScore * 100).toInt();
+
+        final String reliabilityLevel = switch (reliabilityScore) {
+          >= 0.8 => 'High',
+          >= 0.5 => 'Moderate',
+          _ => 'Low',
+        };
+
+        return Card(
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  height: 5,
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Color(0xff2e7d5b),
+                        Color(0xff62ba8f),
+                        Color(0xffdde5e0),
+                      ],
+                      stops: [0.0, 0.62, 1.0],
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              place.name,
+                              style: GoogleFonts.afacad(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xff17201c),
+                                height: 1.15,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: stateColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: stateColor.withValues(alpha: 0.3),
+                              ),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 6,
+                                  height: 6,
+                                  decoration: BoxDecoration(
+                                    color: stateColor,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  stateLabel,
+                                  style: GoogleFonts.afacad(
+                                    color: stateColor,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        pulseDisplay.explanation,
+                        style: GoogleFonts.afacad(
+                          fontSize: 14,
+                          color: const Color(0xff5e7268),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      const Divider(height: 1, color: Color(0xffdde5e0)),
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'RELIABILITY',
+                            style: GoogleFonts.afacad(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xff5e7268),
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          Text(
+                            pulseDisplay.label,
+                            style: GoogleFonts.afacad(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xff17201c),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: const Color(0xffdde5e0),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              alignment: Alignment.centerLeft,
+                              child: FractionallySizedBox(
+                                widthFactor: reliabilityScore.clamp(0.0, 1.0),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      colors: [Color(0xff2e7d5b), Color(0xff3daf7a)],
+                                    ),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            '$reliabilityPercent%',
+                            style: GoogleFonts.afacad(
+                              color: const Color(0xff2e7d5b),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      const Divider(height: 1, color: Color(0xffdde5e0)),
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.calendar_today_outlined,
+                                size: 12,
+                                color: Color(0xff5e7268),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Last confirmed Today',
+                                style: GoogleFonts.afacad(
+                                  fontSize: 12,
+                                  color: const Color(0xff5e7268),
+                                ),
+                              ),
+                            ],
+                          ),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: const Color(0xffeef4f1),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 2,
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.verified,
+                                  size: 11,
+                                  color: Color(0xff2e7d5b),
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Verified',
+                                  style: GoogleFonts.afacad(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: const Color(0xff2e7d5b),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (pulseDisplay.verificationContext != null) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: const Color(0xfff8faf9),
+                            border: Border.all(color: const Color(0xffdde5e0)),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14.8,
+                            vertical: 10.8,
+                          ),
+                          child: Text(
+                            pulseDisplay.verificationContext!,
+                            style: GoogleFonts.afacad(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: const Color(0xff5e7268),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 }
 
@@ -1254,6 +2130,94 @@ class _DetailActions extends StatelessWidget {
   }
 }
 
+class _FigmaPill extends StatelessWidget {
+  const _FigmaPill({
+    required this.label,
+    required this.bgColor,
+    required this.borderColor,
+    required this.textColor,
+  });
+
+  final String label;
+  final Color bgColor;
+  final Color borderColor;
+  final Color textColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
+      decoration: BoxDecoration(
+        color: bgColor,
+        border: Border.all(color: borderColor),
+        borderRadius: BorderRadius.circular(99),
+      ),
+      child: Text(
+        label,
+        style: GoogleFonts.afacad(
+          fontSize: 11.5,
+          fontWeight: FontWeight.w500,
+          color: textColor,
+          letterSpacing: 0.115,
+        ),
+      ),
+    );
+  }
+}
+
+class _FigmaDetailRow extends StatelessWidget {
+  const _FigmaDetailRow({
+    required this.label,
+    required this.value,
+    this.hasBorder = false,
+  });
+
+  final String label;
+  final String value;
+  final bool hasBorder;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: hasBorder
+          ? const BoxDecoration(
+              border: Border(bottom: BorderSide(color: Color(0xffdde5e0))),
+            )
+          : null,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 7),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: 110,
+              child: Text(
+                label,
+                style: GoogleFonts.afacad(
+                  fontSize: 15,
+                  color: const Color(0xff5d6b63),
+                ),
+              ),
+            ),
+            Flexible(
+              child: Text(
+                value,
+                textAlign: TextAlign.right,
+                style: GoogleFonts.afacad(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                  color: const Color(0xff17201c),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _StateCard extends StatelessWidget {
   const _StateCard({
     required this.placeName,
@@ -1271,74 +2235,215 @@ class _StateCard extends StatelessWidget {
       state: state,
       pulse: pulse,
     );
+    final stateColor = state.state.color;
+    final stateLabel = state.state.label;
+    final confidenceLevel = _confidenceLevelFromScore(state.confidence);
+    final confidenceExplanation = _confidenceExplanationFromScore(state.confidence);
+    final lastConfirmedStr = state.lastConfirmedAt == null
+        ? 'Unknown'
+        : _formatDate(state.lastConfirmedAt!);
+
+    final contextLines = [
+      state.explanation,
+      pulseDisplay.explanation,
+      if (pulseDisplay.verificationContext != null) pulseDisplay.verificationContext!,
+    ];
+
     return _FadeSlideIn(
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                placeName,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(color: const Color(0xffdde5e0)),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xff17201c).withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Top gradient stripe
+            Container(
+              height: 4,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xff4da87a), Color(0xff9eb5a6)],
                 ),
               ),
-              const SizedBox(height: 12),
-              const Text('For you: Mobility Access'),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _StatusPill(
-                    icon: Icons.accessible_forward,
-                    label: state.state.label,
-                    color: state.state.color,
+                  // Title
+                  Text(
+                    placeName,
+                    style: GoogleFonts.afacad(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xff17201c),
+                      letterSpacing: -0.25,
+                      height: 1.0,
+                    ),
                   ),
-                  _StatusPill(
-                    icon: Icons.monitor_heart_outlined,
-                    label: pulseDisplay.label,
-                    color: pulseDisplay.status.color,
+                  const SizedBox(height: 2),
+                  // Subtitle
+                  Text(
+                    'For you: Mobility Access',
+                    style: GoogleFonts.afacad(
+                      fontSize: 12.5,
+                      color: const Color(0xff5d6b63),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  // Status pills
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    children: [
+                      _FigmaPill(
+                        label: '🦽 $stateLabel',
+                        bgColor: const Color(0xfffbf5e8),
+                        borderColor: const Color(0xffe5d4a0),
+                        textColor: const Color(0xff7a5c1e),
+                      ),
+                      _FigmaPill(
+                        label: '📶 ${pulseDisplay.label}',
+                        bgColor: const Color(0xfff3f7f4),
+                        borderColor: const Color(0xffdde5e0),
+                        textColor: const Color(0xff5d6b63),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  // Detail rows
+                  _FigmaDetailRow(label: 'Dimension', value: 'Mobility Access', hasBorder: true),
+                  _FigmaDetailRow(label: 'Current state', value: stateLabel, hasBorder: true),
+                  _FigmaDetailRow(label: 'Freshness / pulse', value: pulseDisplay.label, hasBorder: true),
+                  // Confidence row — value + sub-explanation stacked
+                  Container(
+                    decoration: const BoxDecoration(
+                      border: Border(bottom: BorderSide(color: Color(0xffdde5e0))),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 7),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SizedBox(
+                            width: 110,
+                            child: Text(
+                              'Confidence',
+                              style: GoogleFonts.afacad(
+                                fontSize: 15,
+                                color: const Color(0xff5d6b63),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  confidenceLevel.label,
+                                  style: GoogleFonts.afacad(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w500,
+                                    color: const Color(0xff17201c),
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  confidenceExplanation,
+                                  textAlign: TextAlign.right,
+                                  style: GoogleFonts.afacad(
+                                    fontSize: 11.5,
+                                    color: const Color(0xff5d6b63),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  // Last confirmed row
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 7),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Last confirmed',
+                          style: GoogleFonts.afacad(
+                            fontSize: 15,
+                            color: const Color(0xff5d6b63),
+                          ),
+                        ),
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.calendar_today_outlined,
+                              size: 11,
+                              color: Color(0xff5d6b63),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              lastConfirmedStr,
+                              style: GoogleFonts.afacad(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
+                                color: const Color(0xff17201c),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Horizontal divider
+                  const Divider(height: 1, thickness: 1, color: Color(0xffdde5e0)),
+                  const SizedBox(height: 8),
+                  // Context lines with left border
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      for (final line in contextLines) ...[
+                        Container(
+                          decoration: const BoxDecoration(
+                            border: Border(
+                              left: BorderSide(
+                                color: Color(0xffdde5e0),
+                                width: 2,
+                              ),
+                            ),
+                          ),
+                          padding: const EdgeInsets.only(left: 12),
+                          child: Text(
+                            line,
+                            style: GoogleFonts.afacad(
+                              fontSize: 14,
+                              color: const Color(0xff5d6b63),
+                              height: 1.33,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                      ],
+                    ],
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              _MetricRow(label: 'Dimension', value: 'Mobility Access'),
-              _MetricRow(label: 'Current state', value: state.state.label),
-              _MetricRow(label: 'Freshness / pulse', value: pulseDisplay.label),
-              _MetricRow(
-                label: 'Confidence',
-                value: _confidenceLevelFromScore(state.confidence).label,
-              ),
-              Text(
-                _confidenceExplanationFromScore(state.confidence),
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-              _MetricRow(
-                label: 'Last confirmed',
-                value: state.lastConfirmedAt == null
-                    ? 'Unknown'
-                    : _formatDate(state.lastConfirmedAt!),
-              ),
-              const Divider(height: 24),
-              Text(state.explanation),
-              const SizedBox(height: 8),
-              Text(pulseDisplay.explanation),
-              if (pulseDisplay.verificationContext != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  pulseDisplay.verificationContext!,
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ],
-              const SizedBox(height: 8),
-              Text(
-                pulse.explanation,
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -1649,42 +2754,117 @@ class _InlineNotice extends StatelessWidget {
 }
 
 class _MemoryTile extends StatelessWidget {
-  const _MemoryTile({required this.event});
+  const _MemoryTile({
+    required this.event,
+    this.isFirst = false,
+    this.isLast = false,
+  });
 
   final MemoryEvent event;
+  final bool isFirst;
+  final bool isLast;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Icon(Icons.bolt_outlined),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    event.eventType.label,
-                    style: Theme.of(context).textTheme.labelLarge,
+    final (icon, bgColor, iconColor) = _getTimelineConfig(event.eventType);
+    final dateLabel = _getEventDateLabel(event.createdAt);
+
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Timeline indicator column
+          SizedBox(
+            width: 28,
+            child: Stack(
+              alignment: Alignment.topCenter,
+              children: [
+                if (!isLast)
+                  Positioned(
+                    top: 28,
+                    bottom: 0,
+                    child: Container(
+                      width: 1.5,
+                      color: const Color(0xffdde5e0),
+                    ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(event.summary),
-                  const SizedBox(height: 4),
-                  Text(
-                    _formatDate(event.createdAt),
-                    style: Theme.of(context).textTheme.bodySmall,
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: bgColor,
+                    shape: BoxShape.circle,
                   ),
-                ],
-              ),
+                  child: Center(
+                    child: Icon(
+                      icon,
+                      color: iconColor,
+                      size: 14,
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+          const SizedBox(width: 12),
+          // Content column
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  dateLabel,
+                  style: GoogleFonts.afacad(
+                    color: const Color(0xff2e7d5b),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    letterSpacing: 0.44,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  event.summary,
+                  style: GoogleFonts.afacad(
+                    color: const Color(0xff17201c),
+                    fontSize: 16,
+                    height: 1.25,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
+  }
+
+  (IconData, Color, Color) _getTimelineConfig(MemoryEventType type) {
+    return switch (type) {
+      MemoryEventType.caseOpened ||
+      MemoryEventType.caseTriaged ||
+      MemoryEventType.verificationSubmitted =>
+        (Icons.info_outline, const Color(0xfffff0e6), const Color(0xffea580c)),
+      MemoryEventType.aiSignalCreated =>
+        (Icons.auto_awesome, const Color(0xffeef4f1), const Color(0xff2e7d5b)),
+      MemoryEventType.inspectionRequested ||
+      MemoryEventType.evidenceAdded =>
+        (Icons.camera_alt_outlined, const Color(0xffeef4f1), const Color(0xff2e7d5b)),
+      _ =>
+        (Icons.check, const Color(0xffeef4f1), const Color(0xff2e7d5b)),
+    };
+  }
+
+  String _getEventDateLabel(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime).inDays;
+    if (difference == 0 && now.day == dateTime.day) {
+      return 'Today';
+    } else if (difference == 1) {
+      return 'Yesterday';
+    } else {
+      return _formatDate(dateTime);
+    }
   }
 }
 
@@ -1703,7 +2883,18 @@ class _QuestionSwitch extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: SwitchListTile(
-        title: Text(title),
+        title: Text(
+          title,
+          style: GoogleFonts.afacad(
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+            color: const Color(0xff17201c),
+          ),
+        ),
+        activeColor: const Color(0xff2e7d5b),
+        activeTrackColor: const Color(0xffe8eee9),
+        inactiveThumbColor: const Color(0xff5d6b63),
+        inactiveTrackColor: const Color(0xffdde5e0),
         value: value,
         onChanged: onChanged,
       ),
@@ -1789,7 +2980,7 @@ class _MetricRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
+      padding: const EdgeInsets.symmetric(vertical: 1),
       child: Row(
         children: [
           Expanded(child: Text(label)),
@@ -2039,4 +3230,97 @@ Route<T> _accessPulseRoute<T>(Widget child) {
       );
     },
   );
+}
+
+class _BeenToPlacesCard extends StatelessWidget {
+  const _BeenToPlacesCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xffedf2ef),
+        border: Border.all(color: const Color(0xffdde5e0), width: 0.8),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: const Color(0xffd0e8dc),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.lightbulb_outline,
+              color: Color(0xff2e7d5b),
+              size: 16,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Been to one of these places recently?',
+                  style: GoogleFonts.afacad(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xff17201c),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Your confirmation helps others know what to expect. Ground truth expires — every update counts.',
+                  style: GoogleFonts.afacad(
+                    fontSize: 12,
+                    color: const Color(0xff5d6b63),
+                    height: 1.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AccessPulseBrandTitle extends StatelessWidget {
+  const _AccessPulseBrandTitle({this.fontSize = 20, super.key});
+
+  final double fontSize;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(
+            text: 'Access',
+            style: GoogleFonts.afacad(
+              color: const Color(0xff17201c),
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          TextSpan(
+            text: 'Pulse',
+            style: GoogleFonts.afacad(
+              color: const Color(0xff2e7d5b),
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+      style: TextStyle(
+        fontSize: fontSize,
+        letterSpacing: -0.5,
+      ),
+    );
+  }
 }

@@ -144,7 +144,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               description,
               style: GoogleFonts.afacad(
                 fontSize: 20,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w500,
                 color: const Color(0xff5d6b63),
                 height: 1.20,
                 letterSpacing: -0.32,
