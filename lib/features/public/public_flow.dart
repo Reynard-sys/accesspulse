@@ -1311,6 +1311,10 @@ class _StateCard extends StatelessWidget {
                 label: 'Confidence',
                 value: _confidenceLevelFromScore(state.confidence).label,
               ),
+              Text(
+                _confidenceExplanationFromScore(state.confidence),
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
               _MetricRow(
                 label: 'Last confirmed',
                 value: state.lastConfirmedAt == null
@@ -1462,6 +1466,8 @@ class _AiGuidanceCard extends StatelessWidget {
               label: 'Evidence readiness',
               value: assessment.evidenceReadiness.label,
             ),
+            const SizedBox(height: 8),
+            Text(assessment.confidenceExplanation),
             const Divider(height: 24),
             Text(
               'Recommended next step',
@@ -1535,6 +1541,13 @@ class _ReviewPacketPanel extends StatelessWidget {
               title: 'After submission',
               body:
                   'AccessPulse opens a review case, updates the living state, and keeps official verification separate.',
+            ),
+            const SizedBox(height: 10),
+            _PacketStep(
+              icon: Icons.psychology_alt_outlined,
+              title: 'Confidence',
+              body:
+                  '${assessment.confidenceLevel.label}: ${assessment.confidenceExplanation}',
             ),
             const SizedBox(height: 10),
             _PacketStep(
@@ -1966,6 +1979,17 @@ ConfidenceLevel _confidenceLevelFromScore(double confidence) {
     return ConfidenceLevel.moderate;
   }
   return ConfidenceLevel.low;
+}
+
+String _confidenceExplanationFromScore(double confidence) {
+  return switch (_confidenceLevelFromScore(confidence)) {
+    ConfidenceLevel.high =>
+      'Recent evidence strongly supports the current Mobility Access state.',
+    ConfidenceLevel.moderate =>
+      'The current state is supported, but some context should still be refreshed.',
+    ConfidenceLevel.low =>
+      'Current evidence is limited, so this state should be treated cautiously.',
+  };
 }
 
 extension on MemoryEventType {
