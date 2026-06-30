@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../domain/accesspulse_domain.dart';
 
@@ -12,12 +13,14 @@ class InstitutionDashboardScreen extends StatefulWidget {
     required this.repository,
     required this.stateService,
     required this.role,
+    this.hideAppBar = false,
     super.key,
   });
 
   final AccessPulseRepository repository;
   final DimensionStateService stateService;
   final InstitutionRole role;
+  final bool hideAppBar;
 
   @override
   State<InstitutionDashboardScreen> createState() =>
@@ -83,19 +86,21 @@ class _InstitutionDashboardScreenState
   Widget build(BuildContext context) {
     final isInspector = widget.role == InstitutionRole.inspector;
     return Scaffold(
-      appBar: AppBar(
-        title: Text(isInspector ? 'Inspector verification' : 'LGU dashboard'),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: Center(
-              child: _RolePill(
-                label: isInspector ? 'Inspector' : 'LGU reviewer',
-              ),
+      appBar: widget.hideAppBar
+          ? null
+          : AppBar(
+              title: Text(isInspector ? 'Inspector verification' : 'LGU dashboard'),
+              actions: [
+                Padding(
+                  padding: const EdgeInsets.only(right: 12),
+                  child: Center(
+                    child: _RolePill(
+                      label: isInspector ? 'Inspector' : 'LGU reviewer',
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ),
-        ],
-      ),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -278,7 +283,9 @@ class _CaseDetailScreenState extends State<_CaseDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.summary.place.name)),
+      appBar: AppBar(
+        title: const _AccessPulseBrandTitle(),
+      ),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -414,7 +421,9 @@ class _InspectorVerificationScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Inspector verification')),
+      appBar: AppBar(
+        title: const _AccessPulseBrandTitle(),
+      ),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -423,12 +432,23 @@ class _InspectorVerificationScreenState
               padding: const EdgeInsets.all(20),
               children: [
                 Text(
-                  widget.place.name,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
+                  'Inspector Verification',
+                  style: GoogleFonts.afacad(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xff17201c),
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 2),
+                Text(
+                  widget.place.name,
+                  style: GoogleFonts.afacad(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xff5d6b63),
+                  ),
+                ),
+                const SizedBox(height: 12),
                 const Text(
                   'Human verification is authoritative. AI evidence remains supporting context.',
                 ),
@@ -590,6 +610,18 @@ class _CaseQueueTile extends StatelessWidget {
   final _CaseSummary summary;
   final VoidCallback onTap;
 
+  Color _statusColor(CaseStatus status) {
+    return switch (status) {
+      CaseStatus.open => const Color(0xff52616b),
+      CaseStatus.triaging => const Color(0xff1765a6),
+      CaseStatus.inspectionRequested => const Color(0xff8a6d00),
+      CaseStatus.verified => const Color(0xff17643a),
+      CaseStatus.disputed => const Color(0xffb6461a),
+      CaseStatus.resolved => const Color(0xff17643a),
+      CaseStatus.closed => const Color(0xff52616b),
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     final pulseDisplay = const PulseService().describePlacePulse(
@@ -602,16 +634,116 @@ class _CaseQueueTile extends StatelessWidget {
       state: summary.state,
       pulse: summary.pulse,
     );
+    final statusColor = _statusColor(summary.accessCase.status);
+
     return Card(
-      child: ListTile(
-        leading: CircleAvatar(child: Icon(summary.accessCase.status.icon)),
-        title: Text(summary.place.name),
-        subtitle: Text(
-          '${summary.state.state.label} - ${pulseDisplay.label} - ${summary.accessCase.status.label}\n${priority.queueSummary}',
-        ),
-        isThreeLine: true,
-        trailing: const Icon(Icons.chevron_right),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
         onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Severity/Status Left border strip
+              Container(
+                width: 6,
+                color: statusColor,
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: statusColor.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(
+                                      color: statusColor.withValues(alpha: 0.3),
+                                    ),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  child: Text(
+                                    summary.accessCase.status.label.toUpperCase(),
+                                    style: GoogleFonts.afacad(
+                                      color: statusColor,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 11,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    summary.place.placeType,
+                                    style: GoogleFonts.afacad(
+                                      color: const Color(0xff5d6b63),
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              summary.place.name,
+                              style: GoogleFonts.afacad(
+                                color: const Color(0xff17201c),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                                height: 1.2,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              '${summary.state.state.label} · ${pulseDisplay.label}',
+                              style: GoogleFonts.afacad(
+                                color: const Color(0xff5d6b63),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              priority.queueSummary,
+                              style: GoogleFonts.afacad(
+                                color: const Color(0xff17201c),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      const Icon(
+                        Icons.chevron_right,
+                        color: Color(0xff5d6b63),
+                        size: 20,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -1487,5 +1619,39 @@ extension on MemoryEventType {
       MemoryEventType.caseClosed => 'Case closed',
       MemoryEventType.remediationVerified => 'Remediation verified',
     };
+  }
+}
+
+class _AccessPulseBrandTitle extends StatelessWidget {
+  const _AccessPulseBrandTitle({this.fontSize = 20, super.key});
+
+  final double fontSize;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(
+            text: 'Access',
+            style: GoogleFonts.afacad(
+              color: const Color(0xff17201c),
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          TextSpan(
+            text: 'Pulse',
+            style: GoogleFonts.afacad(
+              color: const Color(0xff2e7d5b),
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+      style: TextStyle(
+        fontSize: fontSize,
+        letterSpacing: -0.5,
+      ),
+    );
   }
 }

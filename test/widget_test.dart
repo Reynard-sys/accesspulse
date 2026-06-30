@@ -23,13 +23,13 @@ void main() {
     expect(find.text('Reliable, aging'), findsWidgets);
     final placeDetailScrollable = find.byType(Scrollable).first;
     await tester.scrollUntilVisible(
-      find.text('Place memory'),
+      find.text('PLACE MEMORY'),
       300,
       scrollable: placeDetailScrollable,
     );
-    expect(find.text('Place memory'), findsOneWidget);
-    expect(find.text('I visited this place'), findsOneWidget);
-    expect(find.text('Add evidence'), findsOneWidget);
+    expect(find.text('PLACE MEMORY'), findsOneWidget);
+    expect(find.text('Confirm Your Visit'), findsOneWidget);
+    expect(find.text('Add Evidence'), findsOneWidget);
   });
 
   testWidgets('confirm visit visibly updates a place state', (
@@ -40,7 +40,7 @@ void main() {
 
     await tester.tap(find.text('Quezon City Hall Main Entrance'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('I visited this place'));
+    await tester.tap(find.text('Confirm Your Visit'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Update living state'));
     await tester.pumpAndSettle();
@@ -59,7 +59,7 @@ void main() {
 
     await tester.tap(find.text('Quezon City Hall Main Entrance'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Add evidence'));
+    await tester.tap(find.text('Add Evidence'));
     await tester.pumpAndSettle();
     final evidenceScrollable = find
         .descendant(
@@ -170,12 +170,12 @@ void main() {
   testWidgets('AI guidance card re-evaluates after adding another photo', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const MyApp());
+    await tester.pumpWidget(const MyApp(showOnboarding: false));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Quezon City Hall Main Entrance'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Add evidence'));
+    await tester.tap(find.text('Add Evidence'));
     await tester.pumpAndSettle();
     final evidenceScrollable = find
         .descendant(
