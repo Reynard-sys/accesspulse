@@ -6,7 +6,7 @@ void main() {
   testWidgets('public flow shows seeded living accessibility states', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const MyApp());
+    await tester.pumpWidget(const MyApp(showOnboarding: false));
     await tester.pumpAndSettle();
 
     expect(find.text('AccessPulse'), findsOneWidget);
@@ -35,7 +35,7 @@ void main() {
   testWidgets('confirm visit visibly updates a place state', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const MyApp());
+    await tester.pumpWidget(const MyApp(showOnboarding: false));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Quezon City Hall Main Entrance'));
@@ -54,7 +54,7 @@ void main() {
   testWidgets('evidence flow shows AI structure and submits a signal', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const MyApp());
+    await tester.pumpWidget(const MyApp(showOnboarding: false));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Quezon City Hall Main Entrance'));
