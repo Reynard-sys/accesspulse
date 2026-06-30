@@ -462,6 +462,7 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
     final assessment = await widget.aiService.analyzeMobilityEvidence(
       note: _noteController.text,
       imagePath: _demoPhotoSelected ? 'demo/main-entrance.jpg' : null,
+      rampSlopeMeasurement: _rampSlopeMeasurement,
     );
     if (!mounted) {
       return;
