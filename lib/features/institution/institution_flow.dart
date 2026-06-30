@@ -302,6 +302,17 @@ class _CaseDetailScreenState extends State<_CaseDetailScreen> {
                       pulse: detail.pulse,
                     ),
                     const SizedBox(height: 16),
+                    _PriorityExplanationPanel(
+                      explanation: _PriorityExplanation.fromCase(
+                        place: widget.summary.place,
+                        accessCase: detail.accessCase,
+                        state: detail.state,
+                        pulse: detail.pulse,
+                        signal: detail.signal,
+                        evidence: detail.evidence,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                     if (detail.signal != null)
                       _SignalPanel(
                         signal: detail.signal!,
@@ -484,6 +495,14 @@ class _VerificationResultScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final previousPulseDisplay = const PulseService().describePlacePulse(
+      state: result.previousState,
+      pulse: result.previousPulse,
+    );
+    final currentPulseDisplay = const PulseService().describePlacePulse(
+      state: result.currentState,
+      pulse: result.currentPulse,
+    );
     return Scaffold(
       appBar: AppBar(title: const Text('Verification update')),
       body: SafeArea(
@@ -535,12 +554,17 @@ class _VerificationResultScreen extends StatelessWidget {
                         ),
                         const Divider(height: 24),
                         _TransitionRow(
-                          label: 'Pulse',
-                          before: result.previousPulse.level.label,
-                          after: result.currentPulse.level.label,
+                          label: 'Pulse / freshness',
+                          before: previousPulseDisplay.label,
+                          after: currentPulseDisplay.label,
                         ),
                         const SizedBox(height: 12),
                         Text(result.currentState.explanation),
+                        const SizedBox(height: 8),
+                        Text(
+                          currentPulseDisplay.explanation,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
                       ],
                     ),
                   ),
@@ -568,15 +592,67 @@ class _CaseQueueTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final pulseDisplay = const PulseService().describePlacePulse(
+      state: summary.state,
+      pulse: summary.pulse,
+    );
+    final priority = _PriorityExplanation.fromCase(
+      place: summary.place,
+      accessCase: summary.accessCase,
+      state: summary.state,
+      pulse: summary.pulse,
+    );
     return Card(
       child: ListTile(
         leading: CircleAvatar(child: Icon(summary.accessCase.status.icon)),
         title: Text(summary.place.name),
         subtitle: Text(
-          '${summary.state.state.label} - ${summary.pulse.level.label} pulse - ${summary.accessCase.status.label}',
+          '${summary.state.state.label} - ${pulseDisplay.label} - ${summary.accessCase.status.label}\n${priority.queueSummary}',
         ),
+        isThreeLine: true,
         trailing: const Icon(Icons.chevron_right),
         onTap: onTap,
+      ),
+    );
+  }
+}
+
+class _PriorityExplanationPanel extends StatelessWidget {
+  const _PriorityExplanationPanel({required this.explanation});
+
+  final _PriorityExplanation explanation;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const _SectionHeader(
+              icon: Icons.priority_high,
+              title: 'Why This Case Matters',
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Why this matters',
+              style: Theme.of(context).textTheme.labelLarge,
+            ),
+            const SizedBox(height: 6),
+            for (final reason in explanation.whyThisMatters)
+              _ReasonRow(text: reason),
+            const SizedBox(height: 12),
+            Text('Why now', style: Theme.of(context).textTheme.labelLarge),
+            const SizedBox(height: 6),
+            for (final reason in explanation.whyNow) _ReasonRow(text: reason),
+            const Divider(height: 24),
+            _MetricRow(
+              label: 'Suggested next action',
+              value: explanation.suggestedNextAction,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -597,6 +673,10 @@ class _InstitutionStateCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final pulseDisplay = const PulseService().describePlacePulse(
+      state: state,
+      pulse: pulse,
+    );
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -623,8 +703,8 @@ class _InstitutionStateCard extends StatelessWidget {
                 ),
                 _StatusPill(
                   icon: Icons.monitor_heart_outlined,
-                  label: '${pulse.level.label} pulse',
-                  color: pulse.level.color,
+                  label: pulseDisplay.label,
+                  color: pulseDisplay.status.color,
                 ),
                 _StatusPill(
                   icon: accessCase.status.icon,
@@ -634,15 +714,29 @@ class _InstitutionStateCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
+            _MetricRow(label: 'Freshness / pulse', value: pulseDisplay.label),
             _MetricRow(
               label: 'Case confidence',
-              value: '${(accessCase.confidence * 100).round()}%',
+              value: _confidenceLevelFromScore(accessCase.confidence).label,
             ),
             _MetricRow(label: 'Severity', value: accessCase.severity.label),
             _MetricRow(
               label: 'Current state confidence',
-              value: '${(state.confidence * 100).round()}%',
+              value: _confidenceLevelFromScore(state.confidence).label,
             ),
+            Text(
+              _confidenceExplanationFromScore(accessCase.confidence),
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const Divider(height: 24),
+            Text(pulseDisplay.explanation),
+            if (pulseDisplay.verificationContext != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                pulseDisplay.verificationContext!,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
           ],
         ),
       ),
@@ -663,6 +757,9 @@ class _SignalPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final confidenceLevel = _signalConfidenceLevel(signal);
+    final confidenceExplanation = _signalConfidenceExplanation(signal);
+    final readiness = _signalEvidenceReadiness(signal);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -678,10 +775,8 @@ class _SignalPanel extends StatelessWidget {
               label: 'Issue type',
               value: signal.issueType.replaceAll('_', ' '),
             ),
-            _MetricRow(
-              label: 'AI confidence',
-              value: '${(signal.confidence * 100).round()}%',
-            ),
+            _MetricRow(label: 'AI confidence', value: confidenceLevel.label),
+            _MetricRow(label: 'Evidence readiness', value: readiness.label),
             _MetricRow(
               label: 'Recommended action',
               value: signal.recommendedAction.replaceAll('_', ' '),
@@ -693,6 +788,8 @@ class _SignalPanel extends StatelessWidget {
               _RampMeasurementBlock(measurement: rampMeasurement!),
             ],
             const Divider(height: 24),
+            Text(confidenceExplanation),
+            const SizedBox(height: 8),
             Text(signal.structuredSummary),
             const SizedBox(height: 12),
             Text(
@@ -1003,6 +1100,146 @@ class _TransitionRow extends StatelessWidget {
   }
 }
 
+class _ReasonRow extends StatelessWidget {
+  const _ReasonRow({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.check_circle_outline, size: 18),
+          const SizedBox(width: 8),
+          Expanded(child: Text(text)),
+        ],
+      ),
+    );
+  }
+}
+
+class _PriorityExplanation {
+  const _PriorityExplanation({
+    required this.whyThisMatters,
+    required this.whyNow,
+    required this.suggestedNextAction,
+  });
+
+  final List<String> whyThisMatters;
+  final List<String> whyNow;
+  final String suggestedNextAction;
+
+  String get queueSummary {
+    final primaryReason = whyThisMatters.isEmpty
+        ? 'Institutional review needed'
+        : whyThisMatters.first;
+    return 'Priority: $primaryReason; $suggestedNextAction';
+  }
+
+  static _PriorityExplanation fromCase({
+    required Place place,
+    required AccessCase accessCase,
+    required DimensionStateRecord state,
+    required DimensionPulseRecord pulse,
+    BarrierSignal? signal,
+    Evidence? evidence,
+  }) {
+    final whyThisMatters = <String>[];
+    final whyNow = <String>[];
+    final combinedText = [
+      place.placeType,
+      accessCase.title,
+      accessCase.summary,
+      state.explanation,
+      signal?.issueType,
+      signal?.possibleBarrier,
+      signal?.structuredSummary,
+      evidence?.note,
+      ...?signal?.observedFeatures,
+    ].whereType<String>().join(' ').toLowerCase();
+
+    if (place.placeType == 'public_service_building') {
+      whyThisMatters.add('Public service building');
+    }
+    if (combinedText.contains('entrance')) {
+      whyThisMatters.add('Public service entrance affected');
+    }
+    whyThisMatters.add('Mobility access affected');
+    if (combinedText.contains('assist') || combinedText.contains('help')) {
+      whyThisMatters.add('Assistance may be required');
+    }
+    if (combinedText.contains('purpose')) {
+      whyThisMatters.add('Visit purpose may not be completed');
+    }
+
+    final pulseDisplay = const PulseService().describePlacePulse(
+      state: state,
+      pulse: pulse,
+    );
+    if (state.source == 'ai_structured_barrier_signal') {
+      whyNow.add('Recent evidence updated place state');
+    }
+    if (state.state == DimensionStateValue.degraded) {
+      whyNow.add('State just degraded');
+    }
+    if (state.state == DimensionStateValue.underReview ||
+        accessCase.status == CaseStatus.inspectionRequested) {
+      whyNow.add('Active review needed');
+    }
+    if (accessCase.confidence >= 0.8) {
+      whyNow.add('AI confidence: High');
+    } else if (accessCase.confidence >= 0.5) {
+      whyNow.add('AI confidence: Moderate');
+    } else {
+      whyNow.add('AI confidence: Low');
+    }
+    whyNow.add('Pulse: ${pulseDisplay.label}');
+
+    return _PriorityExplanation(
+      whyThisMatters: _unique(whyThisMatters),
+      whyNow: _unique(whyNow),
+      suggestedNextAction: _suggestedNextAction(accessCase, signal),
+    );
+  }
+
+  static String _suggestedNextAction(
+    AccessCase accessCase,
+    BarrierSignal? signal,
+  ) {
+    if (accessCase.status == CaseStatus.inspectionRequested) {
+      return 'Complete site inspection';
+    }
+    if (accessCase.status == CaseStatus.verified) {
+      return 'Record remediation follow-up';
+    }
+    if (accessCase.status == CaseStatus.disputed) {
+      return 'Review contradictory evidence';
+    }
+    if (accessCase.status == CaseStatus.closed ||
+        accessCase.status == CaseStatus.resolved) {
+      return 'Close if out of scope';
+    }
+    if (signal?.missingEvidence.any(
+          (item) => item.toLowerCase().contains('entrance'),
+        ) ??
+        false) {
+      return 'Review alternate entrance';
+    }
+    return 'Request inspection';
+  }
+
+  static List<String> _unique(List<String> values) {
+    final seen = <String>{};
+    return [
+      for (final value in values)
+        if (seen.add(value)) value,
+    ];
+  }
+}
+
 class _CaseSummary {
   const _CaseSummary({
     required this.accessCase,
@@ -1093,22 +1330,108 @@ extension on DimensionStateValue {
   }
 }
 
-extension on DimensionPulseLevel {
-  String get label {
-    return switch (this) {
-      DimensionPulseLevel.weak => 'Weak',
-      DimensionPulseLevel.moderate => 'Moderate',
-      DimensionPulseLevel.strong => 'Strong',
-    };
-  }
-
+extension on PlacePulseStatus {
   Color get color {
     return switch (this) {
-      DimensionPulseLevel.weak => const Color(0xff7a4d00),
-      DimensionPulseLevel.moderate => const Color(0xff1765a6),
-      DimensionPulseLevel.strong => const Color(0xff17643a),
+      PlacePulseStatus.reliable => const Color(0xff17643a),
+      PlacePulseStatus.reliableAging => const Color(0xff8a6d00),
+      PlacePulseStatus.unknown => const Color(0xff52616b),
+      PlacePulseStatus.underReview => const Color(0xff1765a6),
+      PlacePulseStatus.recentlyRefreshed => const Color(0xff17643a),
     };
   }
+}
+
+extension on ConfidenceLevel {
+  String get label {
+    return switch (this) {
+      ConfidenceLevel.low => 'Low',
+      ConfidenceLevel.moderate => 'Moderate',
+      ConfidenceLevel.high => 'High',
+    };
+  }
+}
+
+extension on EvidenceReadiness {
+  String get label {
+    return switch (this) {
+      EvidenceReadiness.draft => 'Draft',
+      EvidenceReadiness.almostReady => 'Almost Ready',
+      EvidenceReadiness.institutionReady => 'Institution Ready',
+    };
+  }
+}
+
+ConfidenceLevel _confidenceLevelFromScore(double confidence) {
+  if (confidence >= 0.8) {
+    return ConfidenceLevel.high;
+  }
+  if (confidence >= 0.5) {
+    return ConfidenceLevel.moderate;
+  }
+  return ConfidenceLevel.low;
+}
+
+String _confidenceExplanationFromScore(double confidence) {
+  return switch (_confidenceLevelFromScore(confidence)) {
+    ConfidenceLevel.high =>
+      'Evidence is strong enough to support institutional review.',
+    ConfidenceLevel.moderate =>
+      'Evidence supports review, with some uncertainty still visible.',
+    ConfidenceLevel.low =>
+      'Evidence is limited and may need more context before action.',
+  };
+}
+
+ConfidenceLevel _signalConfidenceLevel(BarrierSignal signal) {
+  final value = signal.aiExplanation['confidenceLevel'];
+  if (value is String) {
+    final normalized = value.toLowerCase();
+    if (normalized == ConfidenceLevel.high.name) {
+      return ConfidenceLevel.high;
+    }
+    if (normalized == ConfidenceLevel.moderate.name) {
+      return ConfidenceLevel.moderate;
+    }
+    if (normalized == ConfidenceLevel.low.name) {
+      return ConfidenceLevel.low;
+    }
+  }
+  return _confidenceLevelFromScore(signal.confidence);
+}
+
+String _signalConfidenceExplanation(BarrierSignal signal) {
+  final value = signal.aiExplanation['confidenceExplanation'];
+  if (value is String && value.trim().isNotEmpty) {
+    return value;
+  }
+  return switch (_signalConfidenceLevel(signal)) {
+    ConfidenceLevel.high =>
+      'The evidence strongly supports the mobility-access concern.',
+    ConfidenceLevel.moderate =>
+      'The evidence supports the concern, but some context is still missing.',
+    ConfidenceLevel.low =>
+      'The evidence is too limited for a strong review signal.',
+  };
+}
+
+EvidenceReadiness _signalEvidenceReadiness(BarrierSignal signal) {
+  final value = signal.aiExplanation['evidenceReadiness'];
+  if (value is String) {
+    final normalized = value.toLowerCase();
+    if (normalized == EvidenceReadiness.institutionReady.name) {
+      return EvidenceReadiness.institutionReady;
+    }
+    if (normalized == EvidenceReadiness.almostReady.name) {
+      return EvidenceReadiness.almostReady;
+    }
+    if (normalized == EvidenceReadiness.draft.name) {
+      return EvidenceReadiness.draft;
+    }
+  }
+  return signal.aiExplanation['institutionReady'] == true
+      ? EvidenceReadiness.institutionReady
+      : EvidenceReadiness.almostReady;
 }
 
 extension on CaseStatus {

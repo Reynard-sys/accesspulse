@@ -35,6 +35,13 @@ class MockAiEvidenceService implements AiEvidenceService {
     final baseConfidence = mentionsSteps || mentionsRamp || mentionsAssistance
         ? 0.82
         : 0.58;
+    final confidence = measurement == null
+        ? baseConfidence
+        : (baseConfidence + 0.05).clamp(0.0, 0.9).toDouble();
+    final readiness = measurement != null || imagePath != null
+        ? EvidenceReadiness.institutionReady
+        : EvidenceReadiness.almostReady;
+    final confidenceLevel = _confidenceLevelFromScore(confidence);
 
     return AiEvidenceAssessment(
       dimension: 'mobility_access',
@@ -55,17 +62,78 @@ class MockAiEvidenceService implements AiEvidenceService {
         'confirmation whether another accessible entrance exists',
         if (measurement != null) 'official on-site ramp measurement',
       ],
-      confidence: measurement == null
-          ? baseConfidence
-          : (baseConfidence + 0.05).clamp(0.0, 0.9).toDouble(),
+      confidence: confidence,
+      confidenceLevel: confidenceLevel,
+      confidenceExplanation: _confidenceExplanation(
+        confidenceLevel: confidenceLevel,
+        hasMeasurement: measurement != null,
+        hasPhoto: imagePath != null,
+        mentionsRamp: mentionsRamp,
+      ),
+      evidenceReadiness: readiness,
       summary: measurement == null
           ? 'The evidence suggests Mobility Access at the entrance may be unreliable, but a human reviewer should confirm the site context.'
           : 'The evidence suggests Mobility Access at the entrance may be unreliable. An estimated ${measurement.estimatedAngleDegrees.toStringAsFixed(1)} degree ramp incline reading with ${measurement.qualityLabel.toLowerCase()} supports the reported concern, but a human reviewer should confirm the site context.',
       recommendedAction: 'lgu_review',
+      nextBestAction: _nextBestAction(
+        readiness: readiness,
+        hasPhoto: imagePath != null,
+        hasMeasurement: measurement != null,
+        mentionsRamp: mentionsRamp,
+      ),
       explanation: measurement == null
           ? 'I can structure visible and described mobility-access signals, but I cannot determine legal compliance or official verification.'
           : 'I can use the estimated incline reading as supporting evidence, but it is not an official measurement and does not determine legal compliance.',
+      institutionReady: readiness == EvidenceReadiness.institutionReady,
     );
+  }
+
+  static ConfidenceLevel _confidenceLevelFromScore(double confidence) {
+    if (confidence >= 0.8) {
+      return ConfidenceLevel.high;
+    }
+    if (confidence >= 0.5) {
+      return ConfidenceLevel.moderate;
+    }
+    return ConfidenceLevel.low;
+  }
+
+  static String _confidenceExplanation({
+    required ConfidenceLevel confidenceLevel,
+    required bool hasMeasurement,
+    required bool hasPhoto,
+    required bool mentionsRamp,
+  }) {
+    return switch (confidenceLevel) {
+      ConfidenceLevel.high =>
+        hasMeasurement
+            ? 'The note and field ramp reading align, while official review remains separate.'
+            : 'The note and visible evidence strongly support a mobility-access concern.',
+      ConfidenceLevel.moderate =>
+        hasPhoto || mentionsRamp
+            ? 'The mobility issue is supported, but one key access detail is still missing.'
+            : 'The concern is plausible, but the evidence needs clearer visual context.',
+      ConfidenceLevel.low =>
+        'The evidence is too limited to understand the entrance access issue clearly.',
+    };
+  }
+
+  static String _nextBestAction({
+    required EvidenceReadiness readiness,
+    required bool hasPhoto,
+    required bool hasMeasurement,
+    required bool mentionsRamp,
+  }) {
+    if (readiness == EvidenceReadiness.institutionReady) {
+      return 'Submit for review.';
+    }
+    if (!hasPhoto) {
+      return 'Add a wider photo that shows the full path from sidewalk to entrance.';
+    }
+    if (mentionsRamp && !hasMeasurement) {
+      return 'Add a side angle or ramp reading that shows the ramp slope and top landing.';
+    }
+    return 'Add one clearer detail about the entrance route before review.';
   }
 }
 
@@ -140,6 +208,25 @@ class GeminiServerEvidenceService implements AiEvidenceService {
         ),
         missingEvidence: _stringList(decoded['missingEvidence']),
         confidence: _doubleValue(decoded['confidence'], 0.5).clamp(0.0, 1.0),
+        confidenceLevel: _confidenceLevelValue(
+          decoded['confidenceLevel'],
+          _doubleValue(decoded['confidence'], 0.5),
+        ),
+        confidenceExplanation: _safeText(
+          _stringValue(
+            decoded['confidenceExplanation'],
+            _defaultConfidenceExplanation(
+              _confidenceLevelValue(
+                decoded['confidenceLevel'],
+                _doubleValue(decoded['confidence'], 0.5),
+              ),
+            ),
+          ),
+        ),
+        evidenceReadiness: _evidenceReadinessValue(
+          decoded['evidenceReadiness'],
+          decoded['institutionReady'] == true,
+        ),
         summary: _safeText(
           _stringValue(decoded['summary'], 'Evidence needs human review.'),
         ),
@@ -147,11 +234,22 @@ class GeminiServerEvidenceService implements AiEvidenceService {
           decoded['recommendedAction'],
           'lgu_review',
         ),
+        nextBestAction: _safeText(
+          _stringValue(decoded['nextBestAction'], 'Submit for review.'),
+        ),
         explanation: _safeText(
           _stringValue(
             decoded['explanation'],
             'AI structured this signal but did not make an official judgment.',
           ),
+        ),
+        institutionReady: _boolValue(
+          decoded['institutionReady'],
+          _evidenceReadinessValue(
+                decoded['evidenceReadiness'],
+                decoded['institutionReady'] == true,
+              ) ==
+              EvidenceReadiness.institutionReady,
         ),
       );
     } on Object {
@@ -199,6 +297,67 @@ class GeminiServerEvidenceService implements AiEvidenceService {
       return value.toDouble();
     }
     return fallback;
+  }
+
+  bool _boolValue(Object? value, bool fallback) {
+    if (value is bool) {
+      return value;
+    }
+    return fallback;
+  }
+
+  ConfidenceLevel _confidenceLevelValue(Object? value, double confidence) {
+    if (value is String) {
+      final normalized = value.trim().toLowerCase().replaceAll('_', '');
+      if (normalized == 'high') {
+        return ConfidenceLevel.high;
+      }
+      if (normalized == 'moderate') {
+        return ConfidenceLevel.moderate;
+      }
+      if (normalized == 'low') {
+        return ConfidenceLevel.low;
+      }
+    }
+    if (confidence >= 0.8) {
+      return ConfidenceLevel.high;
+    }
+    if (confidence >= 0.5) {
+      return ConfidenceLevel.moderate;
+    }
+    return ConfidenceLevel.low;
+  }
+
+  EvidenceReadiness _evidenceReadinessValue(
+    Object? value,
+    bool institutionReady,
+  ) {
+    if (value is String) {
+      final normalized = value.trim().toLowerCase().replaceAll('_', '');
+      if (normalized == 'institutionready') {
+        return EvidenceReadiness.institutionReady;
+      }
+      if (normalized == 'almostready') {
+        return EvidenceReadiness.almostReady;
+      }
+      if (normalized == 'draft') {
+        return EvidenceReadiness.draft;
+      }
+    }
+    return institutionReady
+        ? EvidenceReadiness.institutionReady
+        : EvidenceReadiness.almostReady;
+  }
+
+  String _defaultConfidenceExplanation(ConfidenceLevel confidenceLevel) {
+    return switch (confidenceLevel) {
+      ConfidenceLevel.high =>
+        'The evidence strongly supports the mobility-access concern.',
+      ConfidenceLevel.moderate =>
+        'The evidence supports the concern, but some context is still missing.',
+      ConfidenceLevel.low =>
+        'The evidence is too limited for a strong review signal.',
+    };
   }
 
   String _safeText(String value) {
