@@ -84,6 +84,16 @@ Deno.serve(async (request) => {
                 items: { type: "string" },
               },
               confidence: { type: "number" },
+              confidenceLevel: {
+                type: "string",
+                enum: ["low", "moderate", "high"],
+              },
+              confidenceExplanation: { type: "string" },
+              evidenceReadiness: {
+                type: "string",
+                enum: ["draft", "almostReady", "institutionReady"],
+              },
+              institutionReady: { type: "boolean" },
               summary: { type: "string" },
               recommendedAction: { type: "string" },
               explanation: { type: "string" },
@@ -95,6 +105,10 @@ Deno.serve(async (request) => {
               "possibleBarrier",
               "missingEvidence",
               "confidence",
+              "confidenceLevel",
+              "confidenceExplanation",
+              "evidenceReadiness",
+              "institutionReady",
               "summary",
               "recommendedAction",
               "explanation",
@@ -179,6 +193,10 @@ Rules:
 - Never mark a place officially verified.
 - Never overrule a human verifier.
 - If evidence is weak, say what is missing and lower confidence.
+- Use confidenceLevel as low, moderate, or high; do not use percentages in user-facing language.
+- Use evidenceReadiness as draft, almostReady, or institutionReady.
+- Set institutionReady true only when the evidence is sufficient for LGU review.
+- Always include a short confidenceExplanation.
 `;
 }
 
@@ -222,6 +240,30 @@ function normalizeAssessment(value: Record<string, unknown>) {
     ),
     missingEvidence: stringList(value.missingEvidence),
     confidence: numberValue(value.confidence, 0.5),
+    confidenceLevel: confidenceLevelValue(
+      value.confidenceLevel,
+      numberValue(value.confidence, 0.5),
+    ),
+    confidenceExplanation: stringValue(
+      value.confidenceExplanation,
+      defaultConfidenceExplanation(
+        confidenceLevelValue(
+          value.confidenceLevel,
+          numberValue(value.confidence, 0.5),
+        ),
+      ),
+    ),
+    evidenceReadiness: evidenceReadinessValue(
+      value.evidenceReadiness,
+      value.institutionReady === true,
+    ),
+    institutionReady: booleanValue(
+      value.institutionReady,
+      evidenceReadinessValue(
+        value.evidenceReadiness,
+        value.institutionReady === true,
+      ) === "institutionReady",
+    ),
     summary: stringValue(value.summary, "Evidence needs human review."),
     recommendedAction: stringValue(value.recommendedAction, "lgu_review"),
     explanation: stringValue(
@@ -229,6 +271,42 @@ function normalizeAssessment(value: Record<string, unknown>) {
       "AI structured this signal but did not make an official judgment.",
     ),
   };
+}
+
+function confidenceLevelValue(value: unknown, confidence: number) {
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (
+      normalized === "high" ||
+      normalized === "moderate" ||
+      normalized === "low"
+    ) {
+      return normalized;
+    }
+  }
+  if (confidence >= 0.8) return "high";
+  if (confidence >= 0.5) return "moderate";
+  return "low";
+}
+
+function defaultConfidenceExplanation(confidenceLevel: string) {
+  if (confidenceLevel === "high") {
+    return "The evidence strongly supports the mobility-access concern.";
+  }
+  if (confidenceLevel === "moderate") {
+    return "The evidence supports the concern, but some context is still missing.";
+  }
+  return "The evidence is too limited for a strong review signal.";
+}
+
+function evidenceReadinessValue(value: unknown, institutionReady: boolean) {
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase().replace(/_/g, "");
+    if (normalized === "institutionready") return "institutionReady";
+    if (normalized === "almostready") return "almostReady";
+    if (normalized === "draft") return "draft";
+  }
+  return institutionReady ? "institutionReady" : "almostReady";
 }
 
 function extractOutputText(data: unknown) {
@@ -290,4 +368,8 @@ function numberValue(value: unknown, fallback: number) {
     return fallback;
   }
   return Math.max(0, Math.min(1, value));
+}
+
+function booleanValue(value: unknown, fallback: boolean) {
+  return typeof value === "boolean" ? value : fallback;
 }

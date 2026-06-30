@@ -23,11 +23,16 @@ void main() {
         possibleBarrier: 'independent wheelchair access may be unreliable',
         missingEvidence: ['full side view of ramp'],
         confidence: 0.82,
+        confidenceLevel: ConfidenceLevel.high,
+        confidenceExplanation:
+            'The entrance evidence and contributor note strongly align.',
+        evidenceReadiness: EvidenceReadiness.institutionReady,
         summary:
             'The visible entrance suggests mobility access may require assistance.',
         recommendedAction: 'lgu_review',
         explanation:
             'AI structured evidence for review but did not make an official judgment.',
+        institutionReady: true,
       ),
       imagePath: 'demo/main-entrance.jpg',
       rampSlopeMeasurement: RampSlopeMeasurement(
@@ -91,6 +96,9 @@ void main() {
       scrollable: caseDetailScrollable,
     );
     expect(find.text('Evidence bundle'), findsOneWidget);
+    expect(find.text('AI confidence'), findsOneWidget);
+    expect(find.text('Evidence readiness'), findsOneWidget);
+    expect(find.text('Institution Ready'), findsOneWidget);
     expect(find.text('Freshness / pulse'), findsOneWidget);
     expect(find.text('Under review'), findsWidgets);
     expect(find.text('Ramp Measurement'), findsOneWidget);
@@ -114,6 +122,8 @@ void main() {
       300,
       scrollable: caseDetailScrollable,
     );
+    await tester.ensureVisible(requestInspectionButton);
+    await tester.pumpAndSettle();
     expect(requestInspectionButton, findsOneWidget);
 
     await tester.tap(requestInspectionButton);

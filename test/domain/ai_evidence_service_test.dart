@@ -34,6 +34,10 @@ void main() {
   "possibleBarrier": "independent wheelchair access may be unreliable",
   "missingEvidence": ["full side view of ramp"],
   "confidence": 0.81,
+  "confidenceLevel": "high",
+  "confidenceExplanation": "The image and note align around the entrance barrier.",
+  "evidenceReadiness": "institutionReady",
+  "institutionReady": true,
   "summary": "The evidence suggests entrance access may require assistance.",
   "recommendedAction": "lgu_review",
   "explanation": "AI structured the evidence but did not make an official judgment."
@@ -55,6 +59,13 @@ void main() {
       expect(assessment.issueType, 'entrance_ramp_usability');
       expect(assessment.observedFeatures, contains('steps'));
       expect(assessment.confidence, 0.81);
+      expect(assessment.confidenceLevel, ConfidenceLevel.high);
+      expect(
+        assessment.confidenceExplanation,
+        'The image and note align around the entrance barrier.',
+      );
+      expect(assessment.evidenceReadiness, EvidenceReadiness.institutionReady);
+      expect(assessment.institutionReady, isTrue);
       expect(assessment.recommendedAction, 'lgu_review');
     },
   );
@@ -75,6 +86,9 @@ void main() {
       );
       expect(assessment.summary, contains('14.8 degree ramp incline'));
       expect(assessment.summary, contains('human reviewer should confirm'));
+      expect(assessment.confidenceLevel, ConfidenceLevel.high);
+      expect(assessment.evidenceReadiness, EvidenceReadiness.institutionReady);
+      expect(assessment.institutionReady, isTrue);
       expect(
         assessment.missingEvidence,
         contains('official on-site ramp measurement'),
@@ -142,6 +156,9 @@ void main() {
       expect(assessment.dimension, 'mobility_access');
       expect(assessment.issueType, 'entrance_ramp_usability');
       expect(assessment.confidence, 0.82);
+      expect(assessment.confidenceLevel, ConfidenceLevel.high);
+      expect(assessment.evidenceReadiness, EvidenceReadiness.almostReady);
+      expect(assessment.institutionReady, isFalse);
       expect(
         assessment.explanation,
         contains('cannot determine legal compliance'),
