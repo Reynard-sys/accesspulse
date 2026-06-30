@@ -11,6 +11,17 @@ type EvidenceRequest = {
   imagePath?: string;
   imageBase64?: string;
   imageMimeType?: string;
+  rampMeasurement?: RampMeasurementInput;
+};
+
+type RampMeasurementInput = {
+  estimatedAngleDegrees?: number;
+  qualityScore?: number;
+  qualityLabel?: string;
+  captureDurationMs?: number;
+  sampleCount?: number;
+  status?: string;
+  source?: string;
 };
 
 Deno.serve(async (request) => {
@@ -53,6 +64,7 @@ Deno.serve(async (request) => {
           note,
           imagePath: body.imagePath,
           hasImageBytes: Boolean(body.imageBase64 && body.imageMimeType),
+          rampMeasurement: body.rampMeasurement,
         }),
         response_format: {
           type: "text",
@@ -123,7 +135,9 @@ function buildPrompt(input: {
   note: string;
   imagePath?: string;
   hasImageBytes: boolean;
+  rampMeasurement?: RampMeasurementInput;
 }) {
+  const rampMeasurement = formatRampMeasurement(input.rampMeasurement);
   return `
 You are AccessPulse's Accessibility Copilot for the hackathon MVP.
 
@@ -145,18 +159,56 @@ ${
       : "(No image bytes were provided.)"
   }
 
+Ramp slope field measurement:
+${rampMeasurement}
+
 Return only JSON matching the requested schema.
 
 Rules:
 - Structure evidence for institutional review.
 - Identify visible or described features relevant to mobility access.
 - Explain uncertainty and missing context.
+- If a ramp slope field measurement is provided, reference it as an estimated supporting signal.
+- Gemini must not calculate the ramp angle. Use only the provided measured estimate.
 - Recommend a next action such as "lgu_review" when appropriate.
 - Never state legal non-compliance.
+- Never say "violation confirmed".
+- Never say the reading proves non-compliance.
+- Never say the reading is exact.
+- Never say the ramp is illegal.
 - Never mark a place officially verified.
 - Never overrule a human verifier.
 - If evidence is weak, say what is missing and lower confidence.
 `;
+}
+
+function formatRampMeasurement(measurement?: RampMeasurementInput) {
+  if (!measurement || typeof measurement.estimatedAngleDegrees !== "number") {
+    return "(No ramp slope measurement was provided.)";
+  }
+
+  const angle = measurement.estimatedAngleDegrees.toFixed(1);
+  const quality = measurement.qualityLabel ?? "unknown stability";
+  const status = measurement.status ?? "unknown";
+  const source = measurement.source ?? "field capture";
+  const samples =
+    typeof measurement.sampleCount === "number"
+      ? `${measurement.sampleCount} samples`
+      : "sample count unavailable";
+  const duration =
+    typeof measurement.captureDurationMs === "number"
+      ? `${measurement.captureDurationMs} ms`
+      : "duration unavailable";
+
+  return [
+    `- Estimated ramp angle: ${angle} degrees`,
+    `- Capture quality: ${quality}`,
+    `- Status: ${status}`,
+    `- Source: ${source}`,
+    `- Capture window: ${duration}`,
+    `- Sample count: ${samples}`,
+    "- Treat this as citizen field evidence only; official review may still be required.",
+  ].join("\\n");
 }
 
 function normalizeAssessment(value: Record<string, unknown>) {
