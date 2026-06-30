@@ -484,6 +484,14 @@ class _VerificationResultScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final previousPulseDisplay = const PulseService().describePlacePulse(
+      state: result.previousState,
+      pulse: result.previousPulse,
+    );
+    final currentPulseDisplay = const PulseService().describePlacePulse(
+      state: result.currentState,
+      pulse: result.currentPulse,
+    );
     return Scaffold(
       appBar: AppBar(title: const Text('Verification update')),
       body: SafeArea(
@@ -535,12 +543,17 @@ class _VerificationResultScreen extends StatelessWidget {
                         ),
                         const Divider(height: 24),
                         _TransitionRow(
-                          label: 'Pulse',
-                          before: result.previousPulse.level.label,
-                          after: result.currentPulse.level.label,
+                          label: 'Pulse / freshness',
+                          before: previousPulseDisplay.label,
+                          after: currentPulseDisplay.label,
                         ),
                         const SizedBox(height: 12),
                         Text(result.currentState.explanation),
+                        const SizedBox(height: 8),
+                        Text(
+                          currentPulseDisplay.explanation,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
                       ],
                     ),
                   ),
@@ -568,12 +581,16 @@ class _CaseQueueTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final pulseDisplay = const PulseService().describePlacePulse(
+      state: summary.state,
+      pulse: summary.pulse,
+    );
     return Card(
       child: ListTile(
         leading: CircleAvatar(child: Icon(summary.accessCase.status.icon)),
         title: Text(summary.place.name),
         subtitle: Text(
-          '${summary.state.state.label} - ${summary.pulse.level.label} pulse - ${summary.accessCase.status.label}',
+          '${summary.state.state.label} - ${pulseDisplay.label} - ${summary.accessCase.status.label}',
         ),
         trailing: const Icon(Icons.chevron_right),
         onTap: onTap,
@@ -597,6 +614,10 @@ class _InstitutionStateCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final pulseDisplay = const PulseService().describePlacePulse(
+      state: state,
+      pulse: pulse,
+    );
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -623,8 +644,8 @@ class _InstitutionStateCard extends StatelessWidget {
                 ),
                 _StatusPill(
                   icon: Icons.monitor_heart_outlined,
-                  label: '${pulse.level.label} pulse',
-                  color: pulse.level.color,
+                  label: pulseDisplay.label,
+                  color: pulseDisplay.status.color,
                 ),
                 _StatusPill(
                   icon: accessCase.status.icon,
@@ -634,6 +655,7 @@ class _InstitutionStateCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
+            _MetricRow(label: 'Freshness / pulse', value: pulseDisplay.label),
             _MetricRow(
               label: 'Case confidence',
               value: '${(accessCase.confidence * 100).round()}%',
@@ -643,6 +665,15 @@ class _InstitutionStateCard extends StatelessWidget {
               label: 'Current state confidence',
               value: '${(state.confidence * 100).round()}%',
             ),
+            const Divider(height: 24),
+            Text(pulseDisplay.explanation),
+            if (pulseDisplay.verificationContext != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                pulseDisplay.verificationContext!,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
           ],
         ),
       ),
@@ -1093,20 +1124,14 @@ extension on DimensionStateValue {
   }
 }
 
-extension on DimensionPulseLevel {
-  String get label {
-    return switch (this) {
-      DimensionPulseLevel.weak => 'Weak',
-      DimensionPulseLevel.moderate => 'Moderate',
-      DimensionPulseLevel.strong => 'Strong',
-    };
-  }
-
+extension on PlacePulseStatus {
   Color get color {
     return switch (this) {
-      DimensionPulseLevel.weak => const Color(0xff7a4d00),
-      DimensionPulseLevel.moderate => const Color(0xff1765a6),
-      DimensionPulseLevel.strong => const Color(0xff17643a),
+      PlacePulseStatus.reliable => const Color(0xff17643a),
+      PlacePulseStatus.reliableAging => const Color(0xff8a6d00),
+      PlacePulseStatus.unknown => const Color(0xff52616b),
+      PlacePulseStatus.underReview => const Color(0xff1765a6),
+      PlacePulseStatus.recentlyRefreshed => const Color(0xff17643a),
     };
   }
 }

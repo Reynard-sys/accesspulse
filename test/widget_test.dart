@@ -13,11 +13,14 @@ void main() {
     expect(find.text('Current accessibility state'), findsOneWidget);
     expect(find.text('Quezon City Hall Main Entrance'), findsOneWidget);
     expect(find.textContaining('Claimed accessible'), findsOneWidget);
+    expect(find.textContaining('Reliable, aging'), findsOneWidget);
 
     await tester.tap(find.text('Quezon City Hall Main Entrance'));
     await tester.pumpAndSettle();
 
     expect(find.text('For you: Mobility Access'), findsOneWidget);
+    expect(find.text('Freshness / pulse'), findsOneWidget);
+    expect(find.text('Reliable, aging'), findsWidgets);
     expect(find.text('Place memory'), findsOneWidget);
     expect(find.text('I visited this place'), findsOneWidget);
     expect(find.text('Add evidence'), findsOneWidget);
@@ -39,6 +42,7 @@ void main() {
     expect(find.text('Your visit updated this place'), findsOneWidget);
     expect(find.text('Claimed accessible'), findsOneWidget);
     expect(find.text('Degraded'), findsOneWidget);
+    expect(find.text('Recently refreshed'), findsOneWidget);
   });
 
   testWidgets('evidence flow shows AI structure and submits a signal', (
@@ -127,5 +131,6 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Degraded'), findsOneWidget);
+    expect(find.text('Under review'), findsOneWidget);
   });
 }

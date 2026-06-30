@@ -12,6 +12,14 @@ enum DimensionStateValue {
 
 enum DimensionPulseLevel { weak, moderate, strong }
 
+enum PlacePulseStatus {
+  reliable,
+  reliableAging,
+  unknown,
+  underReview,
+  recentlyRefreshed,
+}
+
 enum CaseStatus {
   open,
   triaging,
