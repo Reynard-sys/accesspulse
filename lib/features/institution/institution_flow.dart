@@ -302,6 +302,17 @@ class _CaseDetailScreenState extends State<_CaseDetailScreen> {
                       pulse: detail.pulse,
                     ),
                     const SizedBox(height: 16),
+                    _PriorityExplanationPanel(
+                      explanation: _PriorityExplanation.fromCase(
+                        place: widget.summary.place,
+                        accessCase: detail.accessCase,
+                        state: detail.state,
+                        pulse: detail.pulse,
+                        signal: detail.signal,
+                        evidence: detail.evidence,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                     if (detail.signal != null)
                       _SignalPanel(
                         signal: detail.signal!,
@@ -585,15 +596,63 @@ class _CaseQueueTile extends StatelessWidget {
       state: summary.state,
       pulse: summary.pulse,
     );
+    final priority = _PriorityExplanation.fromCase(
+      place: summary.place,
+      accessCase: summary.accessCase,
+      state: summary.state,
+      pulse: summary.pulse,
+    );
     return Card(
       child: ListTile(
         leading: CircleAvatar(child: Icon(summary.accessCase.status.icon)),
         title: Text(summary.place.name),
         subtitle: Text(
-          '${summary.state.state.label} - ${pulseDisplay.label} - ${summary.accessCase.status.label}',
+          '${summary.state.state.label} - ${pulseDisplay.label} - ${summary.accessCase.status.label}\n${priority.queueSummary}',
         ),
+        isThreeLine: true,
         trailing: const Icon(Icons.chevron_right),
         onTap: onTap,
+      ),
+    );
+  }
+}
+
+class _PriorityExplanationPanel extends StatelessWidget {
+  const _PriorityExplanationPanel({required this.explanation});
+
+  final _PriorityExplanation explanation;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const _SectionHeader(
+              icon: Icons.priority_high,
+              title: 'Why This Case Matters',
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Why this matters',
+              style: Theme.of(context).textTheme.labelLarge,
+            ),
+            const SizedBox(height: 6),
+            for (final reason in explanation.whyThisMatters)
+              _ReasonRow(text: reason),
+            const SizedBox(height: 12),
+            Text('Why now', style: Theme.of(context).textTheme.labelLarge),
+            const SizedBox(height: 6),
+            for (final reason in explanation.whyNow) _ReasonRow(text: reason),
+            const Divider(height: 24),
+            _MetricRow(
+              label: 'Suggested next action',
+              value: explanation.suggestedNextAction,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1031,6 +1090,146 @@ class _TransitionRow extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+class _ReasonRow extends StatelessWidget {
+  const _ReasonRow({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.check_circle_outline, size: 18),
+          const SizedBox(width: 8),
+          Expanded(child: Text(text)),
+        ],
+      ),
+    );
+  }
+}
+
+class _PriorityExplanation {
+  const _PriorityExplanation({
+    required this.whyThisMatters,
+    required this.whyNow,
+    required this.suggestedNextAction,
+  });
+
+  final List<String> whyThisMatters;
+  final List<String> whyNow;
+  final String suggestedNextAction;
+
+  String get queueSummary {
+    final primaryReason = whyThisMatters.isEmpty
+        ? 'Institutional review needed'
+        : whyThisMatters.first;
+    return 'Priority: $primaryReason; $suggestedNextAction';
+  }
+
+  static _PriorityExplanation fromCase({
+    required Place place,
+    required AccessCase accessCase,
+    required DimensionStateRecord state,
+    required DimensionPulseRecord pulse,
+    BarrierSignal? signal,
+    Evidence? evidence,
+  }) {
+    final whyThisMatters = <String>[];
+    final whyNow = <String>[];
+    final combinedText = [
+      place.placeType,
+      accessCase.title,
+      accessCase.summary,
+      state.explanation,
+      signal?.issueType,
+      signal?.possibleBarrier,
+      signal?.structuredSummary,
+      evidence?.note,
+      ...?signal?.observedFeatures,
+    ].whereType<String>().join(' ').toLowerCase();
+
+    if (place.placeType == 'public_service_building') {
+      whyThisMatters.add('Public service building');
+    }
+    if (combinedText.contains('entrance')) {
+      whyThisMatters.add('Public service entrance affected');
+    }
+    whyThisMatters.add('Mobility access affected');
+    if (combinedText.contains('assist') || combinedText.contains('help')) {
+      whyThisMatters.add('Assistance may be required');
+    }
+    if (combinedText.contains('purpose')) {
+      whyThisMatters.add('Visit purpose may not be completed');
+    }
+
+    final pulseDisplay = const PulseService().describePlacePulse(
+      state: state,
+      pulse: pulse,
+    );
+    if (state.source == 'ai_structured_barrier_signal') {
+      whyNow.add('Recent evidence updated place state');
+    }
+    if (state.state == DimensionStateValue.degraded) {
+      whyNow.add('State just degraded');
+    }
+    if (state.state == DimensionStateValue.underReview ||
+        accessCase.status == CaseStatus.inspectionRequested) {
+      whyNow.add('Active review needed');
+    }
+    if (accessCase.confidence >= 0.8) {
+      whyNow.add('AI confidence: High');
+    } else if (accessCase.confidence >= 0.5) {
+      whyNow.add('AI confidence: Moderate');
+    } else {
+      whyNow.add('AI confidence: Low');
+    }
+    whyNow.add('Pulse: ${pulseDisplay.label}');
+
+    return _PriorityExplanation(
+      whyThisMatters: _unique(whyThisMatters),
+      whyNow: _unique(whyNow),
+      suggestedNextAction: _suggestedNextAction(accessCase, signal),
+    );
+  }
+
+  static String _suggestedNextAction(
+    AccessCase accessCase,
+    BarrierSignal? signal,
+  ) {
+    if (accessCase.status == CaseStatus.inspectionRequested) {
+      return 'Complete site inspection';
+    }
+    if (accessCase.status == CaseStatus.verified) {
+      return 'Record remediation follow-up';
+    }
+    if (accessCase.status == CaseStatus.disputed) {
+      return 'Review contradictory evidence';
+    }
+    if (accessCase.status == CaseStatus.closed ||
+        accessCase.status == CaseStatus.resolved) {
+      return 'Close if out of scope';
+    }
+    if (signal?.missingEvidence.any(
+          (item) => item.toLowerCase().contains('entrance'),
+        ) ??
+        false) {
+      return 'Review alternate entrance';
+    }
+    return 'Request inspection';
+  }
+
+  static List<String> _unique(List<String> values) {
+    final seen = <String>{};
+    return [
+      for (final value in values)
+        if (seen.add(value)) value,
+    ];
   }
 }
 
