@@ -494,6 +494,36 @@ class DimensionStateService {
     return nextCase;
   }
 
+  Future<AccessCase> requestRemediationVerification({
+    required String caseId,
+    required String reviewerId,
+    DateTime? now,
+  }) async {
+    final timestamp = now ?? DateTime.now();
+    final accessCase = await _repository.getCase(caseId);
+    final currentState = await _repository.getDimensionState(
+      accessCase.placeDimensionId,
+    );
+    final nextCase = accessCase.copyWith(
+      status: CaseStatus.remediationVerificationRequested,
+      updatedAt: timestamp,
+    );
+    await _repository.saveCase(nextCase);
+    await _appendMemory(
+      placeDimensionId: accessCase.placeDimensionId,
+      eventType: MemoryEventType.remediationVerificationRequested,
+      actorType: 'lgu_reviewer',
+      actorId: reviewerId,
+      previousState: currentState.state,
+      newState: currentState.state,
+      caseId: caseId,
+      summary:
+          'LGU reviewer requested inspector verification for the completed remediation.',
+      createdAt: timestamp,
+    );
+    return nextCase;
+  }
+
   Future<VerificationResult> submitVerification({
     required String caseId,
     required String inspectorId,

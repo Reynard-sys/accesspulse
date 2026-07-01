@@ -298,6 +298,83 @@ void main() {
       isTrue,
     );
   });
+
+  test(
+    'LGU can request remediation verification after remediation request',
+    () async {
+      final repository = InMemoryAccessPulseRepository.seeded();
+      final service = DimensionStateService(
+        repository: repository,
+        idFactory: _deterministicIds(),
+      );
+      final evidenceResult = await service.submitStructuredEvidence(
+        placeDimensionId: stalePlaceDimensionId,
+        submittedBy: communityUserId,
+        assessment: const AiEvidenceAssessment(
+          dimension: 'mobility_access',
+          issueType: 'entrance_ramp_usability',
+          observedFeatures: <String>['entrance', 'steps', 'partial ramp'],
+          possibleBarrier: 'independent wheelchair access may be unreliable',
+          missingEvidence: <String>['full side view of ramp'],
+          confidence: 0.82,
+          confidenceLevel: ConfidenceLevel.high,
+          confidenceExplanation:
+              'The entrance evidence and contributor note strongly align.',
+          evidenceReadiness: EvidenceReadiness.institutionReady,
+          summary:
+              'The visible entrance suggests mobility access may require assistance.',
+          recommendedAction: 'lgu_review',
+          nextBestAction: 'Submit for review.',
+          explanation:
+              'I can describe visible features, but I cannot officially verify the site.',
+          institutionReady: true,
+        ),
+        imagePath: 'demo/entrance.jpg',
+        now: DateTime(2026, 6, 29, 10, 5),
+      );
+
+      await service.requestInspection(
+        caseId: evidenceResult.accessCase.id,
+        reviewerId: reviewerId,
+        now: DateTime(2026, 6, 29, 10, 10),
+      );
+      await service.submitVerification(
+        caseId: evidenceResult.accessCase.id,
+        inspectorId: inspectorId,
+        outcome: VerificationOutcome.confirmed,
+        note: 'Inspector confirmed that the main entrance requires assistance.',
+        now: DateTime(2026, 6, 29, 11),
+      );
+      await service.requestRemediation(
+        caseId: evidenceResult.accessCase.id,
+        reviewerId: reviewerId,
+        now: DateTime(2026, 6, 29, 12),
+      );
+
+      final verificationRequest = await service.requestRemediationVerification(
+        caseId: evidenceResult.accessCase.id,
+        reviewerId: reviewerId,
+        now: DateTime(2026, 6, 29, 13),
+      );
+      final state = await repository.getDimensionState(stalePlaceDimensionId);
+      final memory = await repository.listMemoryEvents(stalePlaceDimensionId);
+
+      expect(
+        verificationRequest.status,
+        CaseStatus.remediationVerificationRequested,
+      );
+      expect(state.state, DimensionStateValue.officiallyVerifiedDegraded);
+      expect(
+        memory.any(
+          (event) =>
+              event.eventType ==
+                  MemoryEventType.remediationVerificationRequested &&
+              event.summary.contains('requested inspector verification'),
+        ),
+        isTrue,
+      );
+    },
+  );
 }
 
 IdFactory _deterministicIds() {

@@ -43,6 +43,7 @@ class _InstitutionDashboardScreenState
       if (widget.role == InstitutionRole.inspector) {
         return accessCase.status == CaseStatus.inspectionRequested ||
             accessCase.status == CaseStatus.verified ||
+            accessCase.status == CaseStatus.remediationVerificationRequested ||
             accessCase.status == CaseStatus.disputed;
       }
       return accessCase.status != CaseStatus.closed;
@@ -281,6 +282,19 @@ class _CaseDetailScreenState extends State<_CaseDetailScreen> {
     _refresh();
   }
 
+  Future<void> _requestRemediationVerification() async {
+    setState(() => _isActing = true);
+    await widget.stateService.requestRemediationVerification(
+      caseId: widget.summary.accessCase.id,
+      reviewerId: _demoReviewerId,
+    );
+    if (!mounted) {
+      return;
+    }
+    setState(() => _isActing = false);
+    _refresh();
+  }
+
   Future<void> _openVerification(_CaseDetailData detail) async {
     await Navigator.of(context).push(
       _institutionRoute<void>(
@@ -369,6 +383,17 @@ class _CaseDetailScreenState extends State<_CaseDetailScreen> {
                               icon: const Icon(Icons.construction_outlined),
                               label: const Text('Request remediation'),
                               onPressed: _isActing ? null : _requestRemediation,
+                            ),
+                          if (detail.accessCase.status ==
+                              CaseStatus.remediationRequested)
+                            FilledButton.icon(
+                              icon: const Icon(Icons.fact_check_outlined),
+                              label: const Text(
+                                'Request remediation verification',
+                              ),
+                              onPressed: _isActing
+                                  ? null
+                                  : _requestRemediationVerification,
                             ),
                           TextButton.icon(
                             icon: const Icon(Icons.close),
@@ -633,6 +658,7 @@ class _CaseQueueTile extends StatelessWidget {
       CaseStatus.inspectionRequested => const Color(0xff8a6d00),
       CaseStatus.verified => const Color(0xff17643a),
       CaseStatus.remediationRequested => const Color(0xff8a6d00),
+      CaseStatus.remediationVerificationRequested => const Color(0xff1765a6),
       CaseStatus.disputed => const Color(0xffb6461a),
       CaseStatus.resolved => const Color(0xff17643a),
       CaseStatus.closed => const Color(0xff52616b),
@@ -1365,6 +1391,9 @@ class _PriorityExplanation {
     if (accessCase.status == CaseStatus.remediationRequested) {
       return 'Remediation requested';
     }
+    if (accessCase.status == CaseStatus.remediationVerificationRequested) {
+      return 'Complete remediation verification';
+    }
     if (accessCase.status == CaseStatus.disputed) {
       return 'Review contradictory evidence';
     }
@@ -1592,6 +1621,8 @@ extension on CaseStatus {
       CaseStatus.inspectionRequested => 'Inspection requested',
       CaseStatus.verified => 'Verified',
       CaseStatus.remediationRequested => 'Remediation requested',
+      CaseStatus.remediationVerificationRequested =>
+        'Awaiting remediation verification',
       CaseStatus.disputed => 'Disputed',
       CaseStatus.resolved => 'Resolved',
       CaseStatus.closed => 'Closed',
@@ -1605,6 +1636,7 @@ extension on CaseStatus {
       CaseStatus.inspectionRequested => Icons.assignment_turned_in,
       CaseStatus.verified => Icons.verified_outlined,
       CaseStatus.remediationRequested => Icons.construction_outlined,
+      CaseStatus.remediationVerificationRequested => Icons.fact_check_outlined,
       CaseStatus.disputed => Icons.report_gmailerrorred,
       CaseStatus.resolved => Icons.task_alt,
       CaseStatus.closed => Icons.close,
@@ -1635,6 +1667,8 @@ extension on MemoryEventType {
       MemoryEventType.inspectionRequested => 'Inspection requested',
       MemoryEventType.verificationSubmitted => 'Verification submitted',
       MemoryEventType.remediationRequested => 'Remediation requested',
+      MemoryEventType.remediationVerificationRequested =>
+        'Remediation verification requested',
       MemoryEventType.stateChanged => 'State changed',
       MemoryEventType.pulseChanged => 'Pulse changed',
       MemoryEventType.caseClosed => 'Case closed',

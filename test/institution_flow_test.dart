@@ -327,4 +327,100 @@ void main() {
     expect(accessCase.status, CaseStatus.remediationRequested);
     expect(state.state, DimensionStateValue.officiallyVerifiedDegraded);
   });
+
+  testWidgets('LGU can request remediation verification for inspector queue', (
+    WidgetTester tester,
+  ) async {
+    final repository = InMemoryAccessPulseRepository.seeded();
+    final stateService = DimensionStateService(repository: repository);
+    final result = await stateService.submitStructuredEvidence(
+      placeDimensionId: placeDimensionId,
+      submittedBy: communityUserId,
+      assessment: const AiEvidenceAssessment(
+        dimension: 'mobility_access',
+        issueType: 'entrance_ramp_usability',
+        observedFeatures: ['entrance', 'steps', 'partial ramp'],
+        possibleBarrier: 'independent wheelchair access may be unreliable',
+        missingEvidence: ['full side view of ramp'],
+        confidence: 0.82,
+        confidenceLevel: ConfidenceLevel.high,
+        confidenceExplanation:
+            'The entrance evidence and contributor note strongly align.',
+        evidenceReadiness: EvidenceReadiness.institutionReady,
+        summary:
+            'The visible entrance suggests mobility access may require assistance.',
+        recommendedAction: 'lgu_review',
+        nextBestAction: 'Submit for review.',
+        explanation:
+            'AI structured evidence for review but did not make an official judgment.',
+        institutionReady: true,
+      ),
+      imagePath: 'demo/main-entrance.jpg',
+    );
+    await stateService.requestInspection(
+      caseId: result.accessCase.id,
+      reviewerId: '20000000-0000-4000-8000-000000000002',
+    );
+    await stateService.submitVerification(
+      caseId: result.accessCase.id,
+      inspectorId: '20000000-0000-4000-8000-000000000003',
+      outcome: VerificationOutcome.confirmed,
+      note: 'Inspector confirmed that the main entrance requires assistance.',
+    );
+    await stateService.requestRemediation(
+      caseId: result.accessCase.id,
+      reviewerId: '20000000-0000-4000-8000-000000000002',
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        key: UniqueKey(),
+        home: InstitutionDashboardScreen(
+          repository: repository,
+          stateService: stateService,
+          role: InstitutionRole.lguReviewer,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Quezon City Hall Main Entrance'));
+    await tester.pumpAndSettle();
+    final caseDetailScrollable = find
+        .descendant(
+          of: find.byKey(const ValueKey('case-detail-scroll')),
+          matching: find.byType(Scrollable),
+        )
+        .first;
+    final requestVerificationButton = find.widgetWithText(
+      FilledButton,
+      'Request remediation verification',
+    );
+    await tester.scrollUntilVisible(
+      requestVerificationButton,
+      300,
+      scrollable: caseDetailScrollable,
+    );
+    await tester.tap(requestVerificationButton);
+    await tester.pumpAndSettle();
+
+    final accessCase = (await repository.listCases()).single;
+    expect(accessCase.status, CaseStatus.remediationVerificationRequested);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        key: UniqueKey(),
+        home: InstitutionDashboardScreen(
+          repository: repository,
+          stateService: stateService,
+          role: InstitutionRole.inspector,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Inspector verification'), findsOneWidget);
+    expect(find.text('Quezon City Hall Main Entrance'), findsOneWidget);
+    expect(find.text('AWAITING REMEDIATION VERIFICATION'), findsOneWidget);
+  });
 }
