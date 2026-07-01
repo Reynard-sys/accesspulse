@@ -1,5 +1,122 @@
 # AccessPulse MVP — Codex Implementation Prompt
 
+## DEVELOPMENT ORDER (MUST FOLLOW)
+
+Do **not** implement everything at once.
+
+Complete each milestone before moving to the next.
+
+If a milestone is incomplete, do not start the next one.
+
+After completing each milestone:
+1. Verify everything builds.
+2. Fix lint errors.
+3. Fix type errors.
+4. Commit the milestone.
+
+Commit format:
+- `feat(mvp): complete milestone 1 project setup`
+- `feat(mvp): complete milestone 2 database`
+- `feat(mvp): complete milestone 3 domain layer`
+- `feat(mvp): complete milestone 4 public flow`
+- `feat(mvp): complete milestone 5 institution flow`
+- `feat(mvp): complete milestone 6 ai integration`
+- `feat(mvp): complete milestone 7 polish and demo`
+
+### Hackathon Rule
+
+If a feature depends on an unfinished backend:
+- **mock it first**
+
+If it depends on AI:
+- **mock it first**
+
+If it depends on Supabase:
+- **seed it first**
+
+A polished end-to-end demo is always preferred over partially completed production infrastructure.
+
+### Milestone 1 — Project setup
+
+Implement only:
+- inspect repository
+- understand architecture
+- identify existing stack
+- create implementation plan
+
+Output:
+- `IMPLEMENTATION_PLAN.md`
+
+Stop after this milestone.
+
+### Milestone 2 — Database
+
+Implement only:
+- schema
+- migrations
+- seed data
+
+No frontend.
+
+Stop after this milestone.
+
+### Milestone 3 — Domain Layer
+
+Implement only:
+- repositories
+- services
+- state machine
+- pulse logic
+- memory logging
+
+No UI.
+
+Stop after this milestone.
+
+### Milestone 4 — Public Flow
+
+Implement only:
+- Home
+- Place Detail
+- Confirm Visit
+- Evidence Upload
+- AI Result
+- State Update
+
+Do not build dashboards yet.
+
+Stop after this milestone.
+
+### Milestone 5 — Institution Flow
+
+Implement only:
+- LGU Dashboard
+- Case Detail
+- Verification
+- State Update
+
+Stop after this milestone.
+
+### Milestone 6 — AI Integration
+
+Implement only:
+- replace AI mocks with Gemini through a secure server-side wrapper
+- preserve visible AI explanations and uncertainty handling
+
+Stop after this milestone.
+
+### Milestone 7 — Animations, polish, demo
+
+Implement only:
+- animations
+- polish
+- demo flow
+- accessibility improvements
+
+Stop after this milestone.
+
+---
+
 You are implementing the **AccessPulse hackathon MVP**.
 
 The repository root contains the final conceptual SSOT handbook for this product. Treat that handbook as the **single source of truth** for product philosophy, ontology, terminology, system boundaries, and MVP scope.
@@ -503,3 +620,21 @@ Build the smallest implementation that makes this sentence feel true:
 > **AccessPulse helps people and institutions know whether places are truly accessible right now.**
 
 And make the architecture strong enough that future work can grow naturally into the full **Living Accessibility Network**.
+
+## 15. Definition of Done
+
+A feature is not complete until all of the following are true:
+
+- ✓ UI works
+- ✓ Backend works
+- ✓ Database updates correctly
+- ✓ State updates correctly
+- ✓ Memory updates correctly
+- ✓ AI response is visible where relevant
+- ✓ No console/runtime errors
+- ✓ Mobile responsiveness is verified
+- ✓ Accessibility semantics are added
+
+If a dependency is unfinished, use a mock or seeded path so the end-to-end experience still works.
+
+The MVP is judged by the strength of the working flow, not by how much incomplete infrastructure exists.
