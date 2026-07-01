@@ -3397,7 +3397,11 @@ Future<BarrierSignal?> _barrierSignalForCase(
   if (barrierSignalId == null) {
     return null;
   }
-  return repository.getBarrierSignal(barrierSignalId);
+  try {
+    return await repository.getBarrierSignal(barrierSignalId);
+  } on StateError {
+    return null;
+  }
 }
 
 _PublicStateDisplay _publicStateDisplay({
