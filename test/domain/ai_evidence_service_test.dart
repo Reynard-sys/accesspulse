@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:accesspulse/domain/accesspulse_domain.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -25,6 +27,8 @@ void main() {
           expect(request.body, contains('"rampMeasurement"'));
           expect(request.body, contains('"estimatedAngleDegrees":14.8'));
           expect(request.body, contains('"qualityLabel":"Moderate stability"'));
+          expect(request.body, contains('"imageBase64":"AQIDBA=="'));
+          expect(request.body, contains('"imageMimeType":"image/png"'));
           return http.Response(
             '''
 {
@@ -53,6 +57,8 @@ void main() {
       final assessment = await service.analyzeMobilityEvidence(
         note: 'The entrance has steps.',
         imagePath: 'demo/main-entrance.jpg',
+        imageBytes: Uint8List.fromList(<int>[1, 2, 3, 4]),
+        imageMimeType: 'image/png',
         rampSlopeMeasurement: rampMeasurement,
       );
 

@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import '../models/accesspulse_models.dart';
 import '../repositories/accesspulse_repository.dart';
 import 'pulse_service.dart';
@@ -185,6 +187,8 @@ class DimensionStateService {
     required AiEvidenceAssessment assessment,
     String? observationId,
     String? imagePath,
+    Uint8List? imageBytes,
+    String? imageMimeType,
     String? note,
     RampSlopeMeasurement? rampSlopeMeasurement,
     DateTime? now,
@@ -203,6 +207,8 @@ class DimensionStateService {
       submittedBy: submittedBy,
       evidenceType: EvidenceType.image,
       storagePath: imagePath,
+      imageBytes: imageBytes,
+      imageMimeType: imageMimeType,
       note: note,
       metadata: <String, Object?>{
         'dimension': assessment.dimension,

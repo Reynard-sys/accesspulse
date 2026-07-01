@@ -74,8 +74,8 @@ Replace the placeholders:
 
 ```powershell
 flutter run -d chrome `
-  --dart-define=ACCESSPULSE_AI_FUNCTION_URL="https://YOUR_SUPABASE_PROJECT_REF.supabase.co/functions/v1/analyze-evidence" `
-  --dart-define=ACCESSPULSE_SUPABASE_ANON_KEY="PASTE_YOUR_SUPABASE_ANON_KEY_HERE"
+  --dart-define=ACCESSPULSE_AI_FUNCTION_URL="https://pextfzbbqyrblhkvmggm.supabase.co/functions/v1/analyze-evidence" `
+  --dart-define=ACCESSPULSE_SUPABASE_ANON_KEY="sb_publishable_hc8pIkwrKe3GPK6mZmKJcg_huAxGWUW"
 ```
 
 For web-server:

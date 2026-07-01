@@ -713,7 +713,8 @@ class _ConfirmVisitScreenState extends State<ConfirmVisitScreen> {
   bool _entranceUsable = false;
   bool _rampUsable = false;
   bool _neededAssistance = false;
-  bool _completedPurpose = true; // Default to true as it is not explicitly questioned in Figma steps
+  final bool _completedPurpose =
+      true; // Default to true as it is not explicitly questioned in Figma steps
   final _noteController = TextEditingController();
   bool _isSubmitting = false;
 
@@ -725,7 +726,7 @@ class _ConfirmVisitScreenState extends State<ConfirmVisitScreen> {
 
   Future<void> _submit() async {
     setState(() => _isSubmitting = true);
-    final result = await widget.stateService.confirmVisit(
+    await widget.stateService.confirmVisit(
       placeDimensionId: widget.placeDimensionId,
       submittedBy: _demoUserId,
       entranceUsableIndependently: _entranceUsable,
@@ -738,9 +739,7 @@ class _ConfirmVisitScreenState extends State<ConfirmVisitScreen> {
       return;
     }
     await Navigator.of(context).pushReplacement(
-      _accessPulseRoute<void>(
-        _VisitConfirmedScreen(place: widget.place),
-      ),
+      _accessPulseRoute<void>(_VisitConfirmedScreen(place: widget.place)),
     );
   }
 
@@ -768,7 +767,7 @@ class _ConfirmVisitScreenState extends State<ConfirmVisitScreen> {
               width: 36,
               height: 36,
               decoration: BoxDecoration(
-                color: const Color(0xffeef4f1).withOpacity(0.4),
+                color: const Color(0xffeef4f1).withValues(alpha: 0.4),
                 shape: BoxShape.circle,
               ),
               child: const Center(
@@ -856,7 +855,9 @@ class _ConfirmVisitScreenState extends State<ConfirmVisitScreen> {
               children: List.generate(4, (index) {
                 final stepNum = index + 1;
                 final isActive = stepNum == _currentStep;
-                final color = isActive ? const Color(0xff3b75d1) : const Color(0xffdde5e0);
+                final color = isActive
+                    ? const Color(0xff3b75d1)
+                    : const Color(0xffdde5e0);
                 return AnimatedContainer(
                   duration: const Duration(milliseconds: 250),
                   curve: Curves.easeOutCubic,
@@ -957,11 +958,16 @@ class _ConfirmVisitScreenState extends State<ConfirmVisitScreen> {
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 curve: Curves.easeInOut,
-                padding: const EdgeInsets.symmetric(horizontal: 21, vertical: 17),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 21,
+                  vertical: 17,
+                ),
                 decoration: BoxDecoration(
                   color: isSelected ? const Color(0xfff1f5f3) : Colors.white,
                   border: Border.all(
-                    color: isSelected ? const Color(0xff2e7d5b) : const Color(0xffdde5e0),
+                    color: isSelected
+                        ? const Color(0xff2e7d5b)
+                        : const Color(0xffdde5e0),
                     width: isSelected ? 1.5 : 1.0,
                   ),
                   borderRadius: BorderRadius.circular(16),
@@ -976,7 +982,9 @@ class _ConfirmVisitScreenState extends State<ConfirmVisitScreen> {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: isSelected ? const Color(0xff2e7d5b) : const Color(0xffdde5e0),
+                          color: isSelected
+                              ? const Color(0xff2e7d5b)
+                              : const Color(0xffdde5e0),
                           width: 2.0,
                         ),
                       ),
@@ -1000,8 +1008,12 @@ class _ConfirmVisitScreenState extends State<ConfirmVisitScreen> {
                         curve: Curves.easeInOut,
                         style: GoogleFonts.afacad(
                           fontSize: 16,
-                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                          color: isSelected ? const Color(0xff17201c) : const Color(0xff5d6b63),
+                          fontWeight: isSelected
+                              ? FontWeight.w600
+                              : FontWeight.normal,
+                          color: isSelected
+                              ? const Color(0xff17201c)
+                              : const Color(0xff5d6b63),
                         ),
                         child: Text(text),
                       ),
@@ -1055,9 +1067,13 @@ class _ConfirmVisitScreenState extends State<ConfirmVisitScreen> {
                     curve: Curves.easeInOut,
                     height: 56,
                     decoration: BoxDecoration(
-                      color: isSelected ? const Color(0xfff1f5f3) : Colors.white,
+                      color: isSelected
+                          ? const Color(0xfff1f5f3)
+                          : Colors.white,
                       border: Border.all(
-                        color: isSelected ? const Color(0xff2e7d5b) : const Color(0xffdde5e0),
+                        color: isSelected
+                            ? const Color(0xff2e7d5b)
+                            : const Color(0xffdde5e0),
                         width: isSelected ? 1.5 : 1.0,
                       ),
                       borderRadius: BorderRadius.circular(16),
@@ -1068,8 +1084,12 @@ class _ConfirmVisitScreenState extends State<ConfirmVisitScreen> {
                       curve: Curves.easeInOut,
                       style: GoogleFonts.afacad(
                         fontSize: 16,
-                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                        color: isSelected ? const Color(0xff2e7d5b) : const Color(0xff5d6b63),
+                        fontWeight: isSelected
+                            ? FontWeight.w600
+                            : FontWeight.normal,
+                        color: isSelected
+                            ? const Color(0xff2e7d5b)
+                            : const Color(0xff5d6b63),
                       ),
                       child: Text(text),
                     ),
@@ -1114,9 +1134,7 @@ class _ConfirmVisitScreenState extends State<ConfirmVisitScreen> {
             final isSelected = _step3Selection == idx;
             return Expanded(
               child: Padding(
-                padding: EdgeInsets.only(
-                  right: idx < 2 ? 10.0 : 0.0,
-                ),
+                padding: EdgeInsets.only(right: idx < 2 ? 10.0 : 0.0),
                 child: InkWell(
                   onTap: () {
                     setState(() {
@@ -1130,9 +1148,13 @@ class _ConfirmVisitScreenState extends State<ConfirmVisitScreen> {
                     curve: Curves.easeInOut,
                     height: 56,
                     decoration: BoxDecoration(
-                      color: isSelected ? const Color(0xfff1f5f3) : Colors.white,
+                      color: isSelected
+                          ? const Color(0xfff1f5f3)
+                          : Colors.white,
                       border: Border.all(
-                        color: isSelected ? const Color(0xff2e7d5b) : const Color(0xffdde5e0),
+                        color: isSelected
+                            ? const Color(0xff2e7d5b)
+                            : const Color(0xffdde5e0),
                         width: isSelected ? 1.5 : 1.0,
                       ),
                       borderRadius: BorderRadius.circular(16),
@@ -1143,8 +1165,12 @@ class _ConfirmVisitScreenState extends State<ConfirmVisitScreen> {
                       curve: Curves.easeInOut,
                       style: GoogleFonts.afacad(
                         fontSize: 16,
-                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                        color: isSelected ? const Color(0xff2e7d5b) : const Color(0xff5d6b63),
+                        fontWeight: isSelected
+                            ? FontWeight.w600
+                            : FontWeight.normal,
+                        color: isSelected
+                            ? const Color(0xff2e7d5b)
+                            : const Color(0xff5d6b63),
                       ),
                       child: Text(text),
                     ),
@@ -1209,7 +1235,7 @@ class _ConfirmVisitScreenState extends State<ConfirmVisitScreen> {
             hintText: 'e.g. The ramp was wet and the signage was unclear...',
             hintStyle: GoogleFonts.afacad(
               fontSize: 15,
-              color: const Color(0xff17201c).withOpacity(0.5),
+              color: const Color(0xff17201c).withValues(alpha: 0.5),
             ),
             fillColor: Colors.white,
             filled: true,
@@ -1223,7 +1249,10 @@ class _ConfirmVisitScreenState extends State<ConfirmVisitScreen> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
-              borderSide: const BorderSide(color: Color(0xff2e7d5b), width: 1.5),
+              borderSide: const BorderSide(
+                color: Color(0xff2e7d5b),
+                width: 1.5,
+              ),
             ),
             contentPadding: const EdgeInsets.all(17),
           ),
@@ -1262,7 +1291,10 @@ class _ConfirmVisitScreenState extends State<ConfirmVisitScreen> {
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 420),
                   child: ListView(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 16,
+                    ),
                     children: [
                       _buildAlertBanner(),
                       const SizedBox(height: 16),
@@ -1272,15 +1304,19 @@ class _ConfirmVisitScreenState extends State<ConfirmVisitScreen> {
                         duration: const Duration(milliseconds: 250),
                         switchInCurve: Curves.easeOutCubic,
                         switchOutCurve: Curves.easeInCubic,
-                        layoutBuilder: (Widget? currentChild, List<Widget> previousChildren) {
-                          return Stack(
-                            alignment: Alignment.topLeft,
-                            children: <Widget>[
-                              ...previousChildren,
-                              if (currentChild != null) currentChild,
-                            ],
-                          );
-                        },
+                        layoutBuilder:
+                            (
+                              Widget? currentChild,
+                              List<Widget> previousChildren,
+                            ) {
+                              return Stack(
+                                alignment: Alignment.topLeft,
+                                children: <Widget>[
+                                  ...previousChildren,
+                                  ?currentChild,
+                                ],
+                              );
+                            },
                         child: KeyedSubtree(
                           key: ValueKey(_currentStep),
                           child: stepWidget,
@@ -1294,7 +1330,12 @@ class _ConfirmVisitScreenState extends State<ConfirmVisitScreen> {
             // Fixed Bottom Action Bar
             Container(
               color: const Color(0xfff8faf9),
-              padding: const EdgeInsets.only(left: 20, right: 20, bottom: 20, top: 12),
+              padding: const EdgeInsets.only(
+                left: 20,
+                right: 20,
+                bottom: 20,
+                top: 12,
+              ),
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 420),
                 child: Column(
@@ -1306,12 +1347,14 @@ class _ConfirmVisitScreenState extends State<ConfirmVisitScreen> {
                       width: double.infinity,
                       height: 54,
                       decoration: BoxDecoration(
-                        color: isValid ? const Color(0xff2e7d5b) : const Color(0xffd5e0da),
+                        color: isValid
+                            ? const Color(0xff2e7d5b)
+                            : const Color(0xffd5e0da),
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: isValid
                             ? [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.15),
+                                  color: Colors.black.withValues(alpha: 0.15),
                                   blurRadius: 8,
                                   offset: const Offset(0, 4),
                                 ),
@@ -1347,7 +1390,9 @@ class _ConfirmVisitScreenState extends State<ConfirmVisitScreen> {
                                     style: GoogleFonts.afacad(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w600,
-                                      color: isValid ? Colors.white : const Color(0xffa8b5ae),
+                                      color: isValid
+                                          ? Colors.white
+                                          : const Color(0xffa8b5ae),
                                     ),
                                   ),
                           ),
@@ -1415,7 +1460,12 @@ class _VisitConfirmedScreen extends StatelessWidget {
                   bottom: BorderSide(color: Color(0xffdde5e0), width: 1.0),
                 ),
               ),
-              padding: const EdgeInsets.only(left: 20, right: 20, bottom: 17, top: 12),
+              padding: const EdgeInsets.only(
+                left: 20,
+                right: 20,
+                bottom: 17,
+                top: 12,
+              ),
               child: Row(
                 children: [
                   InkWell(
@@ -1425,7 +1475,7 @@ class _VisitConfirmedScreen extends StatelessWidget {
                       width: 36,
                       height: 36,
                       decoration: BoxDecoration(
-                        color: const Color(0xffeef4f1).withOpacity(0.4),
+                        color: const Color(0xffeef4f1).withValues(alpha: 0.4),
                         shape: BoxShape.circle,
                       ),
                       child: const Center(
@@ -1481,9 +1531,7 @@ class _VisitConfirmedScreen extends StatelessWidget {
                         color: Color(0xffeaf7f0),
                         shape: BoxShape.circle,
                       ),
-                      child: const CustomPaint(
-                        painter: _CheckmarkPainter(),
-                      ),
+                      child: const CustomPaint(painter: _CheckmarkPainter()),
                     ),
                     const SizedBox(height: 24),
                     Text(
@@ -1508,7 +1556,10 @@ class _VisitConfirmedScreen extends StatelessWidget {
                     // Info banner
                     Container(
                       decoration: BoxDecoration(
-                        border: Border.all(color: const Color(0xffdde5e0), width: 0.8),
+                        border: Border.all(
+                          color: const Color(0xffdde5e0),
+                          width: 0.8,
+                        ),
                         borderRadius: BorderRadius.circular(16),
                         color: Colors.white,
                       ),
@@ -1533,7 +1584,7 @@ class _VisitConfirmedScreen extends StatelessWidget {
                           borderRadius: BorderRadius.circular(16),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.15),
+                              color: Colors.black.withValues(alpha: 0.15),
                               blurRadius: 8,
                               offset: const Offset(0, 4),
                             ),
@@ -1808,10 +1859,13 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
     });
 
     try {
-      // Analyze with all accumulated photos
+      final photo = _photos.last;
+      // Send the latest uploaded photo bytes to the AI wrapper for analysis.
       final assessment = await widget.aiService.analyzeMobilityEvidence(
         note: _noteController.text,
-        imagePath: _photos.isNotEmpty ? _photos.last.file.path : null,
+        imagePath: photo.file.path,
+        imageBytes: photo.bytes,
+        imageMimeType: _mimeTypeForPhoto(photo),
         rampSlopeMeasurement: _rampSlopeMeasurement,
       );
 
@@ -1831,6 +1885,25 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
         _isAnalyzing = false;
       });
     }
+  }
+
+  String _mimeTypeForPhoto(PhotoEvidenceItem photo) {
+    final explicitMimeType = photo.file.mimeType;
+    if (explicitMimeType != null && explicitMimeType.trim().isNotEmpty) {
+      return explicitMimeType;
+    }
+
+    final path = photo.file.path.toLowerCase();
+    if (path.endsWith('.png')) {
+      return 'image/png';
+    }
+    if (path.endsWith('.webp')) {
+      return 'image/webp';
+    }
+    if (path.endsWith('.heic') || path.endsWith('.heif')) {
+      return 'image/heic';
+    }
+    return 'image/jpeg';
   }
 
   // ── Flow Navigation ─────────────────────────────────────────────────────
@@ -1870,11 +1943,14 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
     });
 
     try {
+      final photo = _photos.isEmpty ? null : _photos.last;
       final result = await widget.stateService.submitStructuredEvidence(
         placeDimensionId: widget.placeDimensionId,
         submittedBy: _demoUserId,
         assessment: assessment,
-        imagePath: _photos.isNotEmpty ? _photos.last.file.path : null,
+        imagePath: photo?.file.path,
+        imageBytes: photo?.bytes,
+        imageMimeType: photo == null ? null : _mimeTypeForPhoto(photo),
         note: _noteController.text,
         rampSlopeMeasurement: _rampSlopeMeasurement,
       );
@@ -3935,40 +4011,6 @@ class _MemoryTile extends StatelessWidget {
     } else {
       return _formatDate(dateTime);
     }
-  }
-}
-
-class _QuestionSwitch extends StatelessWidget {
-  const _QuestionSwitch({
-    required this.title,
-    required this.value,
-    required this.onChanged,
-  });
-
-  final String title;
-  final bool value;
-  final ValueChanged<bool> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: SwitchListTile(
-        title: Text(
-          title,
-          style: GoogleFonts.afacad(
-            fontSize: 15,
-            fontWeight: FontWeight.bold,
-            color: const Color(0xff17201c),
-          ),
-        ),
-        activeThumbColor: const Color(0xff2e7d5b),
-        activeTrackColor: const Color(0xffe8eee9),
-        inactiveThumbColor: const Color(0xff5d6b63),
-        inactiveTrackColor: const Color(0xffdde5e0),
-        value: value,
-        onChanged: onChanged,
-      ),
-    );
   }
 }
 

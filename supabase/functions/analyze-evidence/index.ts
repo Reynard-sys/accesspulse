@@ -44,13 +44,33 @@ Deno.serve(async (request) => {
     );
   }
 
-  const model = Deno.env.get("GEMINI_MODEL") ?? "gemini-3.5-flash";
+  const model = Deno.env.get("GEMINI_MODEL") ?? "gemini-2.5-flash";
   const body = (await request.json()) as EvidenceRequest;
   const note = body.note?.trim() ?? "";
   const dimension = body.dimension ?? "mobility_access";
+  const parts: Array<Record<string, unknown>> = [
+    {
+      text: buildPrompt({
+        dimension,
+        note,
+        imagePath: body.imagePath,
+        hasImageBytes: Boolean(body.imageBase64 && body.imageMimeType),
+        rampMeasurement: body.rampMeasurement,
+      }),
+    },
+  ];
+
+  if (body.imageBase64 && body.imageMimeType) {
+    parts.push({
+      inlineData: {
+        mimeType: body.imageMimeType,
+        data: body.imageBase64,
+      },
+    });
+  }
 
   const geminiResponse = await fetch(
-    "https://generativelanguage.googleapis.com/v1beta/interactions",
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
     {
       method: "POST",
       headers: {
@@ -58,18 +78,15 @@ Deno.serve(async (request) => {
         "x-goog-api-key": apiKey,
       },
       body: JSON.stringify({
-        model,
-        input: buildPrompt({
-          dimension,
-          note,
-          imagePath: body.imagePath,
-          hasImageBytes: Boolean(body.imageBase64 && body.imageMimeType),
-          rampMeasurement: body.rampMeasurement,
-        }),
-        response_format: {
-          type: "text",
-          mime_type: "application/json",
-          schema: {
+        contents: [
+          {
+            role: "user",
+            parts,
+          },
+        ],
+        generationConfig: {
+          responseMimeType: "application/json",
+          responseSchema: {
             type: "object",
             properties: {
               dimension: { type: "string" },
@@ -171,7 +188,7 @@ ${input.imagePath || "(No uploaded image bytes were provided.)"}
 Image bytes:
 ${
     input.hasImageBytes
-      ? "Image bytes were received by the wrapper, but this structured-output pass should not claim visual details that are not supported by the user's note."
+      ? "An uploaded image is attached as a separate inlineData part. Use visual evidence from that image, but explain uncertainty and do not make official findings."
       : "(No image bytes were provided.)"
   }
 
@@ -320,6 +337,31 @@ function extractOutputText(data: unknown) {
   const record = data as Record<string, unknown>;
   if (typeof record.output_text === "string") {
     return record.output_text;
+  }
+  if (Array.isArray(record.candidates)) {
+    for (const candidate of record.candidates) {
+      if (!candidate || typeof candidate !== "object") {
+        continue;
+      }
+      const candidateRecord = candidate as Record<string, unknown>;
+      const content = candidateRecord.content;
+      if (!content || typeof content !== "object") {
+        continue;
+      }
+      const contentRecord = content as Record<string, unknown>;
+      if (!Array.isArray(contentRecord.parts)) {
+        continue;
+      }
+      for (const part of contentRecord.parts) {
+        if (!part || typeof part !== "object") {
+          continue;
+        }
+        const partRecord = part as Record<string, unknown>;
+        if (typeof partRecord.text === "string") {
+          return partRecord.text;
+        }
+      }
+    }
   }
   if (!Array.isArray(record.steps)) {
     return null;

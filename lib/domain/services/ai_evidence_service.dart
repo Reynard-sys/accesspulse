@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
@@ -9,6 +10,8 @@ abstract class AiEvidenceService {
   Future<AiEvidenceAssessment> analyzeMobilityEvidence({
     required String note,
     String? imagePath,
+    Uint8List? imageBytes,
+    String? imageMimeType,
     RampSlopeMeasurement? rampSlopeMeasurement,
   });
 }
@@ -20,6 +23,8 @@ class MockAiEvidenceService implements AiEvidenceService {
   Future<AiEvidenceAssessment> analyzeMobilityEvidence({
     required String note,
     String? imagePath,
+    Uint8List? imageBytes,
+    String? imageMimeType,
     RampSlopeMeasurement? rampSlopeMeasurement,
   }) async {
     final lowerNote = note.toLowerCase();
@@ -38,7 +43,8 @@ class MockAiEvidenceService implements AiEvidenceService {
     final confidence = measurement == null
         ? baseConfidence
         : (baseConfidence + 0.05).clamp(0.0, 0.9).toDouble();
-    final readiness = measurement != null || imagePath != null
+    final hasPhoto = imagePath != null || imageBytes != null;
+    final readiness = measurement != null || hasPhoto
         ? EvidenceReadiness.institutionReady
         : EvidenceReadiness.almostReady;
     final confidenceLevel = _confidenceLevelFromScore(confidence);
@@ -50,7 +56,7 @@ class MockAiEvidenceService implements AiEvidenceService {
         'entrance',
         if (mentionsSteps) 'steps',
         if (mentionsRamp) 'ramp',
-        if (imagePath != null) 'uploaded photo',
+        if (hasPhoto) 'uploaded photo',
         ?measurementText,
       ],
       possibleBarrier: mentionsAssistance
@@ -67,7 +73,7 @@ class MockAiEvidenceService implements AiEvidenceService {
       confidenceExplanation: _confidenceExplanation(
         confidenceLevel: confidenceLevel,
         hasMeasurement: measurement != null,
-        hasPhoto: imagePath != null,
+        hasPhoto: hasPhoto,
         mentionsRamp: mentionsRamp,
       ),
       evidenceReadiness: readiness,
@@ -77,7 +83,7 @@ class MockAiEvidenceService implements AiEvidenceService {
       recommendedAction: 'lgu_review',
       nextBestAction: _nextBestAction(
         readiness: readiness,
-        hasPhoto: imagePath != null,
+        hasPhoto: hasPhoto,
         hasMeasurement: measurement != null,
         mentionsRamp: mentionsRamp,
       ),
@@ -157,6 +163,8 @@ class GeminiServerEvidenceService implements AiEvidenceService {
   Future<AiEvidenceAssessment> analyzeMobilityEvidence({
     required String note,
     String? imagePath,
+    Uint8List? imageBytes,
+    String? imageMimeType,
     RampSlopeMeasurement? rampSlopeMeasurement,
   }) async {
     try {
@@ -174,6 +182,9 @@ class GeminiServerEvidenceService implements AiEvidenceService {
           'dimension': 'mobility_access',
           'note': note,
           'imagePath': imagePath,
+          if (imageBytes != null) 'imageBase64': base64Encode(imageBytes),
+          if (imageBytes != null && imageMimeType != null)
+            'imageMimeType': imageMimeType,
           if (rampSlopeMeasurement != null)
             'rampMeasurement': _rampMeasurementPayload(rampSlopeMeasurement),
         }),
@@ -182,6 +193,8 @@ class GeminiServerEvidenceService implements AiEvidenceService {
         return _fallback.analyzeMobilityEvidence(
           note: note,
           imagePath: imagePath,
+          imageBytes: imageBytes,
+          imageMimeType: imageMimeType,
           rampSlopeMeasurement: rampSlopeMeasurement,
         );
       }
@@ -190,6 +203,8 @@ class GeminiServerEvidenceService implements AiEvidenceService {
         return _fallback.analyzeMobilityEvidence(
           note: note,
           imagePath: imagePath,
+          imageBytes: imageBytes,
+          imageMimeType: imageMimeType,
           rampSlopeMeasurement: rampSlopeMeasurement,
         );
       }
@@ -256,6 +271,8 @@ class GeminiServerEvidenceService implements AiEvidenceService {
       return _fallback.analyzeMobilityEvidence(
         note: note,
         imagePath: imagePath,
+        imageBytes: imageBytes,
+        imageMimeType: imageMimeType,
         rampSlopeMeasurement: rampSlopeMeasurement,
       );
     }

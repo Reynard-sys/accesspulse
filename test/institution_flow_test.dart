@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:accesspulse/data/in_memory_accesspulse_repository.dart';
 import 'package:accesspulse/domain/accesspulse_domain.dart';
 import 'package:accesspulse/features/institution/institution_flow.dart';
@@ -36,6 +38,8 @@ void main() {
         institutionReady: true,
       ),
       imagePath: 'demo/main-entrance.jpg',
+      imageBytes: Uint8List.fromList(_tinyPngBytes),
+      imageMimeType: 'image/png',
       rampSlopeMeasurement: RampSlopeMeasurement(
         estimatedAngleDegrees: 14.8,
         qualityScore: 64,
@@ -102,6 +106,13 @@ void main() {
     expect(find.text('Institution Ready'), findsOneWidget);
     expect(find.text('Freshness / pulse'), findsOneWidget);
     expect(find.text('Under review'), findsWidgets);
+    await tester.scrollUntilVisible(
+      find.text('Submitted photo reference'),
+      300,
+      scrollable: caseDetailScrollable,
+    );
+    expect(find.text('Submitted photo reference'), findsOneWidget);
+    expect(find.byType(Image), findsWidgets);
     expect(find.text('Ramp Measurement'), findsOneWidget);
     expect(find.text('Estimated angle'), findsOneWidget);
     expect(find.text('14.8 deg'), findsOneWidget);
@@ -173,7 +184,14 @@ void main() {
       ),
       findsOneWidget,
     );
+    expect(find.text('Submitted photo reference'), findsOneWidget);
+    expect(find.byType(Image), findsWidgets);
 
+    await tester.scrollUntilVisible(
+      find.text('Submit verification'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(find.text('Submit verification'));
     await tester.pumpAndSettle();
 
@@ -500,6 +518,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Remediation Verification'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Submit verification'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(find.text('Submit verification'));
     await tester.pumpAndSettle();
 
@@ -511,3 +534,77 @@ void main() {
     expect(find.text('Resolved'), findsWidgets);
   });
 }
+
+const List<int> _tinyPngBytes = <int>[
+  0x89,
+  0x50,
+  0x4E,
+  0x47,
+  0x0D,
+  0x0A,
+  0x1A,
+  0x0A,
+  0x00,
+  0x00,
+  0x00,
+  0x0D,
+  0x49,
+  0x48,
+  0x44,
+  0x52,
+  0x00,
+  0x00,
+  0x00,
+  0x00,
+  0x01,
+  0x00,
+  0x00,
+  0x00,
+  0x01,
+  0x08,
+  0x06,
+  0x00,
+  0x00,
+  0x00,
+  0x1F,
+  0x15,
+  0xC4,
+  0x89,
+  0x00,
+  0x00,
+  0x00,
+  0x0D,
+  0x49,
+  0x44,
+  0x41,
+  0x54,
+  0x78,
+  0x9C,
+  0x63,
+  0xF8,
+  0xCF,
+  0xC0,
+  0xF0,
+  0x1F,
+  0x00,
+  0x05,
+  0x00,
+  0x01,
+  0xFF,
+  0x89,
+  0x99,
+  0x3D,
+  0x1D,
+  0x00,
+  0x00,
+  0x00,
+  0x00,
+  0x49,
+  0x45,
+  0x4E,
+  0x44,
+  0xAE,
+  0x42,
+  0x60,
+  0x82,
+];

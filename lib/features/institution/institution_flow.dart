@@ -352,6 +352,10 @@ class _CaseDetailScreenState extends State<_CaseDetailScreen> {
                         evidence: detail.evidence,
                         rampMeasurement: detail.rampMeasurement,
                       ),
+                    if (detail.evidence != null) ...[
+                      const SizedBox(height: 16),
+                      _EvidencePhotoPanel(evidence: detail.evidence!),
+                    ],
                     const SizedBox(height: 16),
                     _MemoryPanel(memory: detail.memory),
                     const SizedBox(height: 16),
@@ -509,6 +513,10 @@ class _InspectorVerificationScreenState
                       ? 'Confirm whether the completed remediation resolves the verified barrier.'
                       : 'Human verification is authoritative. AI evidence remains supporting context.',
                 ),
+                if (widget.detail.evidence != null) ...[
+                  const SizedBox(height: 16),
+                  _EvidencePhotoPanel(evidence: widget.detail.evidence!),
+                ],
                 const SizedBox(height: 16),
                 SegmentedButton<VerificationOutcome>(
                   segments: const [
@@ -1064,6 +1072,95 @@ class _RampMeasurementBlock extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EvidencePhotoPanel extends StatelessWidget {
+  const _EvidencePhotoPanel({required this.evidence});
+
+  final Evidence evidence;
+
+  @override
+  Widget build(BuildContext context) {
+    final imageBytes = evidence.imageBytes;
+    final sourceLabel = evidence.storagePath ?? evidence.publicUrl;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const _SectionHeader(
+              icon: Icons.photo_library_outlined,
+              title: 'Submitted photo reference',
+            ),
+            const SizedBox(height: 12),
+            if (imageBytes != null && imageBytes.isNotEmpty)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: AspectRatio(
+                  aspectRatio: 4 / 3,
+                  child: Image.memory(
+                    imageBytes,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return const _PhotoUnavailableBox(
+                        message: 'Photo preview could not be rendered.',
+                      );
+                    },
+                  ),
+                ),
+              )
+            else
+              const _PhotoUnavailableBox(
+                message:
+                    'This case has an evidence record, but no uploaded photo preview is available.',
+              ),
+            if (sourceLabel != null && sourceLabel.trim().isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Text(
+                sourceLabel,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PhotoUnavailableBox extends StatelessWidget {
+  const _PhotoUnavailableBox({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Theme.of(context).colorScheme.outline),
+      ),
+      child: SizedBox(
+        width: double.infinity,
+        height: 160,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.image_not_supported_outlined, size: 32),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(message, textAlign: TextAlign.center),
+            ),
+          ],
         ),
       ),
     );

@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 enum AccessPulseUserRole { communityUser, lguReviewer, inspector }
 
 enum DimensionStateValue {
@@ -248,6 +250,8 @@ class Evidence {
     this.submittedBy,
     this.storagePath,
     this.publicUrl,
+    this.imageBytes,
+    this.imageMimeType,
     this.note,
     this.metadata = const <String, Object?>{},
   });
@@ -259,6 +263,8 @@ class Evidence {
   final EvidenceType evidenceType;
   final String? storagePath;
   final String? publicUrl;
+  final Uint8List? imageBytes;
+  final String? imageMimeType;
   final String? note;
   final Map<String, Object?> metadata;
   final DateTime createdAt;
