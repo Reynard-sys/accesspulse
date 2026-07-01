@@ -296,6 +296,35 @@ void main() {
     await tester.ensureVisible(addAnotherPhotoButton);
     expect(addAnotherPhotoButton, findsOneWidget);
   });
+
+  testWidgets('public detail uses remediation lifecycle wording', (
+    WidgetTester tester,
+  ) async {
+    final underRemediation = await _publicDetailHarness();
+    await _preparePublicCase(
+      service: underRemediation.stateService,
+      status: CaseStatus.remediationRequested,
+    );
+    await _pumpPublicDetail(tester, underRemediation);
+    expect(find.text('Under Remediation'), findsWidgets);
+
+    final resolved = await _publicDetailHarness();
+    await _preparePublicCase(
+      service: resolved.stateService,
+      status: CaseStatus.resolved,
+    );
+    await _pumpPublicDetail(tester, resolved);
+    expect(find.text('Resolved'), findsWidgets);
+
+    final closed = await _publicDetailHarness();
+    await _preparePublicCase(
+      service: closed.stateService,
+      status: CaseStatus.closed,
+    );
+    await _pumpPublicDetail(tester, closed);
+    expect(find.text('Recently Revalidated'), findsWidgets);
+    expect(find.text('Claimed accessible'), findsNothing);
+  });
 }
 
 Finder _stepScrollable(String stepKey) {
@@ -312,6 +341,130 @@ Future<XFile?> Function(ImageSource source, int? imageQuality) _fakePicker(
 ) {
   return (source, imageQuality) async => XFile(filePath);
 }
+
+Future<_PublicDetailHarness> _publicDetailHarness() async {
+  final repository = InMemoryAccessPulseRepository.seeded();
+  final stateService = DimensionStateService(repository: repository);
+  final place = (await repository.listPlaces()).firstWhere(
+    (candidate) => candidate.id == _demoPlaceId,
+  );
+  return _PublicDetailHarness(
+    repository: repository,
+    stateService: stateService,
+    place: place,
+  );
+}
+
+Future<void> _pumpPublicDetail(
+  WidgetTester tester,
+  _PublicDetailHarness harness,
+) async {
+  await tester.pumpWidget(
+    MaterialApp(
+      home: PlaceDetailScreen(
+        key: UniqueKey(),
+        repository: harness.repository,
+        stateService: harness.stateService,
+        aiService: const MockAiEvidenceService(),
+        place: harness.place,
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
+Future<void> _preparePublicCase({
+  required DimensionStateService service,
+  required CaseStatus status,
+}) async {
+  final evidenceResult = await service.submitStructuredEvidence(
+    placeDimensionId: _demoPlaceDimensionId,
+    submittedBy: _communityUserId,
+    assessment: const AiEvidenceAssessment(
+      dimension: 'mobility_access',
+      issueType: 'entrance_ramp_usability',
+      observedFeatures: <String>['entrance', 'steps', 'partial ramp'],
+      possibleBarrier: 'independent wheelchair access may be unreliable',
+      missingEvidence: <String>['full side view of ramp'],
+      confidence: 0.82,
+      confidenceLevel: ConfidenceLevel.high,
+      confidenceExplanation:
+          'The entrance evidence and contributor note strongly align.',
+      evidenceReadiness: EvidenceReadiness.institutionReady,
+      summary:
+          'The visible entrance suggests mobility access may require assistance.',
+      recommendedAction: 'lgu_review',
+      nextBestAction: 'Submit for review.',
+      explanation:
+          'I can describe visible features, but I cannot officially verify the site.',
+      institutionReady: true,
+    ),
+    imagePath: 'demo/entrance.jpg',
+    now: DateTime(2026, 6, 29, 10, 5),
+  );
+
+  await service.requestInspection(
+    caseId: evidenceResult.accessCase.id,
+    reviewerId: _reviewerId,
+    now: DateTime(2026, 6, 29, 10, 10),
+  );
+  await service.submitVerification(
+    caseId: evidenceResult.accessCase.id,
+    inspectorId: _inspectorId,
+    outcome: VerificationOutcome.confirmed,
+    note: 'Inspector confirmed that the main entrance requires assistance.',
+    now: DateTime(2026, 6, 29, 11),
+  );
+  await service.requestRemediation(
+    caseId: evidenceResult.accessCase.id,
+    reviewerId: _reviewerId,
+    now: DateTime(2026, 6, 29, 12),
+  );
+
+  if (status == CaseStatus.remediationRequested) {
+    return;
+  }
+
+  await service.requestRemediationVerification(
+    caseId: evidenceResult.accessCase.id,
+    reviewerId: _reviewerId,
+    now: DateTime(2026, 6, 29, 13),
+  );
+  await service.submitVerification(
+    caseId: evidenceResult.accessCase.id,
+    inspectorId: _inspectorId,
+    outcome: VerificationOutcome.confirmed,
+    note: 'Inspector confirmed remediation resolved the barrier.',
+    now: DateTime(2026, 6, 29, 14),
+  );
+
+  if (status == CaseStatus.closed) {
+    await service.closeCase(
+      caseId: evidenceResult.accessCase.id,
+      reviewerId: _reviewerId,
+      note: 'Resolved remediation case closed.',
+      now: DateTime(2026, 6, 29, 15),
+    );
+  }
+}
+
+class _PublicDetailHarness {
+  const _PublicDetailHarness({
+    required this.repository,
+    required this.stateService,
+    required this.place,
+  });
+
+  final InMemoryAccessPulseRepository repository;
+  final DimensionStateService stateService;
+  final Place place;
+}
+
+const _demoPlaceId = '40000000-0000-4000-8000-000000000001';
+const _demoPlaceDimensionId = '50000000-0000-4000-8000-000000000001';
+const _communityUserId = '20000000-0000-4000-8000-000000000001';
+const _reviewerId = '20000000-0000-4000-8000-000000000002';
+const _inspectorId = '20000000-0000-4000-8000-000000000003';
 
 const List<int> _tinyPngBytes = <int>[
   0x89,

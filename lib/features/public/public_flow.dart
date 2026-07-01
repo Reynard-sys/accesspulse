@@ -327,11 +327,16 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
     final state = await widget.repository.getDimensionState(placeDimension.id);
     final pulse = await widget.repository.getDimensionPulse(placeDimension.id);
     final memory = await widget.repository.listMemoryEvents(placeDimension.id);
+    final latestCase = await _latestCaseForPlaceDimension(
+      widget.repository,
+      placeDimension.id,
+    );
     return _PlaceDetailData(
       placeDimension: placeDimension,
       state: state,
       pulse: pulse,
       memory: memory,
+      latestCase: latestCase,
     );
   }
 
@@ -574,6 +579,7 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
                       placeName: widget.place.name,
                       state: detail.state,
                       pulse: detail.pulse,
+                      latestCase: detail.latestCase,
                     ),
                     const SizedBox(height: 24),
                     Text(
@@ -1745,8 +1751,12 @@ class _PlaceListTile extends StatelessWidget {
           );
         }
 
-        final stateColor = data.state.state.color;
-        final stateLabel = data.state.state.label;
+        final publicState = _publicStateDisplay(
+          state: data.state,
+          latestCase: data.latestCase,
+        );
+        final stateColor = publicState.color;
+        final stateLabel = publicState.label;
         final pulseDisplay = const PulseService().describePlacePulse(
           state: data.state,
           pulse: data.pulse,
@@ -1907,7 +1917,11 @@ class _PlaceListTile extends StatelessWidget {
     );
     final state = await repository.getDimensionState(placeDimension.id);
     final pulse = await repository.getDimensionPulse(placeDimension.id);
-    return _PlaceListData(state: state, pulse: pulse);
+    final latestCase = await _latestCaseForPlaceDimension(
+      repository,
+      placeDimension.id,
+    );
+    return _PlaceListData(state: state, pulse: pulse, latestCase: latestCase);
   }
 }
 
@@ -1929,7 +1943,11 @@ class _NearbyPlaceCard extends StatelessWidget {
     );
     final state = await repository.getDimensionState(placeDimension.id);
     final pulse = await repository.getDimensionPulse(placeDimension.id);
-    return _PlaceListData(state: state, pulse: pulse);
+    final latestCase = await _latestCaseForPlaceDimension(
+      repository,
+      placeDimension.id,
+    );
+    return _PlaceListData(state: state, pulse: pulse, latestCase: latestCase);
   }
 
   @override
@@ -1953,8 +1971,12 @@ class _NearbyPlaceCard extends StatelessWidget {
           );
         }
 
-        final stateColor = data.state.state.color;
-        final stateLabel = data.state.state.label;
+        final publicState = _publicStateDisplay(
+          state: data.state,
+          latestCase: data.latestCase,
+        );
+        final stateColor = publicState.color;
+        final stateLabel = publicState.label;
         final pulseDisplay = const PulseService().describePlacePulse(
           state: data.state,
           pulse: data.pulse,
@@ -2294,11 +2316,13 @@ class _StateCard extends StatelessWidget {
     required this.placeName,
     required this.state,
     required this.pulse,
+    required this.latestCase,
   });
 
   final String placeName;
   final DimensionStateRecord state;
   final DimensionPulseRecord pulse;
+  final AccessCase? latestCase;
 
   @override
   Widget build(BuildContext context) {
@@ -2306,7 +2330,11 @@ class _StateCard extends StatelessWidget {
       state: state,
       pulse: pulse,
     );
-    final stateLabel = state.state.label;
+    final publicState = _publicStateDisplay(
+      state: state,
+      latestCase: latestCase,
+    );
+    final stateLabel = publicState.label;
     final confidenceLevel = _confidenceLevelFromScore(state.confidence);
     final confidenceExplanation = _confidenceExplanationFromScore(
       state.confidence,
@@ -3229,10 +3257,15 @@ class _TransitionRow extends StatelessWidget {
 }
 
 class _PlaceListData {
-  const _PlaceListData({required this.state, required this.pulse});
+  const _PlaceListData({
+    required this.state,
+    required this.pulse,
+    required this.latestCase,
+  });
 
   final DimensionStateRecord state;
   final DimensionPulseRecord pulse;
+  final AccessCase? latestCase;
 }
 
 class _PlaceDetailData {
@@ -3241,12 +3274,14 @@ class _PlaceDetailData {
     required this.state,
     required this.pulse,
     required this.memory,
+    required this.latestCase,
   });
 
   final PlaceDimension placeDimension;
   final DimensionStateRecord state;
   final DimensionPulseRecord pulse;
   final List<MemoryEvent> memory;
+  final AccessCase? latestCase;
 }
 
 class PublicResultNextAction {
@@ -3259,6 +3294,58 @@ class PublicResultNextAction {
   final DimensionStateService stateService;
 }
 
+class _PublicStateDisplay {
+  const _PublicStateDisplay({required this.label, required this.color});
+
+  final String label;
+  final Color color;
+}
+
+Future<AccessCase?> _latestCaseForPlaceDimension(
+  AccessPulseRepository repository,
+  String placeDimensionId,
+) async {
+  final cases = await repository.listCases();
+  for (final accessCase in cases) {
+    if (accessCase.placeDimensionId == placeDimensionId) {
+      return accessCase;
+    }
+  }
+  return null;
+}
+
+_PublicStateDisplay _publicStateDisplay({
+  required DimensionStateRecord state,
+  required AccessCase? latestCase,
+}) {
+  final status = latestCase?.status;
+  if (status == CaseStatus.remediationRequested ||
+      status == CaseStatus.remediationVerificationRequested) {
+    return const _PublicStateDisplay(
+      label: 'Under Remediation',
+      color: Color(0xff8a6d00),
+    );
+  }
+
+  if (state.state == DimensionStateValue.resolved) {
+    if (status == CaseStatus.closed) {
+      return const _PublicStateDisplay(
+        label: 'Recently Revalidated',
+        color: Color(0xff17643a),
+      );
+    }
+    return const _PublicStateDisplay(
+      label: 'Resolved',
+      color: Color(0xff17643a),
+    );
+  }
+
+  return _PublicStateDisplay(
+    label: state.state.label,
+    color: state.state.color,
+  );
+}
+
 extension on DimensionStateValue {
   String get label {
     return switch (this) {
@@ -3267,7 +3354,7 @@ extension on DimensionStateValue {
       DimensionStateValue.reliable => 'Reliable',
       DimensionStateValue.degraded => 'Degraded',
       DimensionStateValue.officiallyVerifiedDegraded =>
-        'Officially verified degraded',
+        'Officially Verified Degraded',
       DimensionStateValue.underReview => 'Under review',
       DimensionStateValue.resolved => 'Resolved',
     };
