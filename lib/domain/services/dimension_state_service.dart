@@ -464,6 +464,36 @@ class DimensionStateService {
     return nextCase;
   }
 
+  Future<AccessCase> requestRemediation({
+    required String caseId,
+    required String reviewerId,
+    DateTime? now,
+  }) async {
+    final timestamp = now ?? DateTime.now();
+    final accessCase = await _repository.getCase(caseId);
+    final currentState = await _repository.getDimensionState(
+      accessCase.placeDimensionId,
+    );
+    final nextCase = accessCase.copyWith(
+      status: CaseStatus.remediationRequested,
+      updatedAt: timestamp,
+    );
+    await _repository.saveCase(nextCase);
+    await _appendMemory(
+      placeDimensionId: accessCase.placeDimensionId,
+      eventType: MemoryEventType.remediationRequested,
+      actorType: 'lgu_reviewer',
+      actorId: reviewerId,
+      previousState: currentState.state,
+      newState: currentState.state,
+      caseId: caseId,
+      summary:
+          'LGU reviewer requested remediation for the officially verified Mobility Access barrier.',
+      createdAt: timestamp,
+    );
+    return nextCase;
+  }
+
   Future<VerificationResult> submitVerification({
     required String caseId,
     required String inspectorId,

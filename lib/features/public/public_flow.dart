@@ -3046,7 +3046,8 @@ class _MemoryTile extends StatelessWidget {
     return switch (type) {
       MemoryEventType.caseOpened ||
       MemoryEventType.caseTriaged ||
-      MemoryEventType.verificationSubmitted => (
+      MemoryEventType.verificationSubmitted ||
+      MemoryEventType.remediationRequested => (
         Icons.info_outline,
         const Color(0xfffff0e6),
         const Color(0xffea580c),

@@ -268,6 +268,19 @@ class _CaseDetailScreenState extends State<_CaseDetailScreen> {
     Navigator.of(context).pop();
   }
 
+  Future<void> _requestRemediation() async {
+    setState(() => _isActing = true);
+    await widget.stateService.requestRemediation(
+      caseId: widget.summary.accessCase.id,
+      reviewerId: _demoReviewerId,
+    );
+    if (!mounted) {
+      return;
+    }
+    setState(() => _isActing = false);
+    _refresh();
+  }
+
   Future<void> _openVerification(_CaseDetailData detail) async {
     await Navigator.of(context).push(
       _institutionRoute<void>(
@@ -351,6 +364,12 @@ class _CaseDetailScreenState extends State<_CaseDetailScreen> {
                             label: const Text('Request inspection'),
                             onPressed: _isActing ? null : _requestInspection,
                           ),
+                          if (detail.accessCase.status == CaseStatus.verified)
+                            FilledButton.icon(
+                              icon: const Icon(Icons.construction_outlined),
+                              label: const Text('Request remediation'),
+                              onPressed: _isActing ? null : _requestRemediation,
+                            ),
                           TextButton.icon(
                             icon: const Icon(Icons.close),
                             label: const Text('Close case'),
@@ -613,6 +632,7 @@ class _CaseQueueTile extends StatelessWidget {
       CaseStatus.triaging => const Color(0xff1765a6),
       CaseStatus.inspectionRequested => const Color(0xff8a6d00),
       CaseStatus.verified => const Color(0xff17643a),
+      CaseStatus.remediationRequested => const Color(0xff8a6d00),
       CaseStatus.disputed => const Color(0xffb6461a),
       CaseStatus.resolved => const Color(0xff17643a),
       CaseStatus.closed => const Color(0xff52616b),
@@ -1342,6 +1362,9 @@ class _PriorityExplanation {
     if (accessCase.status == CaseStatus.verified) {
       return 'Record remediation follow-up';
     }
+    if (accessCase.status == CaseStatus.remediationRequested) {
+      return 'Remediation requested';
+    }
     if (accessCase.status == CaseStatus.disputed) {
       return 'Review contradictory evidence';
     }
@@ -1568,6 +1591,7 @@ extension on CaseStatus {
       CaseStatus.triaging => 'Triaging',
       CaseStatus.inspectionRequested => 'Inspection requested',
       CaseStatus.verified => 'Verified',
+      CaseStatus.remediationRequested => 'Remediation requested',
       CaseStatus.disputed => 'Disputed',
       CaseStatus.resolved => 'Resolved',
       CaseStatus.closed => 'Closed',
@@ -1580,6 +1604,7 @@ extension on CaseStatus {
       CaseStatus.triaging => Icons.rule,
       CaseStatus.inspectionRequested => Icons.assignment_turned_in,
       CaseStatus.verified => Icons.verified_outlined,
+      CaseStatus.remediationRequested => Icons.construction_outlined,
       CaseStatus.disputed => Icons.report_gmailerrorred,
       CaseStatus.resolved => Icons.task_alt,
       CaseStatus.closed => Icons.close,
@@ -1609,6 +1634,7 @@ extension on MemoryEventType {
       MemoryEventType.caseTriaged => 'Case triaged',
       MemoryEventType.inspectionRequested => 'Inspection requested',
       MemoryEventType.verificationSubmitted => 'Verification submitted',
+      MemoryEventType.remediationRequested => 'Remediation requested',
       MemoryEventType.stateChanged => 'State changed',
       MemoryEventType.pulseChanged => 'Pulse changed',
       MemoryEventType.caseClosed => 'Case closed',
