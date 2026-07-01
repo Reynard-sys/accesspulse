@@ -679,13 +679,16 @@ class ConfirmVisitScreen extends StatefulWidget {
 }
 
 class _ConfirmVisitScreenState extends State<ConfirmVisitScreen> {
+  int _currentStep = 1;
+  int? _step1Selection;
+  int? _step2Selection;
+  int? _step3Selection;
+
   bool _entranceUsable = false;
   bool _rampUsable = false;
-  bool _neededAssistance = true;
-  bool _completedPurpose = false;
-  final _noteController = TextEditingController(
-    text: 'The main entrance had steps and I needed assistance to get in.',
-  );
+  bool _neededAssistance = false;
+  bool _completedPurpose = true; // Default to true as it is not explicitly questioned in Figma steps
+  final _noteController = TextEditingController();
   bool _isSubmitting = false;
 
   @override
@@ -710,115 +713,838 @@ class _ConfirmVisitScreenState extends State<ConfirmVisitScreen> {
     }
     await Navigator.of(context).pushReplacement(
       _accessPulseRoute<void>(
-        SubmissionResultScreen(
-          place: widget.place,
-          title: 'Your visit updated this place',
-          message:
-              'The Mobility Access state now reflects your fresh visit confirmation.',
-          previousState: result.previousState,
-          currentState: result.currentState,
-          previousPulse: result.previousPulse,
-          currentPulse: result.currentPulse,
-          nextAction: PublicResultNextAction.addEvidence(
-            placeDimensionId: widget.placeDimensionId,
-            stateService: widget.stateService,
+        _VisitConfirmedScreen(place: widget.place),
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          bottom: BorderSide(color: Color(0xffdde5e0), width: 1.0),
+        ),
+      ),
+      padding: const EdgeInsets.only(left: 20, right: 20, bottom: 17, top: 12),
+      child: Row(
+        children: [
+          InkWell(
+            onTap: () {
+              if (_currentStep > 1) {
+                setState(() => _currentStep--);
+              } else {
+                Navigator.of(context).pop();
+              }
+            },
+            borderRadius: BorderRadius.circular(99),
+            child: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: const Color(0xffeef4f1).withOpacity(0.4),
+                shape: BoxShape.circle,
+              ),
+              child: const Center(
+                child: Icon(
+                  Icons.arrow_back,
+                  color: Color(0xff17201c),
+                  size: 18,
+                ),
+              ),
+            ),
           ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'CONFIRMING VISIT',
+                  style: GoogleFonts.afacad(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xff5d6b63),
+                    letterSpacing: 0.44,
+                  ),
+                ),
+                Text(
+                  widget.place.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.afacad(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xff17201c),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAlertBanner() {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xffeaf2ff),
+        border: Border.all(color: const Color(0xffc5daff)),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 13),
+      child: Text.rich(
+        TextSpan(
+          children: [
+            TextSpan(
+              text: 'You are not filing a complaint. ',
+              style: GoogleFonts.afacad(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: const Color(0xff2558b0),
+              ),
+            ),
+            TextSpan(
+              text: 'You are confirming what happened.',
+              style: GoogleFonts.afacad(
+                fontSize: 14,
+                fontWeight: FontWeight.normal,
+                color: const Color(0xff3b75d1),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
+  Widget _buildProgressBar() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: List.generate(4, (index) {
+                final stepNum = index + 1;
+                final isActive = stepNum == _currentStep;
+                final color = isActive ? const Color(0xff3b75d1) : const Color(0xffdde5e0);
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 250),
+                  curve: Curves.easeOutCubic,
+                  margin: const EdgeInsets.only(right: 8),
+                  width: isActive ? 20 : 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: BorderRadius.circular(33554400),
+                  ),
+                );
+              }),
+            ),
+            Text(
+              'Step $_currentStep of 4',
+              style: GoogleFonts.afacad(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: const Color(0xff5d6b63),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final totalWidth = constraints.maxWidth;
+            final filledWidth = totalWidth * (_currentStep / 4);
+            return Container(
+              height: 3,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: const Color(0xffdde5e0),
+                borderRadius: BorderRadius.circular(33554400),
+              ),
+              alignment: Alignment.centerLeft,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeOutCubic,
+                width: filledWidth,
+                height: 3,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xff2e7d5b), Color(0xff3b75d1)],
+                  ),
+                  borderRadius: BorderRadius.circular(33554400),
+                ),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStep1() {
+    final choices = [
+      'Yes, I could enter independently',
+      'No, I needed help',
+      'Not sure / didn’t try',
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Was the entrance usable without assistance?',
+          style: GoogleFonts.afacad(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: const Color(0xff17201c),
+            height: 1.25,
+          ),
+        ),
+        const SizedBox(height: 28),
+        ...choices.asMap().entries.map((entry) {
+          final idx = entry.key;
+          final text = entry.value;
+          final isSelected = _step1Selection == idx;
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: InkWell(
+              onTap: () {
+                setState(() {
+                  _step1Selection = idx;
+                  if (idx == 0) {
+                    _entranceUsable = true;
+                    _neededAssistance = false;
+                  } else if (idx == 1) {
+                    _entranceUsable = false;
+                    _neededAssistance = true;
+                  } else {
+                    _entranceUsable = false;
+                    _neededAssistance = false;
+                  }
+                });
+              },
+              borderRadius: BorderRadius.circular(16),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeInOut,
+                padding: const EdgeInsets.symmetric(horizontal: 21, vertical: 17),
+                decoration: BoxDecoration(
+                  color: isSelected ? const Color(0xfff1f5f3) : Colors.white,
+                  border: Border.all(
+                    color: isSelected ? const Color(0xff2e7d5b) : const Color(0xffdde5e0),
+                    width: isSelected ? 1.5 : 1.0,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  children: [
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      curve: Curves.easeInOut,
+                      width: 24,
+                      height: 24,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: isSelected ? const Color(0xff2e7d5b) : const Color(0xffdde5e0),
+                          width: 2.0,
+                        ),
+                      ),
+                      padding: const EdgeInsets.all(3),
+                      child: AnimatedScale(
+                        scale: isSelected ? 1.0 : 0.0,
+                        duration: const Duration(milliseconds: 200),
+                        curve: Curves.easeOutBack,
+                        child: const DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: Color(0xff2e7d5b),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: AnimatedDefaultTextStyle(
+                        duration: const Duration(milliseconds: 200),
+                        curve: Curves.easeInOut,
+                        style: GoogleFonts.afacad(
+                          fontSize: 16,
+                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                          color: isSelected ? const Color(0xff17201c) : const Color(0xff5d6b63),
+                        ),
+                        child: Text(text),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
+  Widget _buildStep2() {
+    final options = ['Yes', 'No'];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Did you need help to enter?',
+          style: GoogleFonts.afacad(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: const Color(0xff17201c),
+            height: 1.25,
+          ),
+        ),
+        const SizedBox(height: 28),
+        Row(
+          children: options.asMap().entries.map((entry) {
+            final idx = entry.key;
+            final text = entry.value;
+            final isSelected = _step2Selection == idx;
+            return Expanded(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  right: idx == 0 ? 12.0 : 0.0,
+                  left: idx == 1 ? 12.0 : 0.0,
+                ),
+                child: InkWell(
+                  onTap: () {
+                    setState(() {
+                      _step2Selection = idx;
+                      _neededAssistance = idx == 0;
+                    });
+                  },
+                  borderRadius: BorderRadius.circular(16),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    curve: Curves.easeInOut,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: isSelected ? const Color(0xfff1f5f3) : Colors.white,
+                      border: Border.all(
+                        color: isSelected ? const Color(0xff2e7d5b) : const Color(0xffdde5e0),
+                        width: isSelected ? 1.5 : 1.0,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    alignment: Alignment.center,
+                    child: AnimatedDefaultTextStyle(
+                      duration: const Duration(milliseconds: 200),
+                      curve: Curves.easeInOut,
+                      style: GoogleFonts.afacad(
+                        fontSize: 16,
+                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                        color: isSelected ? const Color(0xff2e7d5b) : const Color(0xff5d6b63),
+                      ),
+                      child: Text(text),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStep3() {
+    final options = ['Yes', 'Not Sure', 'No'];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Was a ramp present at the entrance?',
+          style: GoogleFonts.afacad(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: const Color(0xff17201c),
+            height: 1.25,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Even if it wasn’t usable, did you see one?',
+          style: GoogleFonts.afacad(
+            fontSize: 15,
+            fontWeight: FontWeight.normal,
+            color: const Color(0xff5d6b63),
+          ),
+        ),
+        const SizedBox(height: 24),
+        Row(
+          children: options.asMap().entries.map((entry) {
+            final idx = entry.key;
+            final text = entry.value;
+            final isSelected = _step3Selection == idx;
+            return Expanded(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  right: idx < 2 ? 10.0 : 0.0,
+                ),
+                child: InkWell(
+                  onTap: () {
+                    setState(() {
+                      _step3Selection = idx;
+                      _rampUsable = idx == 0;
+                    });
+                  },
+                  borderRadius: BorderRadius.circular(16),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    curve: Curves.easeInOut,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: isSelected ? const Color(0xfff1f5f3) : Colors.white,
+                      border: Border.all(
+                        color: isSelected ? const Color(0xff2e7d5b) : const Color(0xffdde5e0),
+                        width: isSelected ? 1.5 : 1.0,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    alignment: Alignment.center,
+                    child: AnimatedDefaultTextStyle(
+                      duration: const Duration(milliseconds: 200),
+                      curve: Curves.easeInOut,
+                      style: GoogleFonts.afacad(
+                        fontSize: 16,
+                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                        color: isSelected ? const Color(0xff2e7d5b) : const Color(0xff5d6b63),
+                      ),
+                      child: Text(text),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStep4() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: const Color(0xffeaf2ff),
+            border: Border.all(color: const Color(0xffc5daff)),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
+          child: Text(
+            'Optional — skip anytime',
+            style: GoogleFonts.afacad(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: const Color(0xff3b75d1),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          'Anything else you noticed?',
+          style: GoogleFonts.afacad(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: const Color(0xff17201c),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Surface condition, signage, lighting — anything useful for the next visitor.',
+          style: GoogleFonts.afacad(
+            fontSize: 14,
+            fontWeight: FontWeight.normal,
+            color: const Color(0xff5d6b63),
+          ),
+        ),
+        const SizedBox(height: 20),
+        TextField(
+          controller: _noteController,
+          minLines: 4,
+          maxLines: 5,
+          style: GoogleFonts.afacad(
+            fontSize: 15,
+            color: const Color(0xff17201c),
+          ),
+          decoration: InputDecoration(
+            hintText: 'e.g. The ramp was wet and the signage was unclear...',
+            hintStyle: GoogleFonts.afacad(
+              fontSize: 15,
+              color: const Color(0xff17201c).withOpacity(0.5),
+            ),
+            fillColor: Colors.white,
+            filled: true,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: const BorderSide(color: Color(0xffdde5e0)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: const BorderSide(color: Color(0xffdde5e0)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: const BorderSide(color: Color(0xff2e7d5b), width: 1.5),
+            ),
+            contentPadding: const EdgeInsets.all(17),
+          ),
+        ),
+      ],
+    );
+  }
+
+  bool _isCurrentStepValid() {
+    if (_currentStep == 1) return _step1Selection != null;
+    if (_currentStep == 2) return _step2Selection != null;
+    if (_currentStep == 3) return _step3Selection != null;
+    return true; // Step 4 is optional
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final stepWidget = switch (_currentStep) {
+      1 => _buildStep1(),
+      2 => _buildStep2(),
+      3 => _buildStep3(),
+      _ => _buildStep4(),
+    };
+
+    final isValid = _isCurrentStepValid();
+    final isFinalStep = _currentStep == 4;
+
+    return Scaffold(
+      backgroundColor: const Color(0xfff8faf9),
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildHeader(),
+            Expanded(
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 420),
+                  child: ListView(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    children: [
+                      _buildAlertBanner(),
+                      const SizedBox(height: 16),
+                      _buildProgressBar(),
+                      const SizedBox(height: 24),
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 250),
+                        switchInCurve: Curves.easeOutCubic,
+                        switchOutCurve: Curves.easeInCubic,
+                        layoutBuilder: (Widget? currentChild, List<Widget> previousChildren) {
+                          return Stack(
+                            alignment: Alignment.topLeft,
+                            children: <Widget>[
+                              ...previousChildren,
+                              if (currentChild != null) currentChild,
+                            ],
+                          );
+                        },
+                        child: KeyedSubtree(
+                          key: ValueKey(_currentStep),
+                          child: stepWidget,
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                      // Continue / Submit Button
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        curve: Curves.easeInOut,
+                        width: double.infinity,
+                        height: 54,
+                        decoration: BoxDecoration(
+                          color: isValid ? const Color(0xff2e7d5b) : const Color(0xffd5e0da),
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: isValid
+                              ? [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.15),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ]
+                              : null,
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          borderRadius: BorderRadius.circular(16),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(16),
+                            onTap: (!isValid || _isSubmitting)
+                                ? null
+                                : () {
+                                    if (isFinalStep) {
+                                      _submit();
+                                    } else {
+                                      setState(() => _currentStep++);
+                                    }
+                                  },
+                            child: Center(
+                              child: _isSubmitting
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : Text(
+                                      isFinalStep ? 'Submit' : 'Continue',
+                                      style: GoogleFonts.afacad(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        color: isValid ? Colors.white : const Color(0xffa8b5ae),
+                                      ),
+                                    ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      // Skip Actions
+                      if (_currentStep > 1)
+                        Center(
+                          child: TextButton(
+                            onPressed: _isSubmitting
+                                ? null
+                                : () {
+                                    if (isFinalStep) {
+                                      _submit();
+                                    } else {
+                                      setState(() => _currentStep++);
+                                    }
+                                  },
+                            child: Text(
+                              isFinalStep ? 'Skip this step' : 'Skip this question',
+                              style: GoogleFonts.afacad(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
+                                color: const Color(0xff5d6b63),
+                                decoration: TextDecoration.underline,
+                              ),
+                            ),
+                          ),
+                        )
+                      else
+                        Center(
+                          child: Text(
+                            'This helps the next person decide before they go.',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.afacad(
+                              fontSize: 12,
+                              color: const Color(0xffa8b5ae),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _VisitConfirmedScreen extends StatelessWidget {
+  const _VisitConfirmedScreen({required this.place});
+
+  final Place place;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const _AccessPulseBrandTitle()),
+      backgroundColor: const Color(0xfff8faf9),
       body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 760),
-            child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-              children: [
-                Text(
-                  'Confirm Visit',
-                  style: GoogleFonts.afacad(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xff17201c),
+        child: Column(
+          children: [
+            // Custom Header
+            Container(
+              decoration: const BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(color: Color(0xffdde5e0), width: 1.0),
+                ),
+              ),
+              padding: const EdgeInsets.only(left: 20, right: 20, bottom: 17, top: 12),
+              child: Row(
+                children: [
+                  InkWell(
+                    onTap: () => Navigator.of(context).pop(),
+                    borderRadius: BorderRadius.circular(99),
+                    child: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: const Color(0xffeef4f1).withOpacity(0.4),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Center(
+                        child: Icon(
+                          Icons.arrow_back,
+                          color: Color(0xff17201c),
+                          size: 18,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  widget.place.name,
-                  style: GoogleFonts.afacad(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xff5d6b63),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Answer a few simple questions to help update this place.',
-                  style: GoogleFonts.afacad(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: const Color(0xff5d6b63),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                _QuestionSwitch(
-                  title: 'Was the entrance usable independently?',
-                  value: _entranceUsable,
-                  onChanged: (value) => setState(() => _entranceUsable = value),
-                ),
-                const SizedBox(height: 4),
-                _QuestionSwitch(
-                  title: 'Was the ramp usable?',
-                  value: _rampUsable,
-                  onChanged: (value) => setState(() => _rampUsable = value),
-                ),
-                const SizedBox(height: 4),
-                _QuestionSwitch(
-                  title: 'Did you need assistance?',
-                  value: _neededAssistance,
-                  onChanged: (value) =>
-                      setState(() => _neededAssistance = value),
-                ),
-                const SizedBox(height: 4),
-                _QuestionSwitch(
-                  title: 'Were you able to complete your purpose for visiting?',
-                  value: _completedPurpose,
-                  onChanged: (value) =>
-                      setState(() => _completedPurpose = value),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: _noteController,
-                  minLines: 3,
-                  maxLines: 5,
-                  decoration: const InputDecoration(
-                    labelText: 'Optional note',
-                    alignLabelWithHint: true,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                FilledButton.icon(
-                  icon: _isSubmitting
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'CONFIRMING VISIT',
+                          style: GoogleFonts.afacad(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: const Color(0xff5d6b63),
+                            letterSpacing: 0.44,
                           ),
-                        )
-                      : const Icon(Icons.update),
-                  label: const Text('Update living state'),
-                  onPressed: _isSubmitting ? null : _submit,
-                ),
-              ],
+                        ),
+                        Text(
+                          place.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.afacad(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xff17201c),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Big Check circle
+                    Container(
+                      width: 72,
+                      height: 72,
+                      decoration: const BoxDecoration(
+                        color: Color(0xffeef4f1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Center(
+                        child: Icon(
+                          Icons.check,
+                          color: Color(0xff2e7d5b),
+                          size: 32,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      'Visit confirmed',
+                      style: GoogleFonts.afacad(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xff17201c),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "Your check-in has been added to ${place.name}'s access record.",
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.afacad(
+                        fontSize: 16,
+                        color: const Color(0xff5d6b63),
+                        height: 1.25,
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+                    // Info banner
+                    Container(
+                      decoration: BoxDecoration(
+                        border: Border.all(color: const Color(0xffdde5e0), width: 0.8),
+                        borderRadius: BorderRadius.circular(16),
+                        color: Colors.white,
+                      ),
+                      padding: const EdgeInsets.all(20),
+                      child: Text(
+                        "You've helped future visitors make better decisions before they go.",
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.afacad(
+                          fontSize: 15,
+                          color: const Color(0xff5d6b63),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+                    // Back to place button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 54,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: const Color(0xff2e7d5b),
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.15),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          borderRadius: BorderRadius.circular(16),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(16),
+                            onTap: () => Navigator.of(context).pop(),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  'Back to place',
+                                  style: GoogleFonts.afacad(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                const Icon(
+                                  Icons.chevron_right,
+                                  color: Colors.white,
+                                  size: 18,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
