@@ -300,6 +300,22 @@ void main() {
   testWidgets('public detail uses remediation lifecycle wording', (
     WidgetTester tester,
   ) async {
+    final degraded = await _publicDetailHarness();
+    await _preparePublicCase(
+      service: degraded.stateService,
+      status: CaseStatus.verified,
+    );
+    await _pumpPublicDetail(tester, degraded);
+    expect(find.text('Officially Verified Degraded'), findsWidgets);
+    await _scrollPublicDetailToIssueSummary(tester);
+    expect(find.text('Current Issue Summary'), findsOneWidget);
+    expect(
+      find.text(
+        'Ramp access was reported to be unreliable for independent wheelchair access.',
+      ),
+      findsOneWidget,
+    );
+
     final underRemediation = await _publicDetailHarness();
     await _preparePublicCase(
       service: underRemediation.stateService,
@@ -307,6 +323,13 @@ void main() {
     );
     await _pumpPublicDetail(tester, underRemediation);
     expect(find.text('Under Remediation'), findsWidgets);
+    await _scrollPublicDetailToIssueSummary(tester);
+    expect(
+      find.text(
+        'A confirmed mobility access issue is currently under remediation.',
+      ),
+      findsOneWidget,
+    );
 
     final resolved = await _publicDetailHarness();
     await _preparePublicCase(
@@ -315,6 +338,13 @@ void main() {
     );
     await _pumpPublicDetail(tester, resolved);
     expect(find.text('Resolved'), findsWidgets);
+    await _scrollPublicDetailToIssueSummary(tester);
+    expect(
+      find.text(
+        'The reported mobility access issue has been fixed and is awaiting final closure.',
+      ),
+      findsOneWidget,
+    );
 
     final closed = await _publicDetailHarness();
     await _preparePublicCase(
@@ -323,6 +353,11 @@ void main() {
     );
     await _pumpPublicDetail(tester, closed);
     expect(find.text('Recently Revalidated'), findsWidgets);
+    await _scrollPublicDetailToIssueSummary(tester);
+    expect(
+      find.text('This place was recently revalidated after remediation.'),
+      findsOneWidget,
+    );
     expect(find.text('Claimed accessible'), findsNothing);
   });
 }
@@ -373,6 +408,15 @@ Future<void> _pumpPublicDetail(
   await tester.pumpAndSettle();
 }
 
+Future<void> _scrollPublicDetailToIssueSummary(WidgetTester tester) async {
+  await tester.scrollUntilVisible(
+    find.text('Current Issue Summary'),
+    200,
+    scrollable: find.byType(Scrollable).first,
+  );
+  await tester.pumpAndSettle();
+}
+
 Future<void> _preparePublicCase({
   required DimensionStateService service,
   required CaseStatus status,
@@ -415,6 +459,11 @@ Future<void> _preparePublicCase({
     note: 'Inspector confirmed that the main entrance requires assistance.',
     now: DateTime(2026, 6, 29, 11),
   );
+
+  if (status == CaseStatus.verified) {
+    return;
+  }
+
   await service.requestRemediation(
     caseId: evidenceResult.accessCase.id,
     reviewerId: _reviewerId,

@@ -331,12 +331,17 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
       widget.repository,
       placeDimension.id,
     );
+    final latestBarrierSignal = await _barrierSignalForCase(
+      widget.repository,
+      latestCase,
+    );
     return _PlaceDetailData(
       placeDimension: placeDimension,
       state: state,
       pulse: pulse,
       memory: memory,
       latestCase: latestCase,
+      latestBarrierSignal: latestBarrierSignal,
     );
   }
 
@@ -580,6 +585,14 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
                       state: detail.state,
                       pulse: detail.pulse,
                       latestCase: detail.latestCase,
+                    ),
+                    const SizedBox(height: 12),
+                    _IssueSummaryBlock(
+                      summary: _publicIssueSummary(
+                        state: detail.state,
+                        latestCase: detail.latestCase,
+                        barrierSignal: detail.latestBarrierSignal,
+                      ),
                     ),
                     const SizedBox(height: 24),
                     Text(
@@ -2569,6 +2582,66 @@ class _StateCard extends StatelessWidget {
   }
 }
 
+class _IssueSummaryBlock extends StatelessWidget {
+  const _IssueSummaryBlock({required this.summary});
+
+  final String summary;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: const Color(0xffdde5e0), width: 0.8),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xff17201c).withValues(alpha: 0.04),
+            blurRadius: 6,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.info_outline,
+                size: 16,
+                color: Color(0xff2e7d5b),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Current Issue Summary',
+                style: GoogleFonts.afacad(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xff5e7268),
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            summary,
+            style: GoogleFonts.afacad(
+              fontSize: 15,
+              color: const Color(0xff17201c),
+              height: 1.35,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _AiResultPanel extends StatelessWidget {
   const _AiResultPanel({required this.assessment});
 
@@ -3275,6 +3348,7 @@ class _PlaceDetailData {
     required this.pulse,
     required this.memory,
     required this.latestCase,
+    required this.latestBarrierSignal,
   });
 
   final PlaceDimension placeDimension;
@@ -3282,6 +3356,7 @@ class _PlaceDetailData {
   final DimensionPulseRecord pulse;
   final List<MemoryEvent> memory;
   final AccessCase? latestCase;
+  final BarrierSignal? latestBarrierSignal;
 }
 
 class PublicResultNextAction {
@@ -3314,6 +3389,17 @@ Future<AccessCase?> _latestCaseForPlaceDimension(
   return null;
 }
 
+Future<BarrierSignal?> _barrierSignalForCase(
+  AccessPulseRepository repository,
+  AccessCase? latestCase,
+) async {
+  final barrierSignalId = latestCase?.barrierSignalId;
+  if (barrierSignalId == null) {
+    return null;
+  }
+  return repository.getBarrierSignal(barrierSignalId);
+}
+
 _PublicStateDisplay _publicStateDisplay({
   required DimensionStateRecord state,
   required AccessCase? latestCase,
@@ -3344,6 +3430,56 @@ _PublicStateDisplay _publicStateDisplay({
     label: state.state.label,
     color: state.state.color,
   );
+}
+
+String _publicIssueSummary({
+  required DimensionStateRecord state,
+  required AccessCase? latestCase,
+  required BarrierSignal? barrierSignal,
+}) {
+  final status = latestCase?.status;
+  if (status == CaseStatus.remediationRequested ||
+      status == CaseStatus.remediationVerificationRequested) {
+    return 'A confirmed mobility access issue is currently under remediation.';
+  }
+
+  if (state.state == DimensionStateValue.resolved) {
+    if (status == CaseStatus.closed) {
+      return 'This place was recently revalidated after remediation.';
+    }
+    return 'The reported mobility access issue has been fixed and is awaiting final closure.';
+  }
+
+  if (barrierSignal != null &&
+      state.state == DimensionStateValue.officiallyVerifiedDegraded) {
+    return _barrierSignalSummary(barrierSignal);
+  }
+
+  return 'No active accessibility issue summary is currently available.';
+}
+
+String _barrierSignalSummary(BarrierSignal signal) {
+  final issueType = signal.issueType.toLowerCase();
+  final possibleBarrier = signal.possibleBarrier.toLowerCase();
+  final observedFeatures = signal.observedFeatures
+      .map((feature) => feature.toLowerCase())
+      .toList();
+
+  if (issueType.contains('ramp') ||
+      observedFeatures.any((feature) => feature.contains('ramp'))) {
+    if (possibleBarrier.contains('steep') ||
+        possibleBarrier.contains('slope')) {
+      return 'Ramp was reported to be too steep for independent wheelchair access.';
+    }
+    return 'Ramp access was reported to be unreliable for independent wheelchair access.';
+  }
+
+  if (issueType.contains('entrance') ||
+      observedFeatures.any((feature) => feature.contains('entrance'))) {
+    return 'The main entrance was reported to require assistance.';
+  }
+
+  return 'A confirmed mobility access issue is visible in the latest public report.';
 }
 
 extension on DimensionStateValue {
