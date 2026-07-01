@@ -71,11 +71,35 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Confirm Your Visit'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Update living state'));
+
+    // Step 1: Usable independently? -> Choose "No, I needed help"
+    await tester.tap(find.text('No, I needed help'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Your visit updated this place'), findsOneWidget);
-    expect(find.text('Claimed accessible'), findsOneWidget);
+    // Step 2: Need help to enter? -> Choose "Yes"
+    await tester.tap(find.text('Yes'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+
+    // Step 3: Ramp present? -> Choose "No"
+    await tester.tap(find.text('No'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+
+    // Step 4: Anything else? -> Submit
+    await tester.tap(find.text('Submit'));
+    await tester.pumpAndSettle();
+
+    // Confirmation screen
+    expect(find.text('Visit confirmed'), findsOneWidget);
+    await tester.tap(find.text('Back to place'));
+    await tester.pumpAndSettle();
+
+    // Verify detail screen is updated
     expect(find.text('Degraded'), findsOneWidget);
     expect(find.text('Recently refreshed'), findsOneWidget);
   });
