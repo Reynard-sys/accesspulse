@@ -1635,9 +1635,9 @@ class SubmissionResultScreen extends StatelessWidget {
                   const SizedBox(height: 12),
                 ],
                 FilledButton.icon(
-                  icon: const Icon(Icons.place_outlined),
-                  label: const Text('Back to place'),
-                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.home_outlined),
+                  label: const Text('Back to home'),
+                  onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
                 ),
               ],
             ),
@@ -2505,11 +2505,23 @@ class _AiResultPanel extends StatelessWidget {
             Text('Observed', style: Theme.of(context).textTheme.labelLarge),
             const SizedBox(height: 4),
             Wrap(
-              spacing: 8,
-              runSpacing: 8,
+              spacing: 6,
+              runSpacing: 4,
               children: [
                 for (final feature in assessment.observedFeatures)
-                  Chip(label: Text(feature)),
+                  Chip(
+                    label: Text(
+                      feature,
+                      style: const TextStyle(color: Color(0xFF17201C)),
+                    ),
+                    backgroundColor: const Color(0xFFC8DDD4),
+                    shape: const StadiumBorder(
+                      side: BorderSide(
+                        color: Color(0xFF17201C),
+                        width: 1.0,
+                      ),
+                    ),
+                  ),
               ],
             ),
             const SizedBox(height: 12),
@@ -2571,11 +2583,23 @@ class _AiGuidanceCard extends StatelessWidget {
             Text('Observed', style: Theme.of(context).textTheme.labelLarge),
             const SizedBox(height: 4),
             Wrap(
-              spacing: 8,
+              spacing: 6,
               runSpacing: 8,
               children: [
                 for (final feature in assessment.observedFeatures)
-                  Chip(label: Text(feature)),
+                  Chip(
+                    label: Text(
+                      feature,
+                      style: const TextStyle(color: Color(0xFF17201C)),
+                    ),
+                    backgroundColor: const Color(0xFFC8DDD4),
+                    shape: const StadiumBorder(
+                      side: BorderSide(
+                        color: Color(0xFF17201C),
+                        width: 1.0,
+                      ),
+                    ),
+                  ),
               ],
             ),
             const SizedBox(height: 12),
@@ -3029,7 +3053,7 @@ class _SectionHeader extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(
+          customIcon ?? Icon(
             icon,
             size: 18,
             color: const Color(0xff2e7d5b),
@@ -3406,8 +3430,12 @@ class _RampSlopeEntryState extends StatelessWidget {
       children: [
         _SectionHeader(
           customIcon: Transform.rotate(
-            angle: 45 * 3.1415926535 / 180,
-            child: const Icon(Icons.straighten, color: Colors.black, size: 20),
+            angle: -45 * 3.1415926535 / 180,
+            child: const Icon(
+              Icons.straighten,
+              color: Color(0xFF4A5A52),
+              size: 24,
+            ),
           ),
           title: 'Optional: Measure ramp slope',
         ),
@@ -3654,56 +3682,76 @@ class _RampCaptureStepPageState extends State<_RampCaptureStepPage> with SingleT
   }
 
   Widget _buildCountdown() {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const SizedBox(height: 200),
-        SizedBox(
-          width: 240,
-          height: 240,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              AnimatedBuilder(
+  return Column(
+    mainAxisSize: MainAxisSize.min,
+    crossAxisAlignment: CrossAxisAlignment.center,
+    children: [
+      const SizedBox(height: 200),
+      SizedBox(
+        width: 240,
+        height: 240,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            AnimatedBuilder(
+              animation: _countdownController,
+              builder: (context, child) {
+                return CircularProgressIndicator(
+                  value: _countdownController.value,
+                  strokeWidth: 10,
+                  backgroundColor: const Color(0xffDDE5E0),
+                  color: const Color(0xFF2E7D5B),
+                );
+              },
+            ),
+            Center(
+              child: AnimatedBuilder(
                 animation: _countdownController,
                 builder: (context, child) {
-                  return CircularProgressIndicator(
-                    value: _countdownController.value,
-                    strokeWidth: 10,
-                    backgroundColor: const Color(0xffDDE5E0),
-                    color: const Color(0xFF2E7D5B),
+                  final secondsLeft = 3 - (_countdownController.value * 3).floor();
+                  return Text(
+                    secondsLeft > 0 ? secondsLeft.toString() : '1',
+                    style: const TextStyle(
+                      fontSize: 80,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xff17201c),
+                    ),
                   );
                 },
               ),
-              Center(
-                child: AnimatedBuilder(
-                  animation: _countdownController,
-                  builder: (context, child) {
-                    final secondsLeft = 3 - (_countdownController.value * 3).floor();
-                    return Text(
-                      secondsLeft > 0 ? secondsLeft.toString() : '1',
-                      style: const TextStyle(
-                        fontSize: 80,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xff17201c),
-                      ),
-                    );
-                  },
-                ),
+            ),
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 80),
+                child: Image.asset('assets/images/ramp_slope_countdown.png'),
               ),
-              Center(
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 80),
-                  child: Image.asset('assets/images/ramp_slope_countdown.png'),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
-        const SizedBox(height: 24),
-      ],
-    );
-  }
+      ),
+      const SizedBox(height: 32),
+      
+      const Text(
+        'Hold your device steady against the\nramp surface.',
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+          color: Colors.black87,
+        ),
+      ),
+      const SizedBox(height: 8),
+      Text(
+        'Measuring incline...',
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          fontSize: 14,
+          color: Colors.grey, 
+        ),
+      ),
+    ],
+  );
+}
 
   Widget _buildSuccess() {
     return Column(
