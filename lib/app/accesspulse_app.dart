@@ -274,7 +274,7 @@ class _AccessPulseRoleShellState extends State<_AccessPulseRoleShell> {
 }
 
 class _AccessPulseBrandTitle extends StatelessWidget {
-  const _AccessPulseBrandTitle({this.fontSize = 20, super.key});
+  const _AccessPulseBrandTitle({this.fontSize = 20});
 
   final double fontSize;
 

@@ -89,7 +89,9 @@ class _InstitutionDashboardScreenState
       appBar: widget.hideAppBar
           ? null
           : AppBar(
-              title: Text(isInspector ? 'Inspector verification' : 'LGU dashboard'),
+              title: Text(
+                isInspector ? 'Inspector verification' : 'LGU dashboard',
+              ),
               actions: [
                 Padding(
                   padding: const EdgeInsets.only(right: 12),
@@ -283,9 +285,7 @@ class _CaseDetailScreenState extends State<_CaseDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const _AccessPulseBrandTitle(),
-      ),
+      appBar: AppBar(title: const _AccessPulseBrandTitle()),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -421,9 +421,7 @@ class _InspectorVerificationScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const _AccessPulseBrandTitle(),
-      ),
+      appBar: AppBar(title: const _AccessPulseBrandTitle()),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -646,10 +644,7 @@ class _CaseQueueTile extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // Severity/Status Left border strip
-              Container(
-                width: 6,
-                color: statusColor,
-              ),
+              Container(width: 6, color: statusColor),
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
@@ -674,7 +669,8 @@ class _CaseQueueTile extends StatelessWidget {
                                     vertical: 4,
                                   ),
                                   child: Text(
-                                    summary.accessCase.status.label.toUpperCase(),
+                                    summary.accessCase.status.label
+                                        .toUpperCase(),
                                     style: GoogleFonts.afacad(
                                       color: statusColor,
                                       fontWeight: FontWeight.bold,
@@ -1623,9 +1619,7 @@ extension on MemoryEventType {
 }
 
 class _AccessPulseBrandTitle extends StatelessWidget {
-  const _AccessPulseBrandTitle({this.fontSize = 20, super.key});
-
-  final double fontSize;
+  const _AccessPulseBrandTitle();
 
   @override
   Widget build(BuildContext context) {
@@ -1648,10 +1642,7 @@ class _AccessPulseBrandTitle extends StatelessWidget {
           ),
         ],
       ),
-      style: TextStyle(
-        fontSize: fontSize,
-        letterSpacing: -0.5,
-      ),
+      style: const TextStyle(fontSize: 20),
     );
   }
 }

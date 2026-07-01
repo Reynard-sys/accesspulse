@@ -1,5 +1,4 @@
 import 'dart:typed_data';
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -369,7 +368,9 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xff2e7d5b).withOpacity(0.3),
+                            color: const Color(
+                              0xff2e7d5b,
+                            ).withValues(alpha: 0.3),
                             blurRadius: 8,
                             offset: const Offset(0, 4),
                           ),
@@ -426,7 +427,9 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xff2e7d5b).withOpacity(0.3),
+                            color: const Color(
+                              0xff2e7d5b,
+                            ).withValues(alpha: 0.3),
                             blurRadius: 8,
                             offset: const Offset(0, 4),
                           ),
@@ -594,7 +597,9 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
                           borderRadius: BorderRadius.circular(16),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xff17201c).withOpacity(0.04),
+                              color: const Color(
+                                0xff17201c,
+                              ).withValues(alpha: 0.04),
                               blurRadius: 6,
                               offset: const Offset(0, 1),
                             ),
@@ -623,7 +628,9 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
                           borderRadius: BorderRadius.circular(16),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xff17201c).withOpacity(0.04),
+                              color: const Color(
+                                0xff17201c,
+                              ).withValues(alpha: 0.04),
                               blurRadius: 6,
                               offset: const Offset(0, 1),
                             ),
@@ -2299,7 +2306,6 @@ class _StateCard extends StatelessWidget {
       state: state,
       pulse: pulse,
     );
-    final stateColor = state.state.color;
     final stateLabel = state.state.label;
     final confidenceLevel = _confidenceLevelFromScore(state.confidence);
     final confidenceExplanation = _confidenceExplanationFromScore(
@@ -2324,7 +2330,7 @@ class _StateCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xff17201c).withOpacity(0.05),
+              color: const Color(0xff17201c).withValues(alpha: 0.05),
               blurRadius: 10,
               offset: const Offset(0, 2),
             ),
@@ -3095,7 +3101,7 @@ class _QuestionSwitch extends StatelessWidget {
             color: const Color(0xff17201c),
           ),
         ),
-        activeColor: const Color(0xff2e7d5b),
+        activeThumbColor: const Color(0xff2e7d5b),
         activeTrackColor: const Color(0xffe8eee9),
         inactiveThumbColor: const Color(0xff5d6b63),
         inactiveTrackColor: const Color(0xffdde5e0),
@@ -3278,18 +3284,6 @@ extension on DimensionStateValue {
   }
 }
 
-extension on PlacePulseStatus {
-  Color get color {
-    return switch (this) {
-      PlacePulseStatus.reliable => const Color(0xff17643a),
-      PlacePulseStatus.reliableAging => const Color(0xff8a6d00),
-      PlacePulseStatus.unknown => const Color(0xff52616b),
-      PlacePulseStatus.underReview => const Color(0xff1765a6),
-      PlacePulseStatus.recentlyRefreshed => const Color(0xff17643a),
-    };
-  }
-}
-
 extension on ConfidenceLevel {
   String get label {
     return switch (this) {
@@ -3329,26 +3323,6 @@ String _confidenceExplanationFromScore(double confidence) {
     ConfidenceLevel.low =>
       'Current evidence is limited, so this state should be treated cautiously.',
   };
-}
-
-extension on MemoryEventType {
-  String get label {
-    return switch (this) {
-      MemoryEventType.placeSeeded => 'Place seeded',
-      MemoryEventType.stateSeeded => 'State seeded',
-      MemoryEventType.visitConfirmed => 'Visit confirmed',
-      MemoryEventType.evidenceAdded => 'Evidence added',
-      MemoryEventType.aiSignalCreated => 'AI signal created',
-      MemoryEventType.caseOpened => 'Case opened',
-      MemoryEventType.caseTriaged => 'Case triaged',
-      MemoryEventType.inspectionRequested => 'Inspection requested',
-      MemoryEventType.verificationSubmitted => 'Verification submitted',
-      MemoryEventType.stateChanged => 'State changed',
-      MemoryEventType.pulseChanged => 'Pulse changed',
-      MemoryEventType.caseClosed => 'Case closed',
-      MemoryEventType.remediationVerified => 'Remediation verified',
-    };
-  }
 }
 
 String _formatDate(DateTime dateTime) {
@@ -3440,9 +3414,7 @@ class _BeenToPlacesCard extends StatelessWidget {
 }
 
 class _AccessPulseBrandTitle extends StatelessWidget {
-  const _AccessPulseBrandTitle({this.fontSize = 20, super.key});
-
-  final double fontSize;
+  const _AccessPulseBrandTitle();
 
   @override
   Widget build(BuildContext context) {
@@ -3465,7 +3437,7 @@ class _AccessPulseBrandTitle extends StatelessWidget {
           ),
         ],
       ),
-      style: TextStyle(fontSize: fontSize, letterSpacing: -0.5),
+      style: const TextStyle(fontSize: 20),
     );
   }
 }
@@ -3981,7 +3953,7 @@ class _RampCaptureStepPageState extends State<_RampCaptureStepPage>
         ),
         const SizedBox(height: 16),
         const Text(
-          "We couldn\'t get a stable reading. Try holding the device steady against the ramp surface.",
+          "We couldn't get a stable reading. Try holding the device steady against the ramp surface.",
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 14, color: Color(0xff5d6b63), height: 1.5),
         ),
