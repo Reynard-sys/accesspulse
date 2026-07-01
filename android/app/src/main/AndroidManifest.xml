@@ -1,4 +1,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- image_picker: read photos from gallery (API 33+) -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <!-- image_picker: read photos from gallery (API ≤ 32 fallback) -->
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+    <!-- image_picker: capture from camera -->
+    <uses-permission android:name="android.permission.CAMERA" />
+
     <application
         android:label="accesspulse"
         android:name="${applicationName}"
