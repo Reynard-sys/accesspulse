@@ -1,5 +1,9 @@
+import 'dart:typed_data';
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../domain/accesspulse_domain.dart';
 
@@ -773,6 +777,22 @@ class _ConfirmVisitScreenState extends State<ConfirmVisitScreen> {
   }
 }
 
+// ── Photo Evidence Item ──────────────────────────────────────────────────────
+
+class PhotoEvidenceItem {
+  PhotoEvidenceItem({
+    required this.file,
+    required this.bytes,
+    required this.addedAt,
+  });
+
+  final XFile file;
+  final Uint8List bytes;
+  final DateTime addedAt;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 class EvidenceFlowScreen extends StatefulWidget {
   const EvidenceFlowScreen({
     required this.place,
@@ -791,24 +811,41 @@ class EvidenceFlowScreen extends StatefulWidget {
   State<EvidenceFlowScreen> createState() => _EvidenceFlowScreenState();
 }
 
+enum _EvidenceFlowStep {
+  addEvidence,
+  rampCapture,
+  aiGuidance,
+  structureReview,
+  reviewPacket,
+}
+
 class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
+  // ── State Machine ────────────────────────────────────────────────────────
+  _EvidenceFlowStep _currentStep = _EvidenceFlowStep.addEvidence;
+
+  // ── Photo Accumulation ───────────────────────────────────────────────────
+  final List<PhotoEvidenceItem> _photos = [];
+  // ── Form State ───────────────────────────────────────────────────────────
   final _noteController = TextEditingController(
     text: 'The entrance has steps and the ramp required assistance.',
   );
-  bool _demoPhotoSelected = false;
-  bool _useDemoRampFallback = true;
-  bool _isCapturingRampSlope = false;
-  bool _rampSlopeCaptureFailed = false;
-  bool _isAnalyzing = false;
-  bool _isSubmitting = false;
-  bool _guidanceSkipped = false;
-  bool _guidanceContinued = false;
-  final _rampSlopeCaptureService = const RampSlopeCaptureService();
+
   RampSlopeMeasurement? _rampSlopeMeasurement;
-  String? _rampSlopeFailureMessage;
-  String? _analysisError;
-  String? _submitError;
+  bool _useDemoRampFallback = true;
+  int _rampCaptureSessionId = 0;
+
+  // ── AI Analysis State ────────────────────────────────────────────────────
   AiEvidenceAssessment? _assessment;
+  bool _isAnalyzing = false;
+  String? _analysisError;
+
+  // ── Ramp Capture State ───────────────────────────────────────────────────
+  final _rampSlopeCaptureService = const RampSlopeCaptureService();
+
+  // ── Guidance State ───────────────────────────────────────────────────────
+  // ── Submission State ────────────────────────────────────────────────────
+  bool _isSubmitting = false;
+  String? _submitError;
 
   @override
   void dispose() {
@@ -826,65 +863,130 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
         note.contains('wheelchair entrance');
   }
 
-  Future<void> _captureRampSlope() async {
+  // ── Photo Management ─────────────────────────────────────────────────────
+
+  Future<void> _addPhoto() async {
+    final source = await _showImageSourceSheet();
+    if (source == null || !mounted) return;
+
+    final picker = ImagePicker();
+    final file = await picker.pickImage(source: source, imageQuality: 80);
+    if (file == null || !mounted) return;
+
+    final bytes = await file.readAsBytes();
+    if (!mounted) return;
+
     setState(() {
-      _isCapturingRampSlope = true;
-      _rampSlopeCaptureFailed = false;
-      _rampSlopeFailureMessage = null;
-      _analysisError = null;
-      _submitError = null;
+      _photos.add(PhotoEvidenceItem(
+        file: file,
+        bytes: bytes,
+        addedAt: DateTime.now(),
+      ));
+      // Reset analysis when new photo is added
       _assessment = null;
-      _guidanceSkipped = false;
-      _guidanceContinued = false;
-    });
-    final measurement = _useDemoRampFallback
-        ? await _captureDemoRampSlope()
-        : await _rampSlopeCaptureService.capture();
-    if (!mounted) {
-      return;
-    }
-    setState(() {
-      _isCapturingRampSlope = false;
-      if (measurement.isUsable) {
-        _rampSlopeMeasurement = measurement;
-      } else {
-        _rampSlopeMeasurement = null;
-        _rampSlopeCaptureFailed = true;
-        _rampSlopeFailureMessage = measurement.failureReason;
-      }
+      _analysisError = null;
     });
   }
 
-  Future<RampSlopeMeasurement> _captureDemoRampSlope() async {
-    await Future<void>.delayed(const Duration(milliseconds: 900));
-    return RampSlopeCaptureService.fallbackMeasurement(
-      capturedAt: DateTime.now(),
+  void _removePhoto(int index) {
+    setState(() {
+      _photos.removeAt(index);
+      // Reset analysis when a photo is removed
+      _assessment = null;
+      _analysisError = null;
+    });
+  }
+
+  Future<ImageSource?> _showImageSourceSheet() {
+    return showModalBottomSheet<ImageSource>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Theme.of(ctx).colorScheme.outlineVariant,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 12),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Choose from gallery'),
+              onTap: () => Navigator.of(ctx).pop(ImageSource.gallery),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: const Text('Take a photo'),
+              onTap: () => Navigator.of(ctx).pop(ImageSource.camera),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
     );
   }
 
-  Future<void> _analyze() async {
+  // ── Ramp Slope Capture ───────────────────────────────────────────────────
+
+  void _captureRampSlope() {
+    setState(() {
+      _rampCaptureSessionId++;
+      _currentStep = _EvidenceFlowStep.rampCapture;
+    });
+  }
+
+  void _onRampCaptureComplete(RampSlopeMeasurement? measurement) {
+    setState(() {
+      if (measurement != null) {
+        _rampSlopeMeasurement = measurement;
+      }
+      _currentStep = _EvidenceFlowStep.addEvidence;
+    });
+  }
+
+
+
+  // ── AI Analysis ──────────────────────────────────────────────────────────
+
+  Future<void> _analyzeEvidence() async {
+    if (_photos.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please add at least one photo')),
+      );
+      return;
+    }
+
     setState(() {
       _isAnalyzing = true;
       _analysisError = null;
-      _submitError = null;
     });
+
     try {
+      // Analyze with all accumulated photos
       final assessment = await widget.aiService.analyzeMobilityEvidence(
         note: _noteController.text,
-        imagePath: _demoPhotoSelected ? 'demo/main-entrance.jpg' : null,
+        imagePath: _photos.isNotEmpty ? _photos.last.file.path : null,
         rampSlopeMeasurement: _rampSlopeMeasurement,
       );
-      if (!mounted) {
-        return;
-      }
+
+      if (!mounted) return;
+
       setState(() {
         _assessment = assessment;
         _isAnalyzing = false;
+        _currentStep = _EvidenceFlowStep.aiGuidance;
       });
     } on Object {
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
+
       setState(() {
         _analysisError =
             'AccessPulse could not structure this evidence. You can retry, or keep the note and measurement for manual review.';
@@ -893,53 +995,54 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
     }
   }
 
-  Future<void> _addAnotherPhotoFromGuidance() async {
-    setState(() {
-      _demoPhotoSelected = true;
-      _guidanceSkipped = false;
-      _guidanceContinued = false;
-      _submitError = null;
-    });
-    await _analyze();
-  }
+  // ── Flow Navigation ─────────────────────────────────────────────────────
 
-  void _continueAnyway() {
+  void _returnToAddEvidence() {
     setState(() {
-      _guidanceContinued = true;
-      _guidanceSkipped = false;
-      _submitError = null;
+      _currentStep = _EvidenceFlowStep.addEvidence;
+      // Keep photos accumulated; user can add more
     });
   }
 
-  void _skipGuidance() {
+  void _continueToStructure() {
     setState(() {
-      _guidanceSkipped = true;
-      _guidanceContinued = false;
-      _submitError = null;
+      _currentStep = _EvidenceFlowStep.structureReview;
     });
   }
 
-  Future<void> _submit() async {
+  void _skipGuidanceToReview() {
+    setState(() {
+      _currentStep = _EvidenceFlowStep.reviewPacket;
+    });
+  }
+
+  void _continueFromStructure() {
+    setState(() {
+      _currentStep = _EvidenceFlowStep.reviewPacket;
+    });
+  }
+
+  Future<void> _submitEvidence() async {
     final assessment = _assessment;
-    if (assessment == null) {
-      return;
-    }
+    if (assessment == null) return;
+
     setState(() {
       _isSubmitting = true;
       _submitError = null;
     });
+
     try {
       final result = await widget.stateService.submitStructuredEvidence(
         placeDimensionId: widget.placeDimensionId,
         submittedBy: _demoUserId,
         assessment: assessment,
-        imagePath: _demoPhotoSelected ? 'demo/main-entrance.jpg' : null,
+        imagePath: _photos.isNotEmpty ? _photos.last.file.path : null,
         note: _noteController.text,
         rampSlopeMeasurement: _rampSlopeMeasurement,
       );
-      if (!mounted) {
-        return;
-      }
+
+      if (!mounted) return;
+
       await Navigator.of(context).pushReplacement(
         _accessPulseRoute<void>(
           SubmissionResultScreen(
@@ -955,9 +1058,8 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
         ),
       );
     } on Object {
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
+
       setState(() {
         _submitError =
             'The review packet was not submitted. Please retry while the note and measurement are still on this screen.';
@@ -966,203 +1068,27 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
     }
   }
 
+  // ── Build ────────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const _AccessPulseBrandTitle(),
+        automaticallyImplyLeading: false,
       ),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 820),
-            child: ListView(
-              key: const ValueKey('evidence-flow-scroll'),
-              padding: const EdgeInsets.all(20),
+            child: IndexedStack(
+              index: _currentStep.index,
               children: [
-                Text(
-                  'Add Evidence',
-                  style: GoogleFonts.afacad(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xff17201c),
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  widget.place.name,
-                  style: GoogleFonts.afacad(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xff5d6b63),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Create a review packet with the note, optional photo, ramp reading, and AI summary.',
-                ),
-                const SizedBox(height: 16),
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.photo_camera_outlined),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                _demoPhotoSelected
-                                    ? 'Demo entrance photo selected'
-                                    : 'No photo selected',
-                                style: Theme.of(context).textTheme.titleMedium,
-                              ),
-                            ),
-                            TextButton.icon(
-                              icon: const Icon(Icons.upload),
-                              label: const Text('Use demo photo'),
-                              onPressed: () {
-                                setState(() {
-                                  _demoPhotoSelected = true;
-                                  _assessment = null;
-                                  _submitError = null;
-                                  _guidanceSkipped = false;
-                                  _guidanceContinued = false;
-                                });
-                              },
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        TextField(
-                          controller: _noteController,
-                          minLines: 3,
-                          maxLines: 5,
-                          decoration: const InputDecoration(
-                            labelText: 'Evidence note',
-                            alignLabelWithHint: true,
-                          ),
-                          onChanged: (_) {
-                            setState(() {
-                              _assessment = null;
-                              _analysisError = null;
-                              _submitError = null;
-                              _guidanceSkipped = false;
-                              _guidanceContinued = false;
-                            });
-                          },
-                        ),
-                        const SizedBox(height: 12),
-                        if (_shouldOfferRampSlopeCapture) ...[
-                          _RampSlopeCapturePanel(
-                            measurement: _rampSlopeMeasurement,
-                            isCapturing: _isCapturingRampSlope,
-                            captureFailed: _rampSlopeCaptureFailed,
-                            failureMessage: _rampSlopeFailureMessage,
-                            useDemoFallback: _useDemoRampFallback,
-                            onDemoFallbackChanged: _isCapturingRampSlope
-                                ? null
-                                : (value) {
-                                    setState(() {
-                                      _useDemoRampFallback = value;
-                                      _rampSlopeMeasurement = null;
-                                      _rampSlopeCaptureFailed = false;
-                                      _rampSlopeFailureMessage = null;
-                                      _analysisError = null;
-                                      _submitError = null;
-                                      _assessment = null;
-                                      _guidanceSkipped = false;
-                                      _guidanceContinued = false;
-                                    });
-                                  },
-                            onStart: _captureRampSlope,
-                            onRetry: _captureRampSlope,
-                          ),
-                          const SizedBox(height: 12),
-                        ],
-                        FilledButton.icon(
-                          icon: _isAnalyzing
-                              ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Icon(Icons.auto_awesome),
-                          label: Text(
-                            _isAnalyzing
-                                ? 'Structuring evidence...'
-                                : 'Analyze evidence',
-                          ),
-                          onPressed: _isAnalyzing ? null : _analyze,
-                        ),
-                        if (_analysisError != null) ...[
-                          const SizedBox(height: 12),
-                          _InlineNotice(
-                            icon: Icons.error_outline,
-                            message: _analysisError!,
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                if (_assessment != null) ...[
-                  if (!_guidanceSkipped) ...[
-                    _AiGuidanceCard(
-                      assessment: _assessment!,
-                      onAddAnotherPhoto: _isAnalyzing
-                          ? null
-                          : _addAnotherPhotoFromGuidance,
-                      onContinueAnyway: _continueAnyway,
-                      onSkipGuidance: _skipGuidance,
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-                  _AiResultPanel(assessment: _assessment!),
-                  if (_assessment!.institutionReady ||
-                      _guidanceContinued ||
-                      _guidanceSkipped) ...[
-                    const SizedBox(height: 16),
-                    _ReviewPacketPanel(
-                      assessment: _assessment!,
-                      hasPhoto: _demoPhotoSelected,
-                      hasRampMeasurement: _rampSlopeMeasurement != null,
-                    ),
-                  ],
-                ],
-                if (_assessment != null &&
-                    (_assessment!.institutionReady ||
-                        _guidanceContinued ||
-                        _guidanceSkipped)) ...[
-                  const SizedBox(height: 16),
-                  if (_submitError != null) ...[
-                    _InlineNotice(
-                      icon: Icons.error_outline,
-                      message: _submitError!,
-                    ),
-                    const SizedBox(height: 12),
-                  ],
-                  FilledButton.icon(
-                    icon: _isSubmitting
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.fact_check_outlined),
-                    label: Text(
-                      _isSubmitting
-                          ? 'Submitting review packet...'
-                          : 'Submit review packet',
-                    ),
-                    onPressed: _isSubmitting ? null : _submit,
-                  ),
-                ],
+                _buildAddEvidenceStep(),
+            _buildRampCaptureStep(),
+            _buildAiGuidanceStep(),
+                _buildStructureReviewStep(),
+                _buildReviewPacketStep(),
               ],
             ),
           ),
@@ -1170,247 +1096,397 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
       ),
     );
   }
-}
 
-class _RampSlopeCapturePanel extends StatelessWidget {
-  const _RampSlopeCapturePanel({
-    required this.measurement,
-    required this.isCapturing,
-    required this.captureFailed,
-    required this.failureMessage,
-    required this.useDemoFallback,
-    required this.onDemoFallbackChanged,
-    required this.onStart,
-    required this.onRetry,
-  });
+  // ── Step Builders ────────────────────────────────────────────────────────
 
-  final RampSlopeMeasurement? measurement;
-  final bool isCapturing;
-  final bool captureFailed;
-  final String? failureMessage;
-  final bool useDemoFallback;
-  final ValueChanged<bool>? onDemoFallbackChanged;
-  final VoidCallback onStart;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final measurement = this.measurement;
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        border: Border.all(color: colorScheme.outlineVariant),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          children: [
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              secondary: const Icon(Icons.science_outlined),
-              title: const Text('Demo-safe capture'),
-              subtitle: const Text(
-                'Use the seeded 14.8 deg sample for a reliable live demo.',
+  Widget _buildHeader(VoidCallback onBack) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 4, right: 12),
+          child: GestureDetector(
+            onTap: onBack,
+            child: const Icon(
+              Icons.arrow_back,
+              size: 20,
+              color: Color(0xff5d6b63),
+            ),
+          ),
+        ),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Add Evidence',
+                style: GoogleFonts.afacad(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xff17201c),
+                ),
               ),
-              value: useDemoFallback,
-              onChanged: onDemoFallbackChanged,
-            ),
-            const SizedBox(height: 8),
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 200),
-              child: isCapturing
-                  ? _RampSlopeCapturingState(useDemoFallback: useDemoFallback)
-                  : measurement != null
-                  ? _RampSlopeSuccessState(
-                      key: ValueKey(measurement.capturedAt),
-                      measurement: measurement,
-                      onRetry: onRetry,
-                    )
-                  : captureFailed
-                  ? _RampSlopeFailureState(
-                      message: failureMessage,
-                      onRetry: onRetry,
-                    )
-                  : _RampSlopeEntryState(
-                      useDemoFallback: useDemoFallback,
-                      onStart: onStart,
+              const SizedBox(height: 2),
+              Text(
+                widget.place.name,
+                style: GoogleFonts.afacad(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xff5d6b63),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+
+  Widget _buildRampCaptureStep() {
+    return _RampCaptureStepPage(
+      key: ValueKey(_rampCaptureSessionId),
+      useDemoFallback: _useDemoRampFallback,
+      captureService: _rampSlopeCaptureService,
+      onComplete: _onRampCaptureComplete,
+    );
+  }
+
+  Widget _buildAddEvidenceStep() {
+    return ListView(
+      key: const ValueKey('step-add-evidence'),
+      padding: const EdgeInsets.all(20),
+      children: [
+        _buildHeader(() => Navigator.of(context).pop()),
+        const SizedBox(height: 20),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const _SectionHeader(
+                  icon: Icons.photo_camera_outlined,
+                  title: 'Photo evidence',
+                ),
+                const SizedBox(height: 16),
+                if (_photos.isEmpty)
+                  _EmptyBin(
+                    colorScheme: Theme.of(context).colorScheme,
+                    onTap: _addPhoto,
+                  )
+                else
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        height: 120,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: _photos.length,
+                          itemBuilder: (context, index) {
+                            final photo = _photos[index];
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 12),
+                              child: Stack(
+                                children: [
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Image.memory(
+                                      photo.bytes,
+                                      width: 120,
+                                      height: 120,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                  Positioned(
+                                    top: 4,
+                                    right: 4,
+                                    child: GestureDetector(
+                                      onTap: () => _removePhoto(index),
+                                      child: Container(
+                                        padding: const EdgeInsets.all(4),
+                                        decoration: BoxDecoration(
+                                          color: Colors.black.withAlpha(160),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: const Icon(
+                                          Icons.close,
+                                          size: 16,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      OutlinedButton.icon(
+                        icon: const Icon(Icons.add_a_photo),
+                        label: const Text('Add another photo'),
+                        onPressed: _addPhoto,
+                      ),
+                    ],
+                  ),
+                const SizedBox(height: 20),
+                TextField(
+                  controller: _noteController,
+                  maxLines: 5,
+                  minLines: 3,
+                  decoration: const InputDecoration(
+                    labelText: 'Review note',
+                    hintText: 'e.g. Ramp is too steep...',
+                    alignLabelWithHint: true,
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                if (_shouldOfferRampSlopeCapture) ...[
+                  _RampSlopeCapturePanel(
+                    measurement: _rampSlopeMeasurement,
+                    useDemoFallback: _useDemoRampFallback,
+                    onDemoFallbackChanged: (value) {
+                      setState(() => _useDemoRampFallback = value);
+                    },
+                    onStart: _captureRampSlope,
+                    onRetry: _captureRampSlope,
+                  ),
+                  const SizedBox(height: 20),
+                ],
+                if (_analysisError != null) ...[
+                  _InlineNotice(
+                    icon: Icons.error_outline,
+                    message: _analysisError!,
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    icon: _isAnalyzing
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.auto_awesome),
+                    label: Text(
+                      _isAnalyzing ? 'Analyzing...' : 'Analyze evidence',
                     ),
+                    onPressed: _isAnalyzing ? null : _analyzeEvidence,
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAiGuidanceStep() {
+    final assessment = _assessment;
+    if (assessment == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return ListView(
+      key: const ValueKey('step-ai-guidance'),
+      padding: const EdgeInsets.all(20),
+      children: [
+        _buildHeader(_returnToAddEvidence),
+        const SizedBox(height: 20),
+        _AiGuidanceCard(
+          assessment: assessment,
+          onAddAnotherPhoto: _returnToAddEvidence,
+          onContinueAnyway: _continueToStructure,
+          onSkipGuidance: _skipGuidanceToReview,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStructureReviewStep() {
+    final assessment = _assessment;
+    if (assessment == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return ListView(
+      key: const ValueKey('step-structure-review'),
+      padding: const EdgeInsets.all(20),
+      children: [
+        _buildHeader(() => setState(() => _currentStep = _EvidenceFlowStep.aiGuidance)),
+        const SizedBox(height: 20),
+        _AiResultPanel(assessment: assessment),
+        const SizedBox(height: 20),
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton.icon(
+            icon: const Icon(Icons.arrow_forward),
+            label: const Text('Continue to review packet'),
+            onPressed: _continueFromStructure,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildReviewPacketStep() {
+    final assessment = _assessment;
+    if (assessment == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return ListView(
+      key: const ValueKey('step-review-packet'),
+      padding: const EdgeInsets.all(20),
+      children: [
+        _buildHeader(() => setState(() => _currentStep = _EvidenceFlowStep.structureReview)),
+        const SizedBox(height: 20),
+        _ReviewPacketPanel(
+          assessment: assessment,
+          hasPhoto: _photos.isNotEmpty,
+          hasRampMeasurement: _rampSlopeMeasurement != null,
+        ),
+        const SizedBox(height: 20),
+        if (_submitError != null) ...[
+          _InlineNotice(
+            icon: Icons.error_outline,
+            message: _submitError!,
+          ),
+          const SizedBox(height: 16),
+        ],
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton.icon(
+            icon: _isSubmitting
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.fact_check_outlined),
+            label: Text(
+              _isSubmitting ? 'Submitting...' : 'Submit Review Packet',
+            ),
+            onPressed: _isSubmitting ? null : _submitEvidence,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Helper Widget ────────────────────────────────────────────────────────
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Photo upload bin
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// A rectangular upload container that sits inside the evidence card.
+///
+/// **Empty state** — a dashed-border tap target prompts the user to add a photo.
+/// **Filled state** — renders the selected image as a thumbnail with
+/// "Remove" and "Change photo" action buttons overlaid at the bottom.
+///
+/// This widget is purely presentational; all business logic lives in
+/// [_EvidenceFlowScreenState._pickImage] and [_EvidenceFlowScreenState._removePhoto].
+
+class _EmptyBin extends StatelessWidget {
+  const _EmptyBin({required this.colorScheme, required this.onTap});
+
+  final ColorScheme colorScheme;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: CustomPaint(
+        painter: _DashedBorderPainter(color: colorScheme.outlineVariant),
+        child: SizedBox(
+          height: 180,
+          width: double.infinity,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.add_photo_alternate_outlined,
+                size: 40,
+                color: colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(height: 10),
+              Text(
+                'Tap to add a photo',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                'Gallery or camera  ·  JPG / PNG',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant.withAlpha(180),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _RampSlopeEntryState extends StatelessWidget {
-  const _RampSlopeEntryState({
-    required this.useDemoFallback,
-    required this.onStart,
-  });
 
-  final bool useDemoFallback;
-  final VoidCallback onStart;
+
+class _DashedBorderPainter extends CustomPainter {
+  const _DashedBorderPainter({required this.color});
+
+  final Color color;
 
   @override
-  Widget build(BuildContext context) {
-    return Column(
-      key: const ValueKey('ramp-slope-entry'),
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const _SectionHeader(
-          icon: Icons.straighten,
-          title: 'Optional: Measure ramp slope',
-        ),
-        const SizedBox(height: 8),
-        const Text(
-          'Add an estimated incline reading so reviewers see the reported ramp condition with more context.',
-        ),
-        const SizedBox(height: 12),
-        Text(
-          useDemoFallback
-              ? 'Demo-safe mode is on, so this capture will use a clearly labeled sample reading.'
-              : 'Place your phone flat on the ramp surface and point it in the direction someone would move up or down the ramp. Hold it still for a few seconds.',
-        ),
-        const SizedBox(height: 12),
-        OutlinedButton.icon(
-          icon: const Icon(Icons.speed),
-          label: const Text('Start slope capture'),
-          onPressed: onStart,
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'This is an estimated field measurement to support review. Official verification may still be required.',
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
-      ],
-    );
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke;
+
+    const dashWidth = 6.0;
+    const dashSpace = 4.0;
+    const radius = Radius.circular(10);
+    final rect = Rect.fromLTWH(0, 0, size.width, size.height);
+    final rrect = RRect.fromRectAndRadius(rect, radius);
+    final path = Path()..addRRect(rrect);
+
+    final metrics = path.computeMetrics();
+    for (final metric in metrics) {
+      double distance = 0;
+      while (distance < metric.length) {
+        final next = distance + dashWidth;
+        canvas.drawPath(
+          metric.extractPath(distance, next.clamp(0, metric.length)),
+          paint,
+        );
+        distance += dashWidth + dashSpace;
+      }
+    }
   }
-}
-
-class _RampSlopeCapturingState extends StatelessWidget {
-  const _RampSlopeCapturingState({required this.useDemoFallback});
-
-  final bool useDemoFallback;
 
   @override
-  Widget build(BuildContext context) {
-    return Column(
-      key: const ValueKey('ramp-slope-capturing'),
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const _SectionHeader(icon: Icons.speed, title: 'Capturing ramp slope'),
-        const SizedBox(height: 12),
-        const LinearProgressIndicator(),
-        const SizedBox(height: 12),
-        Text(
-          useDemoFallback
-              ? 'Loading the demo-safe measurement sample.'
-              : 'Keep the phone still while AccessPulse captures motion sensor samples.',
-        ),
-      ],
-    );
-  }
+  bool shouldRepaint(_DashedBorderPainter old) => old.color != color;
 }
 
-class _RampSlopeSuccessState extends StatelessWidget {
-  const _RampSlopeSuccessState({
-    required this.measurement,
-    required this.onRetry,
-    super.key,
-  });
+// ─────────────────────────────────────────────────────────────────────────────
 
-  final RampSlopeMeasurement measurement;
-  final VoidCallback onRetry;
 
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const _SectionHeader(
-          icon: Icons.task_alt,
-          title: 'Ramp slope captured',
-        ),
-        const SizedBox(height: 10),
-        _MetricRow(
-          label: 'Estimated angle',
-          value: '${measurement.estimatedAngleDegrees.toStringAsFixed(1)} deg',
-        ),
-        _MetricRow(label: 'Quality', value: measurement.qualityLabel),
-        _MetricRow(label: 'Source', value: measurement.sourceLabel),
-        _MetricRow(
-          label: 'Capture window',
-          value:
-              '${(measurement.captureDurationMs / 1000).toStringAsFixed(1)}s',
-        ),
-        _MetricRow(label: 'Samples', value: '${measurement.sampleCount}'),
-        const SizedBox(height: 10),
-        const Text('This estimated reading will be attached to your report.'),
-        const SizedBox(height: 8),
-        Text(
-          'Estimated field measurement only. It does not prove legal non-compliance.',
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
-        if (measurement.status == RampMeasurementStatus.lowQuality) ...[
-          const SizedBox(height: 8),
-          const Text(
-            'We captured a reading, but the phone moved too much to trust it strongly. You can retry for a better result.',
-          ),
-        ],
-        if (measurement.usedFallback) ...[
-          const SizedBox(height: 8),
-          const Text(
-            'Demo fallback mode was used because live sensor capture was unavailable in this environment.',
-          ),
-        ],
-        const SizedBox(height: 12),
-        OutlinedButton.icon(
-          icon: const Icon(Icons.refresh),
-          label: const Text('Retry measurement'),
-          onPressed: onRetry,
-        ),
-      ],
-    );
-  }
-}
 
-class _RampSlopeFailureState extends StatelessWidget {
-  const _RampSlopeFailureState({required this.message, required this.onRetry});
 
-  final String? message;
-  final VoidCallback onRetry;
 
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      key: const ValueKey('ramp-slope-failure'),
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const _SectionHeader(
-          icon: Icons.error_outline,
-          title: 'Ramp reading not stable',
-        ),
-        const SizedBox(height: 8),
-        const Text(
-          'We could not capture a stable ramp reading. Please place your phone flat on the ramp and try again.',
-        ),
-        if (message != null) ...[
-          const SizedBox(height: 8),
-          Text(message!, style: Theme.of(context).textTheme.bodySmall),
-        ],
-        const SizedBox(height: 12),
-        OutlinedButton.icon(
-          icon: const Icon(Icons.refresh),
-          label: const Text('Retry measurement'),
-          onPressed: onRetry,
-        ),
-      ],
-    );
-  }
-}
 
 class SubmissionResultScreen extends StatelessWidget {
   const SubmissionResultScreen({
@@ -1833,12 +1909,6 @@ class _NearbyPlaceCard extends StatelessWidget {
         final reliabilityScore = data.pulse.score;
         final reliabilityPercent = (reliabilityScore * 100).toInt();
 
-        final String reliabilityLevel = switch (reliabilityScore) {
-          >= 0.8 => 'High',
-          >= 0.5 => 'Moderate',
-          _ => 'Low',
-        };
-
         return Card(
           clipBehavior: Clip.antiAlias,
           child: InkWell(
@@ -2074,61 +2144,6 @@ class _NearbyPlaceCard extends StatelessWidget {
   }
 }
 
-class _DetailActions extends StatelessWidget {
-  const _DetailActions({
-    required this.onConfirmVisit,
-    required this.onAddEvidence,
-  });
-
-  final VoidCallback onConfirmVisit;
-  final VoidCallback onAddEvidence;
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final narrow = constraints.maxWidth < 560;
-        final confirmButton = Semantics(
-          label: 'Confirm a recent visit for this place',
-          button: true,
-          child: FilledButton.icon(
-            icon: const Icon(Icons.how_to_reg),
-            label: const Text('I visited this place'),
-            onPressed: onConfirmVisit,
-          ),
-        );
-        final evidenceButton = Semantics(
-          label: 'Add mobility access evidence for this place',
-          button: true,
-          child: OutlinedButton.icon(
-            icon: const Icon(Icons.add_a_photo),
-            label: const Text('Add evidence'),
-            onPressed: onAddEvidence,
-          ),
-        );
-
-        if (narrow) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              confirmButton,
-              const SizedBox(height: 10),
-              evidenceButton,
-            ],
-          );
-        }
-
-        return Row(
-          children: [
-            Expanded(child: confirmButton),
-            const SizedBox(width: 12),
-            Expanded(child: evidenceButton),
-          ],
-        );
-      },
-    );
-  }
-}
 
 class _FigmaPill extends StatelessWidget {
   const _FigmaPill({
@@ -2472,10 +2487,12 @@ class _AiResultPanel extends StatelessWidget {
               label: 'Issue type',
               value: assessment.issueType.replaceAll('_', ' '),
             ),
+            const Divider(),
             _MetricRow(
               label: 'Confidence',
               value: assessment.confidenceLevel.label,
             ),
+            const Divider(),
             _MetricRow(
               label: 'Evidence readiness',
               value: assessment.evidenceReadiness.label,
@@ -2563,10 +2580,12 @@ class _AiGuidanceCard extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             _MetricRow(label: 'Missing', value: missing),
+            const Divider(),
             _MetricRow(
               label: 'Confidence',
               value: assessment.confidenceLevel.label,
             ),
+            const Divider(),
             _MetricRow(
               label: 'Evidence readiness',
               value: assessment.evidenceReadiness.label,
@@ -2574,34 +2593,50 @@ class _AiGuidanceCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(assessment.confidenceExplanation),
             const Divider(height: 24),
-            Text(
-              'Recommended next step',
-              style: Theme.of(context).textTheme.labelLarge,
-            ),
-            const SizedBox(height: 4),
-            Text(assessment.nextBestAction),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                OutlinedButton.icon(
-                  icon: const Icon(Icons.add_a_photo_outlined),
-                  label: const Text('Add another photo'),
-                  onPressed: onAddAnotherPhoto,
+                Text(
+                  'Recommended next step:',
+                  style: Theme.of(context).textTheme.labelLarge,
                 ),
-                FilledButton.icon(
-                  icon: const Icon(Icons.arrow_forward),
-                  label: const Text('Continue anyway'),
-                  onPressed: onContinueAnyway,
-                ),
-                TextButton.icon(
-                  icon: const Icon(Icons.visibility_off_outlined),
-                  label: const Text('Skip AI guidance'),
-                  onPressed: onSkipGuidance,
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    assessment.nextBestAction,
+                    textAlign: TextAlign.right,
+                    style: const TextStyle(fontWeight: FontWeight.w700)
+                  ),
                 ),
               ],
             ),
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.add_a_photo_outlined),
+                    label: const Text('Add another photo'),
+                    onPressed: onAddAnotherPhoto,
+                  ),
+                  const SizedBox(height: 12),
+                  FilledButton.icon(
+                    icon: const Icon(Icons.arrow_forward),
+                    label: const Text('Continue anyway'),
+                    onPressed: onContinueAnyway,
+                  ),
+                  const SizedBox(height: 12),
+                  TextButton.icon(
+                    icon: const Icon(Icons.visibility_off_outlined),
+                    label: const Text('Skip'),
+                    onPressed: onSkipGuidance,
+                  ),
+                ],
+              ),
+            )
           ],
         ),
       ),
@@ -2661,28 +2696,99 @@ class _ReviewPacketPanel extends StatelessWidget {
               body:
                   '${assessment.evidenceReadiness.label}: ${assessment.institutionReady ? 'sufficient evidence collected for LGU review.' : 'useful evidence, with missing context kept visible.'}',
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             Wrap(
               spacing: 8,
               runSpacing: 8,
               children: [
-                const Chip(label: Text('Note included')),
-                Chip(label: Text(hasPhoto ? 'Photo included' : 'No photo yet')),
-                Chip(label: Text(assessment.evidenceReadiness.label)),
+                const Chip(
+                  avatar: Icon(
+                    Icons.check_circle,
+                    size: 18,
+                    color: Color(0xFF2E7D5B),
+                  ),
+                  label: Text(
+                    'Note included',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  shape: StadiumBorder(),
+                ),
                 Chip(
+                  avatar: hasPhoto
+                      ? const Icon(
+                          Icons.check_circle,
+                          size: 18,
+                          color: Color(0xFF2E7D5B),
+                        )
+                      : null,
+                  label: Text(
+                    hasPhoto ? 'Photo included' : 'No photo yet',
+                    style: TextStyle(
+                      fontWeight: hasPhoto ? FontWeight.bold : FontWeight.normal,
+                      color: hasPhoto ? null : Colors.grey.shade700,
+                    ),
+                  ),
+                  shape: const StadiumBorder(),
+                ),
+                Chip(
+                  avatar: assessment.institutionReady
+                      ? const Icon(
+                          Icons.check_circle,
+                          size: 18,
+                          color: Color(0xFF2E7D5B),
+                        )
+                      : null,
+                  label: Text(
+                    assessment.evidenceReadiness.label,
+                    style: TextStyle(
+                      fontWeight: assessment.institutionReady
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                      color: assessment.institutionReady ? null : Colors.grey.shade700,
+                    ),
+                  ),
+                  shape: const StadiumBorder(),
+                ),
+                Chip(
+                  avatar: assessment.confidenceLevel.label.contains('High')
+                      ? const Icon(
+                          Icons.check_circle,
+                          size: 18,
+                          color: Color(0xFF2E7D5B),
+                        )
+                      : null,
                   label: Text(
                     'Confidence: ${assessment.confidenceLevel.label}',
+                    style: TextStyle(
+                      fontWeight: assessment.confidenceLevel.label.contains('High')
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                      color: assessment.confidenceLevel.label.contains('High')
+                          ? null
+                          : Colors.grey.shade700,
+                    ),
                   ),
+                  shape: const StadiumBorder(),
                 ),
                 Chip(
+                  avatar: hasRampMeasurement
+                      ? const Icon(
+                          Icons.check_circle,
+                          size: 18,
+                          color: Color(0xFF2E7D5B),
+                        )
+                      : null,
                   label: Text(
-                    hasRampMeasurement
-                        ? 'Ramp reading included'
-                        : 'No ramp reading yet',
+                    hasRampMeasurement ? 'Ramp reading included' : 'No ramp reading yet',
+                    style: TextStyle(
+                      fontWeight: hasRampMeasurement ? FontWeight.bold : FontWeight.normal,
+                      color: hasRampMeasurement ? null : Colors.grey.shade700,
+                    ),
                   ),
+                  shape: const StadiumBorder(),
                 ),
               ],
-            ),
+            )
           ],
         ),
       ),
@@ -2706,7 +2812,7 @@ class _PacketStep extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 20),
+        Icon(icon, size: 20, color: const Color(0xFF2E7D5B),),
         const SizedBox(width: 10),
         Expanded(
           child: Column(
@@ -2903,73 +3009,44 @@ class _QuestionSwitch extends StatelessWidget {
 }
 
 class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.icon, required this.title});
+  const _SectionHeader({this.icon, this.customIcon, required this.title});
 
-  final IconData icon;
+  final IconData? icon;
+  final Widget? customIcon;
   final String title;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon),
-        const SizedBox(width: 8),
-        Text(
-          title,
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-        ),
-      ],
-    );
-  }
-}
-
-class _StatusPill extends StatelessWidget {
-  const _StatusPill({
-    required this.icon,
-    required this.label,
-    required this.color,
-  });
-
-  final IconData icon;
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      label: label,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 220),
-        curve: Curves.easeOutCubic,
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: color.withValues(alpha: 0.45)),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, color: color, size: 18),
-              const SizedBox(width: 6),
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 180),
-                child: Text(
-                  label,
-                  key: ValueKey(label),
-                  style: TextStyle(color: color, fontWeight: FontWeight.w700),
-                ),
-              ),
-            ],
+    return Container(
+      padding: const EdgeInsets.only(bottom: 10),
+      decoration: const BoxDecoration(
+        border: Border(
+          bottom: BorderSide(
+            color: Color(0xffDDE5E0),
+            width: 1,
           ),
         ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            size: 18,
+            color: const Color(0xff2e7d5b),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            title,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+          ),
+        ],
       ),
     );
   }
 }
+
 
 class _MetricRow extends StatelessWidget {
   const _MetricRow({required this.label, required this.value});
@@ -2982,6 +3059,7 @@ class _MetricRow extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 1),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Expanded(child: Text(label)),
           Flexible(
@@ -3054,23 +3132,6 @@ class _TransitionRow extends StatelessWidget {
   }
 }
 
-class _RolePill extends StatelessWidget {
-  const _RolePill();
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        border: Border.all(color: Theme.of(context).colorScheme.outline),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        child: Text('Community user'),
-      ),
-    );
-  }
-}
 
 class _PlaceListData {
   const _PlaceListData({required this.state, required this.pulse});
@@ -3321,6 +3382,559 @@ class _AccessPulseBrandTitle extends StatelessWidget {
         fontSize: fontSize,
         letterSpacing: -0.5,
       ),
+    );
+  }
+}
+
+// ── Ramp Slope UI ────────────────────────────────────────────────────────────
+
+
+class _RampSlopeEntryState extends StatelessWidget {
+  const _RampSlopeEntryState({
+    required this.useDemoFallback,
+    required this.onStart,
+  });
+
+  final bool useDemoFallback;
+  final VoidCallback onStart;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      key: const ValueKey('ramp-slope-entry'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionHeader(
+          customIcon: Transform.rotate(
+            angle: 45 * 3.1415926535 / 180,
+            child: const Icon(Icons.straighten, color: Colors.black, size: 20),
+          ),
+          title: 'Optional: Measure ramp slope',
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'Add an estimated incline reading so reviewers see the reported ramp condition with more context.',
+        ),
+        const SizedBox(height: 12),
+        Text(
+          useDemoFallback
+              ? 'Demo-safe mode is on, so this capture will use a clearly labeled sample reading.'
+              : 'Place your phone flat on the ramp surface and point it in the direction someone would move up or down the ramp. Hold it still for a few seconds.',
+        ),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          style: OutlinedButton.styleFrom(
+            foregroundColor: Colors.black,
+            side: const BorderSide(width: 2, color: Colors.black),
+          ),
+          icon: const Icon(Icons.speed),
+          label: const Text('Start slope capture'),
+          onPressed: onStart,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'This is an estimated field measurement to support review. Official verification may still be required.',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+      ],
+    );
+  }
+}
+
+class _RampSlopeSuccessState extends StatelessWidget {
+  const _RampSlopeSuccessState({
+    required this.measurement,
+    required this.onRetry,
+    super.key,
+  });
+
+  final RampSlopeMeasurement measurement;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      key: const ValueKey('ramp-slope-success'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _SectionHeader(
+          icon: Icons.check_circle_outline,
+          title: 'Slope captured',
+        ),
+        const SizedBox(height: 12),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
+          children: [
+            Text(
+              '${measurement.estimatedAngleDegrees.toStringAsFixed(1)}°',
+              style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'estimated incline',
+              style: Theme.of(context).textTheme.labelLarge,
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        OutlinedButton.icon(
+          icon: const Icon(Icons.refresh),
+          label: const Text('Retake measurement'),
+          onPressed: onRetry,
+        ),
+      ],
+    );
+  }
+}
+
+
+class _RampCaptureStepPage extends StatefulWidget {
+  const _RampCaptureStepPage({
+    required this.useDemoFallback,
+    required this.captureService,
+    required this.onComplete,
+    super.key,
+  });
+
+  final bool useDemoFallback;
+  final RampSlopeCaptureService captureService;
+  final ValueChanged<RampSlopeMeasurement?> onComplete;
+
+  @override
+  State<_RampCaptureStepPage> createState() => _RampCaptureStepPageState();
+}
+
+enum _DialogCaptureState { countdown, success, failure }
+
+class _RampCaptureStepPageState extends State<_RampCaptureStepPage> with SingleTickerProviderStateMixin {
+  _DialogCaptureState _state = _DialogCaptureState.countdown;
+  RampSlopeMeasurement? _measurement;
+  late AnimationController _countdownController;
+
+  @override
+  void initState() {
+    super.initState();
+    _countdownController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    );
+    _startCapture();
+  }
+
+  @override
+  void dispose() {
+    _countdownController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _startCapture() async {
+    setState(() {
+      _state = _DialogCaptureState.countdown;
+      _measurement = null;
+    });
+    
+    _countdownController.forward(from: 0.0);
+
+    final measurement = widget.useDemoFallback
+        ? await _captureDemoRampSlope()
+        : await widget.captureService.capture();
+
+    if (!mounted) return;
+
+    setState(() {
+      _measurement = measurement;
+      if (measurement.isUsable) {
+        _state = _DialogCaptureState.success;
+      } else {
+        _state = _DialogCaptureState.failure;
+      }
+    });
+  }
+
+  Future<RampSlopeMeasurement> _captureDemoRampSlope() async {
+    await Future<void>.delayed(const Duration(seconds: 3));
+    return RampSlopeCaptureService.fallbackMeasurement(
+      capturedAt: DateTime.now(),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+          child: Row(
+            children: [
+              GestureDetector(
+                onTap: () => widget.onComplete(null),
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: const BoxDecoration(
+                    color: Color(0xfff1f4f2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.close, size: 20, color: Color(0xff5d6b63)),
+                ),
+              ),
+              const Expanded(
+                child: Center(
+                  child: Text(
+                    'Measure Ramp Slope',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xff17201c)),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 36),
+            ],
+          ),
+        ),
+        const Divider(height: 1, color: Color(0xffDDE5E0)),
+        Expanded(
+          child: Container(
+            color: const Color(0xFFF9FAF9),
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  if (widget.useDemoFallback)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 24),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: const Color(0xffDDE5E0)),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 6,
+                              height: 6,
+                              decoration: const BoxDecoration(
+                                color: Color(0xFF2E7D5B),
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'Demo-safe capture — using sample reading',
+                              style: TextStyle(fontSize: 12, color: Color(0xff5d6b63), fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(32, 16, 32, 48),
+                    child: _buildContent(),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildContent() {
+    switch (_state) {
+      case _DialogCaptureState.countdown:
+        return _buildCountdown();
+      case _DialogCaptureState.success:
+        return _buildSuccess();
+      case _DialogCaptureState.failure:
+        return _buildFailure();
+    }
+  }
+
+  Widget _buildCountdown() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const SizedBox(height: 200),
+        SizedBox(
+          width: 240,
+          height: 240,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              AnimatedBuilder(
+                animation: _countdownController,
+                builder: (context, child) {
+                  return CircularProgressIndicator(
+                    value: _countdownController.value,
+                    strokeWidth: 10,
+                    backgroundColor: const Color(0xffDDE5E0),
+                    color: const Color(0xFF2E7D5B),
+                  );
+                },
+              ),
+              Center(
+                child: AnimatedBuilder(
+                  animation: _countdownController,
+                  builder: (context, child) {
+                    final secondsLeft = 3 - (_countdownController.value * 3).floor();
+                    return Text(
+                      secondsLeft > 0 ? secondsLeft.toString() : '1',
+                      style: const TextStyle(
+                        fontSize: 80,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xff17201c),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 80),
+                  child: Image.asset('assets/images/ramp_slope_countdown.png'),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+
+  Widget _buildSuccess() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Center(
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: const BoxDecoration(
+              color: Color(0xffE8F5E9),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.check_circle_outline, color: Color(0xFF2E7D5B), size: 32),
+          ),
+        ),
+        const SizedBox(height: 16),
+        const Center(
+          child: Text(
+            'Slope captured',
+            style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xff17201c)),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Center(
+          child: Text(
+            '${_measurement!.estimatedAngleDegrees.toStringAsFixed(1)}°',
+            style: const TextStyle(fontSize: 64, fontWeight: FontWeight.w800, color: Color(0xff17201c)),
+          ),
+        ),
+        const Center(
+          child: Text(
+            'ESTIMATED INCLINE',
+            style: TextStyle(fontSize: 12, letterSpacing: 1.5, color: Color(0xff5d6b63), fontWeight: FontWeight.w600),
+          ),
+        ),
+        const SizedBox(height: 24),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border.all(color: const Color(0xffDDE5E0)),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _MetricRow(label: 'Quality', value: _measurement!.qualityLabel),
+              const Divider(color: Color(0xffDDE5E0)),
+              _MetricRow(label: 'Source', value: _measurement!.sourceLabel),
+              const Divider(color: Color(0xffDDE5E0)),
+              _MetricRow(
+                label: 'Capture window',
+                value: '${(_measurement!.captureDurationMs / 1000).toStringAsFixed(1)}s',
+              ),
+              const Divider(color: Color(0xffDDE5E0)),
+              _MetricRow(label: 'Samples', value: '${_measurement!.sampleCount}'),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            border: Border.all(color: const Color(0xffDDE5E0)),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: const Text(
+            'This is an estimated field measurement to support review. Official verification may still be required.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 12, color: Color(0xff5d6b63)),
+          ),
+        ),
+        const SizedBox(height: 32),
+        FilledButton(
+          style: FilledButton.styleFrom(
+            backgroundColor: const Color(0xFF2E7D5B),
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+          onPressed: () => widget.onComplete(_measurement),
+          child: const Text('Use this reading', style: TextStyle(fontSize: 16)),
+        ),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          style: OutlinedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            side: const BorderSide(color: Color(0xffDDE5E0)),
+          ),
+          icon: const Icon(Icons.refresh, color: Color(0xff17201c)),
+          label: const Text('Retake', style: TextStyle(fontSize: 16, color: Color(0xff17201c), fontWeight: FontWeight.bold)),
+          onPressed: _startCapture,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFailure() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: const BoxDecoration(
+            color: Color(0xffFFF3E0),
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(Icons.error_outline, color: Color(0xffE65100), size: 32),
+        ),
+        const SizedBox(height: 16),
+        const Text(
+          'Capture incomplete',
+          style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xff17201c)),
+        ),
+        const SizedBox(height: 16),
+        const Text(
+          "We couldn\'t get a stable reading. Try holding the device steady against the ramp surface.",
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 14, color: Color(0xff5d6b63), height: 1.5),
+        ),
+        const SizedBox(height: 32),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            border: Border.all(color: const Color(0xffDDE5E0)),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: const Text(
+            'A slope reading is optional — you can still submit evidence without it.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 12, color: Color(0xff5d6b63)),
+          ),
+        ),
+        const SizedBox(height: 32),
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF2E7D5B),
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: _startCapture,
+            child: const Text('Try again', style: TextStyle(fontSize: 16)),
+          ),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton(
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              side: const BorderSide(color: Color(0xffDDE5E0)),
+            ),
+            onPressed: () => widget.onComplete(null),
+            child: const Text('Skip slope reading', style: TextStyle(fontSize: 16, color: Color(0xff17201c), fontWeight: FontWeight.bold)),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+
+
+class _RampSlopeCapturePanel extends StatelessWidget {
+  const _RampSlopeCapturePanel({
+    required this.measurement,
+    required this.useDemoFallback,
+    required this.onDemoFallbackChanged,
+    required this.onStart,
+    required this.onRetry,
+  });
+
+  final RampSlopeMeasurement? measurement;
+  final bool useDemoFallback;
+  final ValueChanged<bool>? onDemoFallbackChanged;
+  final VoidCallback onStart;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Column(
+      children: [
+        DecoratedBox(
+          decoration: BoxDecoration(
+            border: Border.all(color: colorScheme.outlineVariant),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              secondary: const Icon(Icons.science_outlined, color: Color(0xFF2E7D5B)),
+              title: const Text('Demo-safe capture'),
+              subtitle: const Text(
+                'Use the seeded 14.8 deg sample for a reliable live demo.',
+              ),
+              value: useDemoFallback,
+              onChanged: onDemoFallbackChanged,
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        DecoratedBox(
+          decoration: BoxDecoration(
+            border: Border.all(color: colorScheme.outlineVariant),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              child: measurement != null
+                  ? _RampSlopeSuccessState(
+                      key: ValueKey(measurement!.capturedAt),
+                      measurement: measurement!,
+                      onRetry: onRetry,
+                    )
+                  : _RampSlopeEntryState(
+                      useDemoFallback: useDemoFallback,
+                      onStart: onStart,
+                    ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
