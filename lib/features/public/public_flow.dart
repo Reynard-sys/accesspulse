@@ -1260,100 +1260,106 @@ class _ConfirmVisitScreenState extends State<ConfirmVisitScreen> {
                           child: stepWidget,
                         ),
                       ),
-                      const SizedBox(height: 32),
-                      // Continue / Submit Button
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        curve: Curves.easeInOut,
-                        width: double.infinity,
-                        height: 54,
-                        decoration: BoxDecoration(
-                          color: isValid ? const Color(0xff2e7d5b) : const Color(0xffd5e0da),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            // Fixed Bottom Action Bar
+            Container(
+              color: const Color(0xfff8faf9),
+              padding: const EdgeInsets.only(left: 20, right: 20, bottom: 20, top: 12),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      curve: Curves.easeInOut,
+                      width: double.infinity,
+                      height: 54,
+                      decoration: BoxDecoration(
+                        color: isValid ? const Color(0xff2e7d5b) : const Color(0xffd5e0da),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: isValid
+                            ? [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.15),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ]
+                            : null,
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        borderRadius: BorderRadius.circular(16),
+                        child: InkWell(
                           borderRadius: BorderRadius.circular(16),
-                          boxShadow: isValid
-                              ? [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.15),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ]
-                              : null,
-                        ),
-                        child: Material(
-                          color: Colors.transparent,
-                          borderRadius: BorderRadius.circular(16),
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(16),
-                            onTap: (!isValid || _isSubmitting)
-                                ? null
-                                : () {
-                                    if (isFinalStep) {
-                                      _submit();
-                                    } else {
-                                      setState(() => _currentStep++);
-                                    }
-                                  },
-                            child: Center(
-                              child: _isSubmitting
-                                  ? const SizedBox(
-                                      width: 18,
-                                      height: 18,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: Colors.white,
-                                      ),
-                                    )
-                                  : Text(
-                                      isFinalStep ? 'Submit' : 'Continue',
-                                      style: GoogleFonts.afacad(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                        color: isValid ? Colors.white : const Color(0xffa8b5ae),
-                                      ),
+                          onTap: (!isValid || _isSubmitting)
+                              ? null
+                              : () {
+                                  if (isFinalStep) {
+                                    _submit();
+                                  } else {
+                                    setState(() => _currentStep++);
+                                  }
+                                },
+                          child: Center(
+                            child: _isSubmitting
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
                                     ),
-                            ),
+                                  )
+                                : Text(
+                                    isFinalStep ? 'Submit' : 'Continue',
+                                    style: GoogleFonts.afacad(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: isValid ? Colors.white : const Color(0xffa8b5ae),
+                                    ),
+                                  ),
                           ),
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      // Skip Actions
-                      if (_currentStep > 1)
-                        Center(
-                          child: TextButton(
-                            onPressed: _isSubmitting
-                                ? null
-                                : () {
-                                    if (isFinalStep) {
-                                      _submit();
-                                    } else {
-                                      setState(() => _currentStep++);
-                                    }
-                                  },
-                            child: Text(
-                              isFinalStep ? 'Skip this step' : 'Skip this question',
-                              style: GoogleFonts.afacad(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w500,
-                                color: const Color(0xff5d6b63),
-                                decoration: TextDecoration.underline,
-                              ),
-                            ),
-                          ),
-                        )
-                      else
-                        Center(
-                          child: Text(
-                            'This helps the next person decide before they go.',
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.afacad(
-                              fontSize: 12,
-                              color: const Color(0xffa8b5ae),
-                            ),
+                    ),
+                    const SizedBox(height: 12),
+                    if (_currentStep > 1)
+                      TextButton(
+                        onPressed: _isSubmitting
+                            ? null
+                            : () {
+                                if (isFinalStep) {
+                                  _submit();
+                                } else {
+                                  setState(() => _currentStep++);
+                                }
+                              },
+                        child: Text(
+                          isFinalStep ? 'Skip this step' : 'Skip this question',
+                          style: GoogleFonts.afacad(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
+                            color: const Color(0xff5d6b63),
+                            decoration: TextDecoration.underline,
                           ),
                         ),
-                    ],
-                  ),
+                      )
+                    else
+                      Text(
+                        'This helps the next person decide before they go.',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.afacad(
+                          fontSize: 12,
+                          color: const Color(0xffa8b5ae),
+                        ),
+                      ),
+                  ],
                 ),
               ),
             ),
@@ -1446,15 +1452,11 @@ class _VisitConfirmedScreen extends StatelessWidget {
                       width: 72,
                       height: 72,
                       decoration: const BoxDecoration(
-                        color: Color(0xffeef4f1),
+                        color: Color(0xffeaf7f0),
                         shape: BoxShape.circle,
                       ),
-                      child: const Center(
-                        child: Icon(
-                          Icons.check,
-                          color: Color(0xff2e7d5b),
-                          size: 32,
-                        ),
+                      child: const CustomPaint(
+                        painter: _CheckmarkPainter(),
                       ),
                     ),
                     const SizedBox(height: 24),
@@ -1549,6 +1551,35 @@ class _VisitConfirmedScreen extends StatelessWidget {
       ),
     );
   }
+}
+
+class _CheckmarkPainter extends CustomPainter {
+  const _CheckmarkPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = const Color(0xff2e7d5b)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.5
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    // Draw the green ring inside (diameter 36, radius 18)
+    final center = Offset(size.width / 2, size.height / 2);
+    canvas.drawCircle(center, 18, paint);
+
+    // Draw checkmark inside (centered, radius/thickness matching)
+    final path = Path()
+      ..moveTo(center.dx - 6, center.dy)
+      ..lineTo(center.dx - 1.5, center.dy + 4.5)
+      ..lineTo(center.dx + 6, center.dy - 3.5);
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 // ── Photo Evidence Item ──────────────────────────────────────────────────────
