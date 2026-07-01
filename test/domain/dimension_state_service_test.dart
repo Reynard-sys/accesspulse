@@ -444,6 +444,49 @@ void main() {
       );
     },
   );
+
+  test(
+    'full institutional remediation loop reaches resolved memory chain',
+    () async {
+      final repository = InMemoryAccessPulseRepository.seeded();
+      final service = DimensionStateService(
+        repository: repository,
+        idFactory: _deterministicIds(),
+      );
+      final caseId = await _prepareRemediationVerificationCase(
+        service: service,
+        placeDimensionId: stalePlaceDimensionId,
+        communityUserId: communityUserId,
+        reviewerId: reviewerId,
+        inspectorId: inspectorId,
+      );
+
+      final result = await service.submitVerification(
+        caseId: caseId,
+        inspectorId: inspectorId,
+        outcome: VerificationOutcome.confirmed,
+        note: 'Inspector confirmed remediation resolved the barrier.',
+        now: DateTime(2026, 6, 29, 14),
+      );
+      final memory = await repository.listMemoryEvents(stalePlaceDimensionId);
+
+      expect(result.accessCase.status, CaseStatus.resolved);
+      expect(result.currentState.state, DimensionStateValue.resolved);
+      expect(result.currentPulse.hasRecentVerification, isTrue);
+      expect(
+        memory.map((event) => event.eventType),
+        containsAllInOrder([
+          MemoryEventType.verificationSubmitted,
+          MemoryEventType.remediationVerified,
+          MemoryEventType.remediationVerificationRequested,
+          MemoryEventType.remediationRequested,
+          MemoryEventType.verificationSubmitted,
+          MemoryEventType.inspectionRequested,
+          MemoryEventType.caseOpened,
+        ]),
+      );
+    },
+  );
 }
 
 Future<String> _prepareRemediationVerificationCase({
