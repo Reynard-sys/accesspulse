@@ -181,4 +181,71 @@ void main() {
     expect(find.text('Officially verified degraded'), findsOneWidget);
     expect(find.text('Verified'), findsWidgets);
   });
+
+  testWidgets('triaging case remains visible to LGU but hidden from inspector', (
+    WidgetTester tester,
+  ) async {
+    final repository = InMemoryAccessPulseRepository.seeded();
+    final stateService = DimensionStateService(repository: repository);
+    final result = await stateService.submitStructuredEvidence(
+      placeDimensionId: placeDimensionId,
+      submittedBy: communityUserId,
+      assessment: const AiEvidenceAssessment(
+        dimension: 'mobility_access',
+        issueType: 'entrance_ramp_usability',
+        observedFeatures: ['entrance', 'steps', 'partial ramp'],
+        possibleBarrier: 'independent wheelchair access may be unreliable',
+        missingEvidence: ['full side view of ramp'],
+        confidence: 0.82,
+        confidenceLevel: ConfidenceLevel.high,
+        confidenceExplanation:
+            'The entrance evidence and contributor note strongly align.',
+        evidenceReadiness: EvidenceReadiness.institutionReady,
+        summary:
+            'The visible entrance suggests mobility access may require assistance.',
+        recommendedAction: 'lgu_review',
+        nextBestAction: 'Submit for review.',
+        explanation:
+            'AI structured evidence for review but did not make an official judgment.',
+        institutionReady: true,
+      ),
+      imagePath: 'demo/main-entrance.jpg',
+    );
+    await stateService.triageCase(
+      caseId: result.accessCase.id,
+      reviewerId: '20000000-0000-4000-8000-000000000002',
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        key: UniqueKey(),
+        home: InstitutionDashboardScreen(
+          repository: repository,
+          stateService: stateService,
+          role: InstitutionRole.lguReviewer,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('LGU dashboard'), findsOneWidget);
+    expect(find.text('Quezon City Hall Main Entrance'), findsOneWidget);
+    expect(find.text('TRIAGING'), findsOneWidget);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        key: UniqueKey(),
+        home: InstitutionDashboardScreen(
+          repository: repository,
+          stateService: stateService,
+          role: InstitutionRole.inspector,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Inspector verification'), findsOneWidget);
+    expect(find.text('Quezon City Hall Main Entrance'), findsNothing);
+    expect(find.text('No actionable cases yet'), findsOneWidget);
+  });
 }

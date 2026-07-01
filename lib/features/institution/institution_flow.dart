@@ -43,8 +43,7 @@ class _InstitutionDashboardScreenState
       if (widget.role == InstitutionRole.inspector) {
         return accessCase.status == CaseStatus.inspectionRequested ||
             accessCase.status == CaseStatus.verified ||
-            accessCase.status == CaseStatus.disputed ||
-            accessCase.status == CaseStatus.triaging;
+            accessCase.status == CaseStatus.disputed;
       }
       return accessCase.status != CaseStatus.closed;
     }).toList();
