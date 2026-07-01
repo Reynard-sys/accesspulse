@@ -11,10 +11,12 @@ import '../features/public/public_flow.dart';
 class AccessPulseApp extends StatefulWidget {
   const AccessPulseApp({
     this.showOnboarding = true,
+    this.imagePickerOverride,
     super.key,
   });
 
   final bool showOnboarding;
+  final ImagePickerOverride? imagePickerOverride;
 
   @override
   State<AccessPulseApp> createState() => _AccessPulseAppState();
@@ -65,10 +67,7 @@ class _AccessPulseAppState extends State<AccessPulseApp> {
         centerTitle: true,
         iconTheme: const IconThemeData(color: Color(0xff17201c)),
         shape: const Border(
-          bottom: BorderSide(
-            color: Color(0xffdde5e0),
-            width: 1.5,
-          ),
+          bottom: BorderSide(color: Color(0xffdde5e0), width: 1.5),
         ),
         titleTextStyle: GoogleFonts.afacad(
           color: const Color(0xff17201c),
@@ -183,6 +182,7 @@ class _AccessPulseAppState extends State<AccessPulseApp> {
               repository: _repository,
               stateService: _stateService,
               aiService: _aiService,
+              imagePickerOverride: widget.imagePickerOverride,
             ),
     );
   }
@@ -193,11 +193,13 @@ class _AccessPulseRoleShell extends StatefulWidget {
     required this.repository,
     required this.stateService,
     required this.aiService,
+    this.imagePickerOverride,
   });
 
   final AccessPulseRepository repository;
   final DimensionStateService stateService;
   final AiEvidenceService aiService;
+  final ImagePickerOverride? imagePickerOverride;
 
   @override
   State<_AccessPulseRoleShell> createState() => _AccessPulseRoleShellState();
@@ -214,6 +216,7 @@ class _AccessPulseRoleShellState extends State<_AccessPulseRoleShell> {
         stateService: widget.stateService,
         aiService: widget.aiService,
         hideAppBar: true,
+        imagePickerOverride: widget.imagePickerOverride,
       ),
       1 => InstitutionDashboardScreen(
         repository: widget.repository,
@@ -230,9 +233,7 @@ class _AccessPulseRoleShellState extends State<_AccessPulseRoleShell> {
     };
 
     return Scaffold(
-      appBar: AppBar(
-        title: const _AccessPulseBrandTitle(fontSize: 24),
-      ),
+      appBar: AppBar(title: const _AccessPulseBrandTitle(fontSize: 24)),
       body: AnimatedSwitcher(
         duration: const Duration(milliseconds: 240),
         switchInCurve: Curves.easeOutCubic,
@@ -298,10 +299,7 @@ class _AccessPulseBrandTitle extends StatelessWidget {
           ),
         ],
       ),
-      style: TextStyle(
-        fontSize: fontSize,
-        letterSpacing: -0.5,
-      ),
+      style: TextStyle(fontSize: fontSize, letterSpacing: -0.5),
     );
   }
 }
