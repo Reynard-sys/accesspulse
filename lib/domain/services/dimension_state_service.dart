@@ -488,7 +488,7 @@ class DimensionStateService {
       newState: currentState.state,
       caseId: caseId,
       summary:
-          'LGU reviewer requested remediation for the officially verified Mobility Access barrier.',
+          'Remediation requested for the officially verified Mobility Access barrier.',
       createdAt: timestamp,
     );
     return nextCase;
@@ -518,7 +518,7 @@ class DimensionStateService {
       newState: currentState.state,
       caseId: caseId,
       summary:
-          'LGU reviewer requested inspector verification for the completed remediation.',
+          'Remediation verification requested after LGU marked the fix ready for inspection.',
       createdAt: timestamp,
     );
     return nextCase;
@@ -640,7 +640,7 @@ class DimensionStateService {
         caseId: caseId,
         verificationId: verification.id,
         summary:
-            'Inspector verified remediation and refreshed the Mobility Access place state.',
+            'Remediation verified. Place state refreshed after verified remediation.',
         createdAt: timestamp,
       );
     }
@@ -817,7 +817,7 @@ class DimensionStateService {
     if (isRemediationVerification) {
       return switch (outcome) {
         VerificationOutcome.confirmed =>
-          'Human verifier confirmed the remediation and resolved the case.',
+          'Human verifier confirmed remediation and resolved the case.',
         VerificationOutcome.disputed =>
           'Human verifier did not confirm the remediation; the case returned to remediation follow-up.',
         VerificationOutcome.insufficientEvidence =>

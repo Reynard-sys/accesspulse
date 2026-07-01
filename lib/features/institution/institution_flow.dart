@@ -1405,7 +1405,7 @@ class _PriorityExplanation {
       return 'Record remediation follow-up';
     }
     if (accessCase.status == CaseStatus.remediationRequested) {
-      return 'Remediation requested';
+      return 'Request remediation verification';
     }
     if (accessCase.status == CaseStatus.remediationVerificationRequested) {
       return 'Complete remediation verification';

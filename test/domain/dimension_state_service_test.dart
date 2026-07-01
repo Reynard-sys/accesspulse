@@ -293,7 +293,7 @@ void main() {
       memory.any(
         (event) =>
             event.eventType == MemoryEventType.remediationRequested &&
-            event.summary.contains('requested remediation'),
+            event.summary.contains('Remediation requested'),
       ),
       isTrue,
     );
@@ -369,7 +369,7 @@ void main() {
           (event) =>
               event.eventType ==
                   MemoryEventType.remediationVerificationRequested &&
-              event.summary.contains('requested inspector verification'),
+              event.summary.contains('verification requested'),
         ),
         isTrue,
       );
