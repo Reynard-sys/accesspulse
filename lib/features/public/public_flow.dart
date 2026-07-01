@@ -9,6 +9,8 @@ import '../../domain/accesspulse_domain.dart';
 
 const _mobilityDimensionKey = 'mobility_access';
 const _demoUserId = '20000000-0000-4000-8000-000000000001';
+typedef ImagePickerOverride =
+    Future<XFile?> Function(ImageSource source, int? imageQuality);
 
 class PublicHomeScreen extends StatefulWidget {
   const PublicHomeScreen({
@@ -16,6 +18,7 @@ class PublicHomeScreen extends StatefulWidget {
     required this.stateService,
     required this.aiService,
     this.hideAppBar = false,
+    this.imagePickerOverride,
     super.key,
   });
 
@@ -23,6 +26,7 @@ class PublicHomeScreen extends StatefulWidget {
   final DimensionStateService stateService;
   final AiEvidenceService aiService;
   final bool hideAppBar;
+  final ImagePickerOverride? imagePickerOverride;
 
   @override
   State<PublicHomeScreen> createState() => _PublicHomeScreenState();
@@ -76,16 +80,23 @@ class _PublicHomeScreenState extends State<PublicHomeScreen> {
                     .toList();
 
                 final nearbyPlaces = places
-                    .where((place) =>
-                        place.id == '40000000-0000-4000-8000-000000000001')
+                    .where(
+                      (place) =>
+                          place.id == '40000000-0000-4000-8000-000000000001',
+                    )
                     .toList();
                 final otherPlaces = places
-                    .where((place) =>
-                        place.id != '40000000-0000-4000-8000-000000000001')
+                    .where(
+                      (place) =>
+                          place.id != '40000000-0000-4000-8000-000000000001',
+                    )
                     .toList();
 
                 return ListView(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 20,
+                  ),
                   children: [
                     const SizedBox(height: 12),
                     Text(
@@ -118,9 +129,14 @@ class _PublicHomeScreenState extends State<PublicHomeScreen> {
                           fontWeight: FontWeight.w500,
                         ),
                         decoration: InputDecoration(
-                          prefixIcon: const Icon(Icons.search, color: Color(0xff5d6b63)),
+                          prefixIcon: const Icon(
+                            Icons.search,
+                            color: Color(0xff5d6b63),
+                          ),
                           hintText: 'Search places',
-                          contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 14,
+                          ),
                         ),
                         onChanged: (value) => setState(() => _query = value),
                       ),
@@ -131,7 +147,11 @@ class _PublicHomeScreenState extends State<PublicHomeScreen> {
                       runSpacing: 8,
                       children: [
                         Chip(
-                          avatar: const Icon(Icons.accessible_forward, size: 16, color: Color(0xff2e7d5b)),
+                          avatar: const Icon(
+                            Icons.accessible_forward,
+                            size: 16,
+                            color: Color(0xff2e7d5b),
+                          ),
                           label: Text(
                             'Mobility Access',
                             style: GoogleFonts.afacad(
@@ -142,11 +162,20 @@ class _PublicHomeScreenState extends State<PublicHomeScreen> {
                           ),
                           backgroundColor: const Color(0xffe8eee9),
                           side: BorderSide.none,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 4,
+                            vertical: 4,
+                          ),
                         ),
                         Chip(
-                          avatar: const Icon(Icons.business, size: 16, color: Color(0xff2e7d5b)),
+                          avatar: const Icon(
+                            Icons.business,
+                            size: 16,
+                            color: Color(0xff2e7d5b),
+                          ),
                           label: Text(
                             'Public service buildings',
                             style: GoogleFonts.afacad(
@@ -157,8 +186,13 @@ class _PublicHomeScreenState extends State<PublicHomeScreen> {
                           ),
                           backgroundColor: const Color(0xffe8eee9),
                           side: BorderSide.none,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 4,
+                            vertical: 4,
+                          ),
                         ),
                       ],
                     ),
@@ -195,6 +229,8 @@ class _PublicHomeScreenState extends State<PublicHomeScreen> {
                                   stateService: widget.stateService,
                                   aiService: widget.aiService,
                                   place: place,
+                                  imagePickerOverride:
+                                      widget.imagePickerOverride,
                                 ),
                               ),
                             );
@@ -261,6 +297,7 @@ class PlaceDetailScreen extends StatefulWidget {
     required this.stateService,
     required this.aiService,
     required this.place,
+    this.imagePickerOverride,
     super.key,
   });
 
@@ -268,6 +305,7 @@ class PlaceDetailScreen extends StatefulWidget {
   final DimensionStateService stateService;
   final AiEvidenceService aiService;
   final Place place;
+  final ImagePickerOverride? imagePickerOverride;
 
   @override
   State<PlaceDetailScreen> createState() => _PlaceDetailScreenState();
@@ -407,6 +445,8 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
                                   placeDimensionId: detail.placeDimension.id,
                                   stateService: widget.stateService,
                                   aiService: widget.aiService,
+                                  imagePickerOverride:
+                                      widget.imagePickerOverride,
                                 ),
                               ),
                             );
@@ -463,7 +503,8 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
                       placeDimensionId: detail.placeDimension.id,
                       eventType: MemoryEventType.visitConfirmed,
                       actorType: 'user',
-                      summary: 'Visitor confirmed ramp was not usable independently',
+                      summary:
+                          'Visitor confirmed ramp was not usable independently',
                       createdAt: DateTime.now(),
                     ),
                     MemoryEvent(
@@ -546,7 +587,10 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
                       Container(
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          border: Border.all(color: const Color(0xffdde5e0), width: 0.8),
+                          border: Border.all(
+                            color: const Color(0xffdde5e0),
+                            width: 0.8,
+                          ),
                           borderRadius: BorderRadius.circular(16),
                           boxShadow: [
                             BoxShadow(
@@ -572,7 +616,10 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
                       Container(
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          border: Border.all(color: const Color(0xffdde5e0), width: 0.8),
+                          border: Border.all(
+                            color: const Color(0xffdde5e0),
+                            width: 0.8,
+                          ),
                           borderRadius: BorderRadius.circular(16),
                           boxShadow: [
                             BoxShadow(
@@ -684,9 +731,7 @@ class _ConfirmVisitScreenState extends State<ConfirmVisitScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const _AccessPulseBrandTitle(),
-      ),
+      appBar: AppBar(title: const _AccessPulseBrandTitle()),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -762,7 +807,10 @@ class _ConfirmVisitScreenState extends State<ConfirmVisitScreen> {
                       ? const SizedBox(
                           width: 18,
                           height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
                         )
                       : const Icon(Icons.update),
                   label: const Text('Update living state'),
@@ -799,6 +847,8 @@ class EvidenceFlowScreen extends StatefulWidget {
     required this.placeDimensionId,
     required this.stateService,
     required this.aiService,
+    this.imagePickerOverride,
+    this.initialPhotos = const <PhotoEvidenceItem>[],
     super.key,
   });
 
@@ -806,6 +856,8 @@ class EvidenceFlowScreen extends StatefulWidget {
   final String placeDimensionId;
   final DimensionStateService stateService;
   final AiEvidenceService aiService;
+  final ImagePickerOverride? imagePickerOverride;
+  final List<PhotoEvidenceItem> initialPhotos;
 
   @override
   State<EvidenceFlowScreen> createState() => _EvidenceFlowScreenState();
@@ -848,6 +900,12 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
   String? _submitError;
 
   @override
+  void initState() {
+    super.initState();
+    _photos.addAll(widget.initialPhotos);
+  }
+
+  @override
   void dispose() {
     _noteController.dispose();
     super.dispose();
@@ -869,19 +927,18 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
     final source = await _showImageSourceSheet();
     if (source == null || !mounted) return;
 
-    final picker = ImagePicker();
-    final file = await picker.pickImage(source: source, imageQuality: 80);
+    final file = widget.imagePickerOverride != null
+        ? await widget.imagePickerOverride!(source, 80)
+        : await ImagePicker().pickImage(source: source, imageQuality: 80);
     if (file == null || !mounted) return;
 
     final bytes = await file.readAsBytes();
     if (!mounted) return;
 
     setState(() {
-      _photos.add(PhotoEvidenceItem(
-        file: file,
-        bytes: bytes,
-        addedAt: DateTime.now(),
-      ));
+      _photos.add(
+        PhotoEvidenceItem(file: file, bytes: bytes, addedAt: DateTime.now()),
+      );
       // Reset analysis when new photo is added
       _assessment = null;
       _analysisError = null;
@@ -951,8 +1008,6 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
       _currentStep = _EvidenceFlowStep.addEvidence;
     });
   }
-
-
 
   // ── AI Analysis ──────────────────────────────────────────────────────────
 
@@ -1072,6 +1127,14 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final currentStep = switch (_currentStep) {
+      _EvidenceFlowStep.addEvidence => _buildAddEvidenceStep(),
+      _EvidenceFlowStep.rampCapture => _buildRampCaptureStep(),
+      _EvidenceFlowStep.aiGuidance => _buildAiGuidanceStep(),
+      _EvidenceFlowStep.structureReview => _buildStructureReviewStep(),
+      _EvidenceFlowStep.reviewPacket => _buildReviewPacketStep(),
+    };
+
     return Scaffold(
       appBar: AppBar(
         title: const _AccessPulseBrandTitle(),
@@ -1081,16 +1144,7 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 820),
-            child: IndexedStack(
-              index: _currentStep.index,
-              children: [
-                _buildAddEvidenceStep(),
-            _buildRampCaptureStep(),
-            _buildAiGuidanceStep(),
-                _buildStructureReviewStep(),
-                _buildReviewPacketStep(),
-              ],
-            ),
+            child: currentStep,
           ),
         ),
       ),
@@ -1141,7 +1195,6 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
       ],
     );
   }
-
 
   Widget _buildRampCaptureStep() {
     return _RampCaptureStepPage(
@@ -1320,7 +1373,9 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
       key: const ValueKey('step-structure-review'),
       padding: const EdgeInsets.all(20),
       children: [
-        _buildHeader(() => setState(() => _currentStep = _EvidenceFlowStep.aiGuidance)),
+        _buildHeader(
+          () => setState(() => _currentStep = _EvidenceFlowStep.aiGuidance),
+        ),
         const SizedBox(height: 20),
         _AiResultPanel(assessment: assessment),
         const SizedBox(height: 20),
@@ -1346,7 +1401,10 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
       key: const ValueKey('step-review-packet'),
       padding: const EdgeInsets.all(20),
       children: [
-        _buildHeader(() => setState(() => _currentStep = _EvidenceFlowStep.structureReview)),
+        _buildHeader(
+          () =>
+              setState(() => _currentStep = _EvidenceFlowStep.structureReview),
+        ),
         const SizedBox(height: 20),
         _ReviewPacketPanel(
           assessment: assessment,
@@ -1355,10 +1413,7 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
         ),
         const SizedBox(height: 20),
         if (_submitError != null) ...[
-          _InlineNotice(
-            icon: Icons.error_outline,
-            message: _submitError!,
-          ),
+          _InlineNotice(icon: Icons.error_outline, message: _submitError!),
           const SizedBox(height: 16),
         ],
         SizedBox(
@@ -1442,8 +1497,6 @@ class _EmptyBin extends StatelessWidget {
   }
 }
 
-
-
 class _DashedBorderPainter extends CustomPainter {
   const _DashedBorderPainter({required this.color});
 
@@ -1483,11 +1536,6 @@ class _DashedBorderPainter extends CustomPainter {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-
-
-
-
-
 class SubmissionResultScreen extends StatelessWidget {
   const SubmissionResultScreen({
     required this.place,
@@ -1521,9 +1569,7 @@ class SubmissionResultScreen extends StatelessWidget {
       pulse: currentPulse,
     );
     return Scaffold(
-      appBar: AppBar(
-        title: const _AccessPulseBrandTitle(),
-      ),
+      appBar: AppBar(title: const _AccessPulseBrandTitle()),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -1637,7 +1683,8 @@ class SubmissionResultScreen extends StatelessWidget {
                 FilledButton.icon(
                   icon: const Icon(Icons.home_outlined),
                   label: const Text('Back to home'),
-                  onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
+                  onPressed: () =>
+                      Navigator.of(context).popUntil((route) => route.isFirst),
                 ),
               ],
             ),
@@ -2037,7 +2084,10 @@ class _NearbyPlaceCard extends StatelessWidget {
                                 child: Container(
                                   decoration: BoxDecoration(
                                     gradient: const LinearGradient(
-                                      colors: [Color(0xff2e7d5b), Color(0xff3daf7a)],
+                                      colors: [
+                                        Color(0xff2e7d5b),
+                                        Color(0xff3daf7a),
+                                      ],
                                     ),
                                     borderRadius: BorderRadius.circular(4),
                                   ),
@@ -2143,7 +2193,6 @@ class _NearbyPlaceCard extends StatelessWidget {
     );
   }
 }
-
 
 class _FigmaPill extends StatelessWidget {
   const _FigmaPill({
@@ -2253,7 +2302,9 @@ class _StateCard extends StatelessWidget {
     final stateColor = state.state.color;
     final stateLabel = state.state.label;
     final confidenceLevel = _confidenceLevelFromScore(state.confidence);
-    final confidenceExplanation = _confidenceExplanationFromScore(state.confidence);
+    final confidenceExplanation = _confidenceExplanationFromScore(
+      state.confidence,
+    );
     final lastConfirmedStr = state.lastConfirmedAt == null
         ? 'Unknown'
         : _formatDate(state.lastConfirmedAt!);
@@ -2261,7 +2312,8 @@ class _StateCard extends StatelessWidget {
     final contextLines = [
       state.explanation,
       pulseDisplay.explanation,
-      if (pulseDisplay.verificationContext != null) pulseDisplay.verificationContext!,
+      if (pulseDisplay.verificationContext != null)
+        pulseDisplay.verificationContext!,
     ];
 
     return _FadeSlideIn(
@@ -2338,13 +2390,27 @@ class _StateCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
                   // Detail rows
-                  _FigmaDetailRow(label: 'Dimension', value: 'Mobility Access', hasBorder: true),
-                  _FigmaDetailRow(label: 'Current state', value: stateLabel, hasBorder: true),
-                  _FigmaDetailRow(label: 'Freshness / pulse', value: pulseDisplay.label, hasBorder: true),
+                  _FigmaDetailRow(
+                    label: 'Dimension',
+                    value: 'Mobility Access',
+                    hasBorder: true,
+                  ),
+                  _FigmaDetailRow(
+                    label: 'Current state',
+                    value: stateLabel,
+                    hasBorder: true,
+                  ),
+                  _FigmaDetailRow(
+                    label: 'Freshness / pulse',
+                    value: pulseDisplay.label,
+                    hasBorder: true,
+                  ),
                   // Confidence row — value + sub-explanation stacked
                   Container(
                     decoration: const BoxDecoration(
-                      border: Border(bottom: BorderSide(color: Color(0xffdde5e0))),
+                      border: Border(
+                        bottom: BorderSide(color: Color(0xffdde5e0)),
+                      ),
                     ),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 7),
@@ -2425,7 +2491,11 @@ class _StateCard extends StatelessWidget {
                     ),
                   ),
                   // Horizontal divider
-                  const Divider(height: 1, thickness: 1, color: Color(0xffdde5e0)),
+                  const Divider(
+                    height: 1,
+                    thickness: 1,
+                    color: Color(0xffdde5e0),
+                  ),
                   const SizedBox(height: 8),
                   // Context lines with left border
                   Column(
@@ -2516,10 +2586,7 @@ class _AiResultPanel extends StatelessWidget {
                     ),
                     backgroundColor: const Color(0xFFC8DDD4),
                     shape: const StadiumBorder(
-                      side: BorderSide(
-                        color: Color(0xFF17201C),
-                        width: 1.0,
-                      ),
+                      side: BorderSide(color: Color(0xFF17201C), width: 1.0),
                     ),
                   ),
               ],
@@ -2594,10 +2661,7 @@ class _AiGuidanceCard extends StatelessWidget {
                     ),
                     backgroundColor: const Color(0xFFC8DDD4),
                     shape: const StadiumBorder(
-                      side: BorderSide(
-                        color: Color(0xFF17201C),
-                        width: 1.0,
-                      ),
+                      side: BorderSide(color: Color(0xFF17201C), width: 1.0),
                     ),
                   ),
               ],
@@ -2630,7 +2694,7 @@ class _AiGuidanceCard extends StatelessWidget {
                   child: Text(
                     assessment.nextBestAction,
                     textAlign: TextAlign.right,
-                    style: const TextStyle(fontWeight: FontWeight.w700)
+                    style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
                 ),
               ],
@@ -2660,7 +2724,7 @@ class _AiGuidanceCard extends StatelessWidget {
                   ),
                 ],
               ),
-            )
+            ),
           ],
         ),
       ),
@@ -2748,7 +2812,9 @@ class _ReviewPacketPanel extends StatelessWidget {
                   label: Text(
                     hasPhoto ? 'Photo included' : 'No photo yet',
                     style: TextStyle(
-                      fontWeight: hasPhoto ? FontWeight.bold : FontWeight.normal,
+                      fontWeight: hasPhoto
+                          ? FontWeight.bold
+                          : FontWeight.normal,
                       color: hasPhoto ? null : Colors.grey.shade700,
                     ),
                   ),
@@ -2768,7 +2834,9 @@ class _ReviewPacketPanel extends StatelessWidget {
                       fontWeight: assessment.institutionReady
                           ? FontWeight.bold
                           : FontWeight.normal,
-                      color: assessment.institutionReady ? null : Colors.grey.shade700,
+                      color: assessment.institutionReady
+                          ? null
+                          : Colors.grey.shade700,
                     ),
                   ),
                   shape: const StadiumBorder(),
@@ -2784,7 +2852,8 @@ class _ReviewPacketPanel extends StatelessWidget {
                   label: Text(
                     'Confidence: ${assessment.confidenceLevel.label}',
                     style: TextStyle(
-                      fontWeight: assessment.confidenceLevel.label.contains('High')
+                      fontWeight:
+                          assessment.confidenceLevel.label.contains('High')
                           ? FontWeight.bold
                           : FontWeight.normal,
                       color: assessment.confidenceLevel.label.contains('High')
@@ -2803,16 +2872,20 @@ class _ReviewPacketPanel extends StatelessWidget {
                         )
                       : null,
                   label: Text(
-                    hasRampMeasurement ? 'Ramp reading included' : 'No ramp reading yet',
+                    hasRampMeasurement
+                        ? 'Ramp reading included'
+                        : 'No ramp reading yet',
                     style: TextStyle(
-                      fontWeight: hasRampMeasurement ? FontWeight.bold : FontWeight.normal,
+                      fontWeight: hasRampMeasurement
+                          ? FontWeight.bold
+                          : FontWeight.normal,
                       color: hasRampMeasurement ? null : Colors.grey.shade700,
                     ),
                   ),
                   shape: const StadiumBorder(),
                 ),
               ],
-            )
+            ),
           ],
         ),
       ),
@@ -2836,7 +2909,7 @@ class _PacketStep extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 20, color: const Color(0xFF2E7D5B),),
+        Icon(icon, size: 20, color: const Color(0xFF2E7D5B)),
         const SizedBox(width: 10),
         Expanded(
           child: Column(
@@ -2926,13 +2999,7 @@ class _MemoryTile extends StatelessWidget {
                     color: bgColor,
                     shape: BoxShape.circle,
                   ),
-                  child: Center(
-                    child: Icon(
-                      icon,
-                      color: iconColor,
-                      size: 14,
-                    ),
-                  ),
+                  child: Center(child: Icon(icon, color: iconColor, size: 14)),
                 ),
               ],
             ),
@@ -2973,15 +3040,22 @@ class _MemoryTile extends StatelessWidget {
     return switch (type) {
       MemoryEventType.caseOpened ||
       MemoryEventType.caseTriaged ||
-      MemoryEventType.verificationSubmitted =>
-        (Icons.info_outline, const Color(0xfffff0e6), const Color(0xffea580c)),
-      MemoryEventType.aiSignalCreated =>
-        (Icons.auto_awesome, const Color(0xffeef4f1), const Color(0xff2e7d5b)),
-      MemoryEventType.inspectionRequested ||
-      MemoryEventType.evidenceAdded =>
-        (Icons.camera_alt_outlined, const Color(0xffeef4f1), const Color(0xff2e7d5b)),
-      _ =>
-        (Icons.check, const Color(0xffeef4f1), const Color(0xff2e7d5b)),
+      MemoryEventType.verificationSubmitted => (
+        Icons.info_outline,
+        const Color(0xfffff0e6),
+        const Color(0xffea580c),
+      ),
+      MemoryEventType.aiSignalCreated => (
+        Icons.auto_awesome,
+        const Color(0xffeef4f1),
+        const Color(0xff2e7d5b),
+      ),
+      MemoryEventType.inspectionRequested || MemoryEventType.evidenceAdded => (
+        Icons.camera_alt_outlined,
+        const Color(0xffeef4f1),
+        const Color(0xff2e7d5b),
+      ),
+      _ => (Icons.check, const Color(0xffeef4f1), const Color(0xff2e7d5b)),
     };
   }
 
@@ -3044,33 +3118,23 @@ class _SectionHeader extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.only(bottom: 10),
       decoration: const BoxDecoration(
-        border: Border(
-          bottom: BorderSide(
-            color: Color(0xffDDE5E0),
-            width: 1,
-          ),
-        ),
+        border: Border(bottom: BorderSide(color: Color(0xffDDE5E0), width: 1)),
       ),
       child: Row(
         children: [
-          customIcon ?? Icon(
-            icon,
-            size: 18,
-            color: const Color(0xff2e7d5b),
-          ),
+          customIcon ?? Icon(icon, size: 18, color: const Color(0xff2e7d5b)),
           const SizedBox(width: 8),
           Text(
             title,
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
           ),
         ],
       ),
     );
   }
 }
-
 
 class _MetricRow extends StatelessWidget {
   const _MetricRow({required this.label, required this.value});
@@ -3155,7 +3219,6 @@ class _TransitionRow extends StatelessWidget {
     );
   }
 }
-
 
 class _PlaceListData {
   const _PlaceListData({required this.state, required this.pulse});
@@ -3402,16 +3465,12 @@ class _AccessPulseBrandTitle extends StatelessWidget {
           ),
         ],
       ),
-      style: TextStyle(
-        fontSize: fontSize,
-        letterSpacing: -0.5,
-      ),
+      style: TextStyle(fontSize: fontSize, letterSpacing: -0.5),
     );
   }
 }
 
 // ── Ramp Slope UI ────────────────────────────────────────────────────────────
-
 
 class _RampSlopeEntryState extends StatelessWidget {
   const _RampSlopeEntryState({
@@ -3497,9 +3556,9 @@ class _RampSlopeSuccessState extends StatelessWidget {
             Text(
               '${measurement.estimatedAngleDegrees.toStringAsFixed(1)}°',
               style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.primary,
+              ),
             ),
             const SizedBox(width: 8),
             Text(
@@ -3519,7 +3578,6 @@ class _RampSlopeSuccessState extends StatelessWidget {
   }
 }
 
-
 class _RampCaptureStepPage extends StatefulWidget {
   const _RampCaptureStepPage({
     required this.useDemoFallback,
@@ -3538,7 +3596,8 @@ class _RampCaptureStepPage extends StatefulWidget {
 
 enum _DialogCaptureState { countdown, success, failure }
 
-class _RampCaptureStepPageState extends State<_RampCaptureStepPage> with SingleTickerProviderStateMixin {
+class _RampCaptureStepPageState extends State<_RampCaptureStepPage>
+    with SingleTickerProviderStateMixin {
   _DialogCaptureState _state = _DialogCaptureState.countdown;
   RampSlopeMeasurement? _measurement;
   late AnimationController _countdownController;
@@ -3564,7 +3623,7 @@ class _RampCaptureStepPageState extends State<_RampCaptureStepPage> with SingleT
       _state = _DialogCaptureState.countdown;
       _measurement = null;
     });
-    
+
     _countdownController.forward(from: 0.0);
 
     final measurement = widget.useDemoFallback
@@ -3606,14 +3665,22 @@ class _RampCaptureStepPageState extends State<_RampCaptureStepPage> with SingleT
                     color: Color(0xfff1f4f2),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.close, size: 20, color: Color(0xff5d6b63)),
+                  child: const Icon(
+                    Icons.close,
+                    size: 20,
+                    color: Color(0xff5d6b63),
+                  ),
                 ),
               ),
               const Expanded(
                 child: Center(
                   child: Text(
                     'Measure Ramp Slope',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xff17201c)),
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xff17201c),
+                    ),
                   ),
                 ),
               ),
@@ -3632,7 +3699,10 @@ class _RampCaptureStepPageState extends State<_RampCaptureStepPage> with SingleT
                     Padding(
                       padding: const EdgeInsets.only(top: 24),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
                           border: Border.all(color: const Color(0xffDDE5E0)),
                           borderRadius: BorderRadius.circular(20),
@@ -3651,7 +3721,11 @@ class _RampCaptureStepPageState extends State<_RampCaptureStepPage> with SingleT
                             const SizedBox(width: 8),
                             const Text(
                               'Demo-safe capture — using sample reading',
-                              style: TextStyle(fontSize: 12, color: Color(0xff5d6b63), fontWeight: FontWeight.w600),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Color(0xff5d6b63),
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ],
                         ),
@@ -3682,76 +3756,74 @@ class _RampCaptureStepPageState extends State<_RampCaptureStepPage> with SingleT
   }
 
   Widget _buildCountdown() {
-  return Column(
-    mainAxisSize: MainAxisSize.min,
-    crossAxisAlignment: CrossAxisAlignment.center,
-    children: [
-      const SizedBox(height: 200),
-      SizedBox(
-        width: 240,
-        height: 240,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            AnimatedBuilder(
-              animation: _countdownController,
-              builder: (context, child) {
-                return CircularProgressIndicator(
-                  value: _countdownController.value,
-                  strokeWidth: 10,
-                  backgroundColor: const Color(0xffDDE5E0),
-                  color: const Color(0xFF2E7D5B),
-                );
-              },
-            ),
-            Center(
-              child: AnimatedBuilder(
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        const SizedBox(height: 200),
+        SizedBox(
+          width: 240,
+          height: 240,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              AnimatedBuilder(
                 animation: _countdownController,
                 builder: (context, child) {
-                  final secondsLeft = 3 - (_countdownController.value * 3).floor();
-                  return Text(
-                    secondsLeft > 0 ? secondsLeft.toString() : '1',
-                    style: const TextStyle(
-                      fontSize: 80,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xff17201c),
-                    ),
+                  return CircularProgressIndicator(
+                    value: _countdownController.value,
+                    strokeWidth: 10,
+                    backgroundColor: const Color(0xffDDE5E0),
+                    color: const Color(0xFF2E7D5B),
                   );
                 },
               ),
-            ),
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.only(top: 80),
-                child: Image.asset('assets/images/ramp_slope_countdown.png'),
+              Center(
+                child: AnimatedBuilder(
+                  animation: _countdownController,
+                  builder: (context, child) {
+                    final secondsLeft =
+                        3 - (_countdownController.value * 3).floor();
+                    return Text(
+                      secondsLeft > 0 ? secondsLeft.toString() : '1',
+                      style: const TextStyle(
+                        fontSize: 80,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xff17201c),
+                      ),
+                    );
+                  },
+                ),
               ),
-            ),
-          ],
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 80),
+                  child: Image.asset('assets/images/ramp_slope_countdown.png'),
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
-      const SizedBox(height: 32),
-      
-      const Text(
-        'Hold your device steady against the\nramp surface.',
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w500,
-          color: Colors.black87,
+        const SizedBox(height: 32),
+
+        const Text(
+          'Hold your device steady against the\nramp surface.',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+            color: Colors.black87,
+          ),
         ),
-      ),
-      const SizedBox(height: 8),
-      Text(
-        'Measuring incline...',
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          fontSize: 14,
-          color: Colors.grey, 
+        const SizedBox(height: 8),
+        Text(
+          'Measuring incline...',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 14, color: Colors.grey),
         ),
-      ),
-    ],
-  );
-}
+      ],
+    );
+  }
 
   Widget _buildSuccess() {
     return Column(
@@ -3765,27 +3837,44 @@ class _RampCaptureStepPageState extends State<_RampCaptureStepPage> with SingleT
               color: Color(0xffE8F5E9),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.check_circle_outline, color: Color(0xFF2E7D5B), size: 32),
+            child: const Icon(
+              Icons.check_circle_outline,
+              color: Color(0xFF2E7D5B),
+              size: 32,
+            ),
           ),
         ),
         const SizedBox(height: 16),
         const Center(
           child: Text(
             'Slope captured',
-            style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xff17201c)),
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: Color(0xff17201c),
+            ),
           ),
         ),
         const SizedBox(height: 8),
         Center(
           child: Text(
             '${_measurement!.estimatedAngleDegrees.toStringAsFixed(1)}°',
-            style: const TextStyle(fontSize: 64, fontWeight: FontWeight.w800, color: Color(0xff17201c)),
+            style: const TextStyle(
+              fontSize: 64,
+              fontWeight: FontWeight.w800,
+              color: Color(0xff17201c),
+            ),
           ),
         ),
         const Center(
           child: Text(
             'ESTIMATED INCLINE',
-            style: TextStyle(fontSize: 12, letterSpacing: 1.5, color: Color(0xff5d6b63), fontWeight: FontWeight.w600),
+            style: TextStyle(
+              fontSize: 12,
+              letterSpacing: 1.5,
+              color: Color(0xff5d6b63),
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
         const SizedBox(height: 24),
@@ -3805,10 +3894,14 @@ class _RampCaptureStepPageState extends State<_RampCaptureStepPage> with SingleT
               const Divider(color: Color(0xffDDE5E0)),
               _MetricRow(
                 label: 'Capture window',
-                value: '${(_measurement!.captureDurationMs / 1000).toStringAsFixed(1)}s',
+                value:
+                    '${(_measurement!.captureDurationMs / 1000).toStringAsFixed(1)}s',
               ),
               const Divider(color: Color(0xffDDE5E0)),
-              _MetricRow(label: 'Samples', value: '${_measurement!.sampleCount}'),
+              _MetricRow(
+                label: 'Samples',
+                value: '${_measurement!.sampleCount}',
+              ),
             ],
           ),
         ),
@@ -3830,7 +3923,9 @@ class _RampCaptureStepPageState extends State<_RampCaptureStepPage> with SingleT
           style: FilledButton.styleFrom(
             backgroundColor: const Color(0xFF2E7D5B),
             padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
           onPressed: () => widget.onComplete(_measurement),
           child: const Text('Use this reading', style: TextStyle(fontSize: 16)),
@@ -3839,11 +3934,20 @@ class _RampCaptureStepPageState extends State<_RampCaptureStepPage> with SingleT
         OutlinedButton.icon(
           style: OutlinedButton.styleFrom(
             padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
             side: const BorderSide(color: Color(0xffDDE5E0)),
           ),
           icon: const Icon(Icons.refresh, color: Color(0xff17201c)),
-          label: const Text('Retake', style: TextStyle(fontSize: 16, color: Color(0xff17201c), fontWeight: FontWeight.bold)),
+          label: const Text(
+            'Retake',
+            style: TextStyle(
+              fontSize: 16,
+              color: Color(0xff17201c),
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           onPressed: _startCapture,
         ),
       ],
@@ -3860,12 +3964,20 @@ class _RampCaptureStepPageState extends State<_RampCaptureStepPage> with SingleT
             color: Color(0xffFFF3E0),
             shape: BoxShape.circle,
           ),
-          child: const Icon(Icons.error_outline, color: Color(0xffE65100), size: 32),
+          child: const Icon(
+            Icons.error_outline,
+            color: Color(0xffE65100),
+            size: 32,
+          ),
         ),
         const SizedBox(height: 16),
         const Text(
           'Capture incomplete',
-          style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xff17201c)),
+          style: TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+            color: Color(0xff17201c),
+          ),
         ),
         const SizedBox(height: 16),
         const Text(
@@ -3893,7 +4005,9 @@ class _RampCaptureStepPageState extends State<_RampCaptureStepPage> with SingleT
             style: FilledButton.styleFrom(
               backgroundColor: const Color(0xFF2E7D5B),
               padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
             onPressed: _startCapture,
             child: const Text('Try again', style: TextStyle(fontSize: 16)),
@@ -3905,19 +4019,26 @@ class _RampCaptureStepPageState extends State<_RampCaptureStepPage> with SingleT
           child: OutlinedButton(
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
               side: const BorderSide(color: Color(0xffDDE5E0)),
             ),
             onPressed: () => widget.onComplete(null),
-            child: const Text('Skip slope reading', style: TextStyle(fontSize: 16, color: Color(0xff17201c), fontWeight: FontWeight.bold)),
+            child: const Text(
+              'Skip slope reading',
+              style: TextStyle(
+                fontSize: 16,
+                color: Color(0xff17201c),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ),
       ],
     );
   }
 }
-
-
 
 class _RampSlopeCapturePanel extends StatelessWidget {
   const _RampSlopeCapturePanel({
@@ -3949,7 +4070,10 @@ class _RampSlopeCapturePanel extends StatelessWidget {
             padding: const EdgeInsets.all(14),
             child: SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              secondary: const Icon(Icons.science_outlined, color: Color(0xFF2E7D5B)),
+              secondary: const Icon(
+                Icons.science_outlined,
+                color: Color(0xFF2E7D5B),
+              ),
               title: const Text('Demo-safe capture'),
               subtitle: const Text(
                 'Use the seeded 14.8 deg sample for a reliable live demo.',
