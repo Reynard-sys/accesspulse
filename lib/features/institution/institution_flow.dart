@@ -432,10 +432,22 @@ class _InspectorVerificationScreen extends StatefulWidget {
 class _InspectorVerificationScreenState
     extends State<_InspectorVerificationScreen> {
   VerificationOutcome _outcome = VerificationOutcome.confirmed;
-  final _noteController = TextEditingController(
-    text: 'Inspector confirmed that the main entrance requires assistance.',
-  );
+  late final TextEditingController _noteController;
   bool _isSubmitting = false;
+
+  bool get _isRemediationVerification =>
+      widget.detail.accessCase.status ==
+      CaseStatus.remediationVerificationRequested;
+
+  @override
+  void initState() {
+    super.initState();
+    _noteController = TextEditingController(
+      text: _isRemediationVerification
+          ? 'Inspector confirmed that remediation resolved the entrance barrier.'
+          : 'Inspector confirmed that the main entrance requires assistance.',
+    );
+  }
 
   @override
   void dispose() {
@@ -473,7 +485,9 @@ class _InspectorVerificationScreenState
               padding: const EdgeInsets.all(20),
               children: [
                 Text(
-                  'Inspector Verification',
+                  _isRemediationVerification
+                      ? 'Remediation Verification'
+                      : 'Inspector Verification',
                   style: GoogleFonts.afacad(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
@@ -490,8 +504,10 @@ class _InspectorVerificationScreenState
                   ),
                 ),
                 const SizedBox(height: 12),
-                const Text(
-                  'Human verification is authoritative. AI evidence remains supporting context.',
+                Text(
+                  _isRemediationVerification
+                      ? 'Confirm whether the completed remediation resolves the verified barrier.'
+                      : 'Human verification is authoritative. AI evidence remains supporting context.',
                 ),
                 const SizedBox(height: 16),
                 SegmentedButton<VerificationOutcome>(

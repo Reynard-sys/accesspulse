@@ -550,33 +550,46 @@ class DimensionStateService {
     );
     await _repository.addVerification(verification);
 
-    final nextState = switch (outcome) {
-      VerificationOutcome.confirmed =>
-        DimensionStateValue.officiallyVerifiedDegraded,
-      VerificationOutcome.disputed => previousState.state,
-      VerificationOutcome.insufficientEvidence => previousState.state,
-    };
-    final nextStatus = switch (outcome) {
-      VerificationOutcome.confirmed => CaseStatus.verified,
-      VerificationOutcome.disputed => CaseStatus.disputed,
-      VerificationOutcome.insufficientEvidence => CaseStatus.triaging,
-    };
+    final isRemediationVerification =
+        accessCase.status == CaseStatus.remediationVerificationRequested;
+    final nextState = isRemediationVerification
+        ? switch (outcome) {
+            VerificationOutcome.confirmed => DimensionStateValue.resolved,
+            VerificationOutcome.disputed => previousState.state,
+            VerificationOutcome.insufficientEvidence => previousState.state,
+          }
+        : switch (outcome) {
+            VerificationOutcome.confirmed =>
+              DimensionStateValue.officiallyVerifiedDegraded,
+            VerificationOutcome.disputed => previousState.state,
+            VerificationOutcome.insufficientEvidence => previousState.state,
+          };
+    final nextStatus = isRemediationVerification
+        ? switch (outcome) {
+            VerificationOutcome.confirmed => CaseStatus.resolved,
+            VerificationOutcome.disputed => CaseStatus.remediationRequested,
+            VerificationOutcome.insufficientEvidence =>
+              CaseStatus.remediationRequested,
+          }
+        : switch (outcome) {
+            VerificationOutcome.confirmed => CaseStatus.verified,
+            VerificationOutcome.disputed => CaseStatus.disputed,
+            VerificationOutcome.insufficientEvidence => CaseStatus.triaging,
+          };
 
     final currentState = previousState.copyWith(
       state: nextState,
-      confidence: switch (outcome) {
-        VerificationOutcome.confirmed => 0.92,
-        VerificationOutcome.disputed => 0.48,
-        VerificationOutcome.insufficientEvidence => 0.36,
-      },
-      explanation: switch (outcome) {
-        VerificationOutcome.confirmed =>
-          'A human inspector confirmed the Mobility Access barrier. This is an official verification outcome.',
-        VerificationOutcome.disputed =>
-          'A human inspector disputed the barrier signal. The place memory keeps both the signal and the dispute.',
-        VerificationOutcome.insufficientEvidence =>
-          'A human inspector found that the evidence is not sufficient for an official outcome yet.',
-      },
+      confidence: _verificationConfidence(
+        outcome: outcome,
+        isRemediationVerification: isRemediationVerification,
+      ),
+      explanation: _verificationStateExplanation(
+        outcome: outcome,
+        isRemediationVerification: isRemediationVerification,
+      ),
+      lastConfirmedAt: outcome == VerificationOutcome.confirmed
+          ? timestamp
+          : previousState.lastConfirmedAt,
       source: 'human_verification',
       updatedAt: timestamp,
     );
@@ -607,9 +620,30 @@ class DimensionStateService {
       newPulse: currentPulse.level,
       caseId: caseId,
       verificationId: verification.id,
-      summary: _verificationMemorySummary(outcome),
+      summary: _verificationMemorySummary(
+        outcome: outcome,
+        isRemediationVerification: isRemediationVerification,
+      ),
       createdAt: timestamp,
     );
+
+    if (isRemediationVerification && outcome == VerificationOutcome.confirmed) {
+      await _appendMemory(
+        placeDimensionId: accessCase.placeDimensionId,
+        eventType: MemoryEventType.remediationVerified,
+        actorType: 'inspector',
+        actorId: inspectorId,
+        previousState: previousState.state,
+        newState: currentState.state,
+        previousPulse: previousPulse.level,
+        newPulse: currentPulse.level,
+        caseId: caseId,
+        verificationId: verification.id,
+        summary:
+            'Inspector verified remediation and refreshed the Mobility Access place state.',
+        createdAt: timestamp,
+      );
+    }
 
     return VerificationResult(
       verification: verification,
@@ -741,7 +775,55 @@ class DimensionStateService {
     };
   }
 
-  String _verificationMemorySummary(VerificationOutcome outcome) {
+  double _verificationConfidence({
+    required VerificationOutcome outcome,
+    required bool isRemediationVerification,
+  }) {
+    return switch (outcome) {
+      VerificationOutcome.confirmed => isRemediationVerification ? 0.88 : 0.92,
+      VerificationOutcome.disputed => 0.48,
+      VerificationOutcome.insufficientEvidence => 0.36,
+    };
+  }
+
+  String _verificationStateExplanation({
+    required VerificationOutcome outcome,
+    required bool isRemediationVerification,
+  }) {
+    if (isRemediationVerification) {
+      return switch (outcome) {
+        VerificationOutcome.confirmed =>
+          'A human inspector confirmed remediation. The Mobility Access state is now resolved.',
+        VerificationOutcome.disputed =>
+          'A human inspector did not confirm remediation. The verified barrier remains visible for follow-up.',
+        VerificationOutcome.insufficientEvidence =>
+          'A human inspector found that remediation needs more evidence before the place can be resolved.',
+      };
+    }
+    return switch (outcome) {
+      VerificationOutcome.confirmed =>
+        'A human inspector confirmed the Mobility Access barrier. This is an official verification outcome.',
+      VerificationOutcome.disputed =>
+        'A human inspector disputed the barrier signal. The place memory keeps both the signal and the dispute.',
+      VerificationOutcome.insufficientEvidence =>
+        'A human inspector found that the evidence is not sufficient for an official outcome yet.',
+    };
+  }
+
+  String _verificationMemorySummary({
+    required VerificationOutcome outcome,
+    required bool isRemediationVerification,
+  }) {
+    if (isRemediationVerification) {
+      return switch (outcome) {
+        VerificationOutcome.confirmed =>
+          'Human verifier confirmed the remediation and resolved the case.',
+        VerificationOutcome.disputed =>
+          'Human verifier did not confirm the remediation; the case returned to remediation follow-up.',
+        VerificationOutcome.insufficientEvidence =>
+          'Human verifier marked remediation evidence insufficient; the case returned to remediation follow-up.',
+      };
+    }
     return switch (outcome) {
       VerificationOutcome.confirmed =>
         'Human verifier confirmed the barrier and made the degraded state official.',
