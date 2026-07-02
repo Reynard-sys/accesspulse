@@ -1,9 +1,27 @@
-# AccessPulse MVP
+# AccessPulse
+
+## Project Information
+
+| Field | Details |
+| --- | --- |
+| Team Name | Mainit pa ang Kanin |
+| Project Name | AccessPulse |
+| Team Members | To be added |
+
+## Project Brief
 
 AccessPulse is a Flutter MVP for living accessibility intelligence. The demo
 focuses on Mobility Access for public service buildings and shows how community
-signals, AI-structured evidence, LGU review, and inspector verification update a
-shared accessibility state.
+signals, AI-structured evidence, LGU review, and inspector verification can
+update a shared accessibility state.
+
+## Google Technologies Used
+
+- Flutter
+- Gemini API
+- Google Fonts
+
+AccessPulse was developed for SparkFest 2026.
 
 ## Local Setup
 
