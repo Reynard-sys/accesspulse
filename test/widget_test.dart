@@ -224,11 +224,11 @@ void main() {
     expect(find.text('Institution Ready'), findsWidgets);
     expect(find.text('Missing evidence'), findsOneWidget);
     await tester.scrollUntilVisible(
-      find.text('Continue to review packet'),
+      find.text('Continue'),
       300,
       scrollable: structureReviewScrollable,
     );
-    await tester.tap(find.text('Continue to review packet'));
+    await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
 
     final reviewPacketScrollable = _stepScrollable('step-review-packet');
@@ -242,19 +242,19 @@ void main() {
     expect(find.text('Ramp reading included'), findsOneWidget);
 
     await tester.scrollUntilVisible(
-      find.text('Submit Review Packet'),
+      find.text('Submit'),
       300,
       scrollable: reviewPacketScrollable,
     );
-    await tester.tap(find.text('Submit Review Packet'));
+    await tester.tap(find.text('Submit'));
     await tester.pumpAndSettle();
 
     expect(
-      find.text('Evidence strengthened this place memory'),
+      find.text('Review packet submitted'),
       findsOneWidget,
     );
-    expect(find.text('Degraded'), findsOneWidget);
-    expect(find.text('Under review'), findsOneWidget);
+    expect(find.text('⚠ DEGRADED'), findsOneWidget);
+    expect(find.text('Open — awaiting LGU review'), findsOneWidget);
   });
 
   testWidgets('AI guidance card re-evaluates after adding another photo', (

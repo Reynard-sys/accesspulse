@@ -1908,9 +1908,9 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
         _accessPulseRoute<void>(
           SubmissionResultScreen(
             place: widget.place,
-            title: 'Evidence strengthened this place memory',
+            title: 'Review packet submitted',
             message:
-                'The report now carries the note, optional photo, measured incline, and AI summary into LGU review.',
+                'Your evidence has been sent for LGU review. A case has been opened for this place.',
             previousState: result.previousState,
             currentState: result.currentState,
             previousPulse: result.previousPulse,
@@ -1946,6 +1946,7 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
         title: const _AccessPulseBrandTitle(),
         automaticallyImplyLeading: false,
       ),
+      backgroundColor: const Color(0xfff8faf9),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -2019,6 +2020,7 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
         _buildHeader(() => Navigator.of(context).pop()),
         const SizedBox(height: 20),
         Card(
+          color: Colors.white,
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -2096,11 +2098,31 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
                   controller: _noteController,
                   maxLines: 5,
                   minLines: 3,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Review note',
                     hintText: 'e.g. Ramp is too steep...',
                     alignLabelWithHint: true,
-                    border: OutlineInputBorder(),
+                    filled: true,
+                    fillColor: const Color(0xfff8faf9),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(
+                        color: Theme.of(context).colorScheme.outlineVariant,
+                      ),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(
+                        color: Theme.of(context).colorScheme.outlineVariant,
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(
+                        color: Theme.of(context).colorScheme.primary,
+                        width: 2.0,
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -2189,7 +2211,7 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
           width: double.infinity,
           child: FilledButton.icon(
             icon: const Icon(Icons.arrow_forward),
-            label: const Text('Continue to review packet'),
+            label: const Text('Continue'),
             onPressed: _continueFromStructure,
           ),
         ),
@@ -2233,7 +2255,7 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
                   )
                 : const Icon(Icons.fact_check_outlined),
             label: Text(
-              _isSubmitting ? 'Submitting...' : 'Submit Review Packet',
+              _isSubmitting ? 'Submitting...' : 'Submit',
             ),
             onPressed: _isSubmitting ? null : _submitEvidence,
           ),
@@ -2268,11 +2290,16 @@ class _EmptyBin extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: CustomPaint(
-        painter: _DashedBorderPainter(color: colorScheme.outlineVariant),
-        child: SizedBox(
-          height: 180,
-          width: double.infinity,
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xfff8faf9),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: CustomPaint(
+          painter: _DashedBorderPainter(color: colorScheme.outlineVariant),
+          child: SizedBox(
+            height: 180,
+            width: double.infinity,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -2298,6 +2325,7 @@ class _EmptyBin extends StatelessWidget {
             ],
           ),
         ),
+      ),
       ),
     );
   }
@@ -2364,18 +2392,222 @@ class SubmissionResultScreen extends StatelessWidget {
   final DimensionPulseRecord currentPulse;
   final PublicResultNextAction? nextAction;
 
+  Widget _buildStatePill(DimensionStateValue state, {required bool isBefore}) {
+    final label = state.label;
+    final bool isDegraded = state == DimensionStateValue.degraded ||
+        state == DimensionStateValue.officiallyVerifiedDegraded;
+
+    if (isDegraded) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+        decoration: BoxDecoration(
+          color: const Color(0xfffff0e6),
+          borderRadius: BorderRadius.circular(99),
+          border: Border.all(
+            color: const Color(0xfff0c4a0),
+            width: 0.8,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              '⚠ ',
+              style: TextStyle(
+                fontSize: 11.5,
+                color: Color(0xffd46a2a),
+              ),
+            ),
+            Text(
+              label.toUpperCase(),
+              style: GoogleFonts.afacad(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xffd46a2a),
+                letterSpacing: 0.23,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+      decoration: BoxDecoration(
+        color: const Color(0xfff0f4f2),
+        borderRadius: BorderRadius.circular(99),
+        border: Border.all(
+          color: const Color(0xffdde5e0),
+          width: 0.8,
+        ),
+      ),
+      child: Text(
+        label,
+        style: GoogleFonts.afacad(
+          fontSize: 11.5,
+          fontWeight: FontWeight.w600,
+          color: const Color(0xff5d6b63),
+          letterSpacing: 0.23,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatRow(String label, String value, {Color valueColor = const Color(0xff17201c)}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      decoration: const BoxDecoration(
+        border: Border(
+          bottom: BorderSide(
+            color: Color(0xffdde5e0),
+            width: 0.8,
+          ),
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: GoogleFonts.afacad(
+              fontSize: 15,
+              color: const Color(0xff5d6b63),
+            ),
+          ),
+          Text(
+            value,
+            style: GoogleFonts.afacad(
+              fontSize: 15,
+              fontWeight: FontWeight.w500,
+              color: valueColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCaseStatusRow() {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            'Case status',
+            style: GoogleFonts.afacad(
+              fontSize: 15,
+              color: const Color(0xff5d6b63),
+            ),
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 6,
+                height: 6,
+                decoration: const BoxDecoration(
+                  color: Color(0xffd46a2a),
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'Open — awaiting LGU review',
+                style: GoogleFonts.afacad(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                  color: const Color(0xff17201c),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNextStepRow({
+    required String assetPath,
+    required String title,
+    required String description,
+    bool isLast = false,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        border: isLast
+            ? null
+            : const Border(
+                bottom: BorderSide(
+                  color: Color(0xffdde5e0),
+                  width: 0.8,
+                ),
+              ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: const Color(0xffeef3f0),
+              borderRadius: BorderRadius.circular(9),
+            ),
+            child: Center(
+              child: SizedBox(
+                width: 16,
+                height: 16,
+                child: SvgPicture.asset(
+                  assetPath,
+                  colorFilter: const ColorFilter.mode(
+                    Color(0xff2e7d5b),
+                    BlendMode.srcIn,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.afacad(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xff17201c),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  description,
+                  style: GoogleFonts.afacad(
+                    fontSize: 13,
+                    height: 1.4,
+                    color: const Color(0xff5d6b63),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final previousPulseDisplay = const PulseService().describePlacePulse(
-      state: previousState,
-      pulse: previousPulse,
-    );
-    final currentPulseDisplay = const PulseService().describePlacePulse(
-      state: currentState,
-      pulse: currentPulse,
-    );
     return Scaffold(
-      appBar: AppBar(title: const _AccessPulseBrandTitle()),
+      appBar: AppBar(
+        title: const _AccessPulseBrandTitle(),
+        automaticallyImplyLeading: false,
+      ),
+      backgroundColor: const Color(0xfff8faf9),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -2384,17 +2616,27 @@ class SubmissionResultScreen extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
               children: [
                 const SizedBox(height: 20),
-                TweenAnimationBuilder<double>(
-                  tween: Tween(begin: 0.82, end: 1),
-                  duration: const Duration(milliseconds: 500),
-                  curve: Curves.easeOutBack,
-                  builder: (context, scale, child) {
-                    return Transform.scale(scale: scale, child: child);
-                  },
-                  child: const Icon(
-                    Icons.check_circle_outline,
-                    size: 64,
-                    color: Color(0xff2e7d5b),
+                Center(
+                  child: Container(
+                    width: 96,
+                    height: 96,
+                    decoration: const BoxDecoration(
+                      color: Color(0xffeaf7f0),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: SizedBox(
+                        width: 48,
+                        height: 48,
+                        child: SvgPicture.asset(
+                          'assets/icons/verified.svg',
+                          colorFilter: const ColorFilter.mode(
+                            Color(0xff2e7d5b),
+                            BlendMode.srcIn,
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -2402,72 +2644,238 @@ class SubmissionResultScreen extends StatelessWidget {
                   title,
                   textAlign: TextAlign.center,
                   style: GoogleFonts.afacad(
-                    fontSize: 24,
+                    fontSize: 32,
                     fontWeight: FontWeight.bold,
                     color: const Color(0xff17201c),
+                    letterSpacing: -0.66,
                   ),
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  message,
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.afacad(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: const Color(0xff5d6b63),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          place.name,
-                          style: GoogleFonts.afacad(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: const Color(0xff17201c),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        _TransitionRow(
-                          label: 'Current accessibility state',
-                          before: previousState.state.label,
-                          after: currentState.state.label,
-                        ),
-                        const Divider(height: 24, color: Color(0xffdde5e0)),
-                        _TransitionRow(
-                          label: 'Pulse / freshness',
-                          before: previousPulseDisplay.label,
-                          after: currentPulseDisplay.label,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          currentState.explanation,
-                          style: GoogleFonts.afacad(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            color: const Color(0xff17201c),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          currentPulseDisplay.explanation,
-                          style: GoogleFonts.afacad(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                            color: const Color(0xff5d6b63),
-                          ),
-                        ),
-                      ],
+                Center(
+                  child: SizedBox(
+                    width: 280,
+                    child: Text(
+                      message,
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.afacad(
+                        fontSize: 14,
+                        height: 1.6,
+                        fontWeight: FontWeight.normal,
+                        color: const Color(0xff5d6b63),
+                      ),
                     ),
                   ),
                 ),
+                const SizedBox(height: 32),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'WHAT CHANGED',
+                    style: GoogleFonts.afacad(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xff5d6b63),
+                      letterSpacing: 0.84,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: const Color(0xffdde5e0),
+                      width: 0.8,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xff17201c).withOpacity(0.04),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        height: 4,
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Color(0x54d46a2a),
+                              Color(0xfffff0e6),
+                            ],
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              place.name,
+                              style: GoogleFonts.afacad(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xff17201c),
+                                letterSpacing: -0.14,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                _buildStatePill(previousState.state, isBefore: true),
+                                const SizedBox(width: 8),
+                                const Icon(
+                                  Icons.arrow_forward,
+                                  size: 14,
+                                  color: Color(0xff5d6b63),
+                                ),
+                                const SizedBox(width: 8),
+                                _buildStatePill(currentState.state, isBefore: false),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              currentState.explanation,
+                              style: GoogleFonts.afacad(
+                                fontSize: 15,
+                                height: 1.25,
+                                fontWeight: FontWeight.normal,
+                                color: const Color(0xff5d6b63),
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            const Divider(height: 1, color: Color(0xffdde5e0)),
+                            const SizedBox(height: 4),
+                            _buildStatRow(
+                              'Confidence',
+                              _confidenceLevelFromScore(currentState.confidence).label,
+                              valueColor: const Color(0xff2e7d5b),
+                            ),
+                            _buildStatRow(
+                              'Evidence readiness',
+                              'Institution Ready',
+                            ),
+                            _buildCaseStatusRow(),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: const Color(0xffdde5e0),
+                      width: 0.8,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xff17201c).withOpacity(0.04),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(left: 16, right: 16, top: 13, bottom: 13),
+                        child: Text(
+                          'What happens next',
+                          style: GoogleFonts.afacad(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xff17201c),
+                            letterSpacing: -0.135,
+                          ),
+                        ),
+                      ),
+                      const Divider(height: 1, color: Color(0xffdde5e0)),
+                      _buildNextStepRow(
+                        assetPath: 'assets/icons/icon_lgu.svg',
+                        title: 'LGU Review',
+                        description: 'A reviewer will assess the case and assign an inspector if needed.',
+                      ),
+                      _buildNextStepRow(
+                        assetPath: 'assets/icons/icon_inspector_ver.svg',
+                        title: 'Inspector Verification',
+                        description: 'An inspector will verify the reported condition on site.',
+                      ),
+                      _buildNextStepRow(
+                        assetPath: 'assets/icons/location_icon.svg',
+                        title: 'Place Memory Updated',
+                        description: "This place's accessibility state will reflect the outcome.",
+                        isLast: true,
+                      ),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.only(left: 16, right: 16, top: 12, bottom: 12),
+                        decoration: const BoxDecoration(
+                          color: Color(0xfff8faf9),
+                          border: Border(
+                            top: BorderSide(
+                              color: Color(0xffdde5e0),
+                              width: 0.8,
+                            ),
+                          ),
+                        ),
+                        child: Text(
+                          'Official verification remains with human reviewers. AccessPulse does not determine legal compliance.',
+                          style: GoogleFonts.afacad(
+                            fontSize: 12,
+                            height: 1.4,
+                            color: const Color(0xff5d6b63),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
                 const SizedBox(height: 24),
+                FilledButton(
+                  onPressed: () {
+                    Navigator.of(context).popUntil((route) => route.isFirst);
+                  },
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xff2e7d5b),
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size.fromHeight(46),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 3,
+                    shadowColor: const Color(0xff2e7d5b).withOpacity(0.22),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'Continue',
+                        style: GoogleFonts.afacad(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(width: 7),
+                      const Icon(Icons.arrow_forward, size: 20),
+                    ],
+                  ),
+                ),
                 if (nextAction != null) ...[
+                  const SizedBox(height: 12),
                   OutlinedButton.icon(
                     icon: const Icon(Icons.add_a_photo),
                     label: const Text('Add evidence'),
@@ -2484,14 +2892,7 @@ class SubmissionResultScreen extends StatelessWidget {
                       );
                     },
                   ),
-                  const SizedBox(height: 12),
                 ],
-                FilledButton.icon(
-                  icon: const Icon(Icons.home_outlined),
-                  label: const Text('Back to home'),
-                  onPressed: () =>
-                      Navigator.of(context).popUntil((route) => route.isFirst),
-                ),
               ],
             ),
           ),
@@ -3611,6 +4012,7 @@ class _AiResultPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
+      color: Colors.white,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -3705,6 +4107,7 @@ class _AiGuidanceCard extends StatelessWidget {
         ? 'No major missing evidence.'
         : assessment.missingEvidence.first;
     return Card(
+      color: Colors.white,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -3814,6 +4217,7 @@ class _ReviewPacketPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
+      color: Colors.white,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -5193,6 +5597,7 @@ class _RampSlopeCapturePanel extends StatelessWidget {
       children: [
         DecoratedBox(
           decoration: BoxDecoration(
+            color: const Color(0xfff8faf9),
             border: Border.all(color: colorScheme.outlineVariant),
             borderRadius: BorderRadius.circular(8),
           ),
@@ -5216,6 +5621,7 @@ class _RampSlopeCapturePanel extends StatelessWidget {
         const SizedBox(height: 12),
         DecoratedBox(
           decoration: BoxDecoration(
+            color: const Color(0xfff8faf9),
             border: Border.all(color: colorScheme.outlineVariant),
             borderRadius: BorderRadius.circular(8),
           ),
