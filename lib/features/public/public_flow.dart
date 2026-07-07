@@ -312,125 +312,126 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
           final detail = snapshot.data!;
           return SafeArea(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
+              padding: const EdgeInsets.only(
+                left: 16,
+                right: 16,
+                bottom: 32,
+                top: 16,
+              ),
+              child: Row(
                 children: [
-                  SizedBox(
-                    width: double.infinity,
-                    height: 54,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: const Color(0xff2e7d5b),
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(
-                              0xff2e7d5b,
-                            ).withValues(alpha: 0.3),
-                            blurRadius: 8,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        borderRadius: BorderRadius.circular(16),
-                        child: InkWell(
+                  Expanded(
+                    child: SizedBox(
+                      height: 54,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
                           borderRadius: BorderRadius.circular(16),
-                          onTap: () async {
-                            await Navigator.of(context).push(
-                              _accessPulseRoute<void>(
-                                ConfirmVisitScreen(
-                                  place: widget.place,
-                                  placeDimensionId: detail.placeDimension.id,
-                                  stateService: widget.stateService,
+                          border: Border.all(
+                            color: const Color(0xff2e7d5b),
+                            width: 2.0,
+                          ),
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          borderRadius: BorderRadius.circular(16),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(16),
+                            onTap: () async {
+                              await Navigator.of(context).push(
+                                _accessPulseRoute<void>(
+                                  EvidenceFlowScreen(
+                                    place: widget.place,
+                                    placeDimensionId: detail.placeDimension.id,
+                                    stateService: widget.stateService,
+                                    aiService: widget.aiService,
+                                    imagePickerOverride:
+                                        widget.imagePickerOverride,
+                                  ),
                                 ),
-                              ),
-                            );
-                            _refresh();
-                          },
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(
-                                Icons.how_to_reg,
-                                color: Colors.white,
-                                size: 22,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Confirm Your Visit',
-                                style: GoogleFonts.afacad(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
-                                  letterSpacing: -0.16,
+                              );
+                              _refresh();
+                            },
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(
+                                  Icons.add,
+                                  color: Color(0xff2e7d5b),
+                                  size: 21,
                                 ),
-                              ),
-                            ],
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Add Evidence',
+                                  style: GoogleFonts.afacad(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xff2e7d5b),
+                                    letterSpacing: -0.16,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 54,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: const Color(0xff3b75d1),
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(
-                              0xff2e7d5b,
-                            ).withValues(alpha: 0.3),
-                            blurRadius: 8,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        borderRadius: BorderRadius.circular(16),
-                        child: InkWell(
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: SizedBox(
+                      height: 54,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: const Color(0xff2e7d5b),
                           borderRadius: BorderRadius.circular(16),
-                          onTap: () async {
-                            await Navigator.of(context).push(
-                              _accessPulseRoute<void>(
-                                EvidenceFlowScreen(
-                                  place: widget.place,
-                                  placeDimensionId: detail.placeDimension.id,
-                                  stateService: widget.stateService,
-                                  aiService: widget.aiService,
-                                  imagePickerOverride:
-                                      widget.imagePickerOverride,
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(
+                                0xff2e7d5b,
+                              ).withValues(alpha: 0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          borderRadius: BorderRadius.circular(16),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(16),
+                            onTap: () async {
+                              await Navigator.of(context).push(
+                                _accessPulseRoute<void>(
+                                  ConfirmVisitScreen(
+                                    place: widget.place,
+                                    placeDimensionId: detail.placeDimension.id,
+                                    stateService: widget.stateService,
+                                  ),
                                 ),
-                              ),
-                            );
-                            _refresh();
-                          },
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(
-                                Icons.add_a_photo,
-                                color: Colors.white,
-                                size: 21,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Add Evidence',
-                                style: GoogleFonts.afacad(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
+                              );
+                              _refresh();
+                            },
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(
+                                  Icons.check_circle_outline,
                                   color: Colors.white,
-                                  letterSpacing: -0.16,
+                                  size: 22,
                                 ),
-                              ),
-                            ],
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Confirm',
+                                  style: GoogleFonts.afacad(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                    letterSpacing: -0.16,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -2254,9 +2255,7 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.fact_check_outlined),
-            label: Text(
-              _isSubmitting ? 'Submitting...' : 'Submit',
-            ),
+            label: Text(_isSubmitting ? 'Submitting...' : 'Submit'),
             onPressed: _isSubmitting ? null : _submitEvidence,
           ),
         ),
@@ -2300,32 +2299,32 @@ class _EmptyBin extends StatelessWidget {
           child: SizedBox(
             height: 180,
             width: double.infinity,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.add_photo_alternate_outlined,
-                size: 40,
-                color: colorScheme.onSurfaceVariant,
-              ),
-              const SizedBox(height: 10),
-              Text(
-                'Tap to add a photo',
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.add_photo_alternate_outlined,
+                  size: 40,
                   color: colorScheme.onSurfaceVariant,
                 ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                'Gallery or camera  ·  JPG / PNG',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant.withAlpha(180),
+                const SizedBox(height: 10),
+                Text(
+                  'Tap to add a photo',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 2),
+                Text(
+                  'Gallery or camera  ·  JPG / PNG',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant.withAlpha(180),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
-      ),
       ),
     );
   }
@@ -2394,7 +2393,8 @@ class SubmissionResultScreen extends StatelessWidget {
 
   Widget _buildStatePill(DimensionStateValue state, {required bool isBefore}) {
     final label = state.label;
-    final bool isDegraded = state == DimensionStateValue.degraded ||
+    final bool isDegraded =
+        state == DimensionStateValue.degraded ||
         state == DimensionStateValue.officiallyVerifiedDegraded;
 
     if (isDegraded) {
@@ -2403,20 +2403,14 @@ class SubmissionResultScreen extends StatelessWidget {
         decoration: BoxDecoration(
           color: const Color(0xfffff0e6),
           borderRadius: BorderRadius.circular(99),
-          border: Border.all(
-            color: const Color(0xfff0c4a0),
-            width: 0.8,
-          ),
+          border: Border.all(color: const Color(0xfff0c4a0), width: 0.8),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             const Text(
               '⚠ ',
-              style: TextStyle(
-                fontSize: 11.5,
-                color: Color(0xffd46a2a),
-              ),
+              style: TextStyle(fontSize: 11.5, color: Color(0xffd46a2a)),
             ),
             Text(
               label.toUpperCase(),
@@ -2437,10 +2431,7 @@ class SubmissionResultScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xfff0f4f2),
         borderRadius: BorderRadius.circular(99),
-        border: Border.all(
-          color: const Color(0xffdde5e0),
-          width: 0.8,
-        ),
+        border: Border.all(color: const Color(0xffdde5e0), width: 0.8),
       ),
       child: Text(
         label,
@@ -2454,15 +2445,16 @@ class SubmissionResultScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStatRow(String label, String value, {Color valueColor = const Color(0xff17201c)}) {
+  Widget _buildStatRow(
+    String label,
+    String value, {
+    Color valueColor = const Color(0xff17201c),
+  }) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8),
       decoration: const BoxDecoration(
         border: Border(
-          bottom: BorderSide(
-            color: Color(0xffdde5e0),
-            width: 0.8,
-          ),
+          bottom: BorderSide(color: Color(0xffdde5e0), width: 0.8),
         ),
       ),
       child: Row(
@@ -2540,10 +2532,7 @@ class SubmissionResultScreen extends StatelessWidget {
         border: isLast
             ? null
             : const Border(
-                bottom: BorderSide(
-                  color: Color(0xffdde5e0),
-                  width: 0.8,
-                ),
+                bottom: BorderSide(color: Color(0xffdde5e0), width: 0.8),
               ),
       ),
       child: Row(
@@ -2704,10 +2693,7 @@ class SubmissionResultScreen extends StatelessWidget {
                         height: 4,
                         decoration: const BoxDecoration(
                           gradient: LinearGradient(
-                            colors: [
-                              Color(0x54d46a2a),
-                              Color(0xfffff0e6),
-                            ],
+                            colors: [Color(0x54d46a2a), Color(0xfffff0e6)],
                             begin: Alignment.centerLeft,
                             end: Alignment.centerRight,
                           ),
@@ -2730,7 +2716,10 @@ class SubmissionResultScreen extends StatelessWidget {
                             const SizedBox(height: 12),
                             Row(
                               children: [
-                                _buildStatePill(previousState.state, isBefore: true),
+                                _buildStatePill(
+                                  previousState.state,
+                                  isBefore: true,
+                                ),
                                 const SizedBox(width: 8),
                                 const Icon(
                                   Icons.arrow_forward,
@@ -2738,7 +2727,10 @@ class SubmissionResultScreen extends StatelessWidget {
                                   color: Color(0xff5d6b63),
                                 ),
                                 const SizedBox(width: 8),
-                                _buildStatePill(currentState.state, isBefore: false),
+                                _buildStatePill(
+                                  currentState.state,
+                                  isBefore: false,
+                                ),
                               ],
                             ),
                             const SizedBox(height: 12),
@@ -2756,7 +2748,9 @@ class SubmissionResultScreen extends StatelessWidget {
                             const SizedBox(height: 4),
                             _buildStatRow(
                               'Confidence',
-                              _confidenceLevelFromScore(currentState.confidence).label,
+                              _confidenceLevelFromScore(
+                                currentState.confidence,
+                              ).label,
                               valueColor: const Color(0xff2e7d5b),
                             ),
                             _buildStatRow(
@@ -2792,7 +2786,12 @@ class SubmissionResultScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Padding(
-                        padding: const EdgeInsets.only(left: 16, right: 16, top: 13, bottom: 13),
+                        padding: const EdgeInsets.only(
+                          left: 16,
+                          right: 16,
+                          top: 13,
+                          bottom: 13,
+                        ),
                         child: Text(
                           'What happens next',
                           style: GoogleFonts.afacad(
@@ -2807,22 +2806,30 @@ class SubmissionResultScreen extends StatelessWidget {
                       _buildNextStepRow(
                         assetPath: 'assets/icons/icon_lgu.svg',
                         title: 'LGU Review',
-                        description: 'A reviewer will assess the case and assign an inspector if needed.',
+                        description:
+                            'A reviewer will assess the case and assign an inspector if needed.',
                       ),
                       _buildNextStepRow(
                         assetPath: 'assets/icons/icon_inspector_ver.svg',
                         title: 'Inspector Verification',
-                        description: 'An inspector will verify the reported condition on site.',
+                        description:
+                            'An inspector will verify the reported condition on site.',
                       ),
                       _buildNextStepRow(
                         assetPath: 'assets/icons/location_icon.svg',
                         title: 'Place Memory Updated',
-                        description: "This place's accessibility state will reflect the outcome.",
+                        description:
+                            "This place's accessibility state will reflect the outcome.",
                         isLast: true,
                       ),
                       Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.only(left: 16, right: 16, top: 12, bottom: 12),
+                        padding: const EdgeInsets.only(
+                          left: 16,
+                          right: 16,
+                          top: 12,
+                          bottom: 12,
+                        ),
                         decoration: const BoxDecoration(
                           color: Color(0xfff8faf9),
                           border: Border(
@@ -2952,7 +2959,8 @@ class _PlaceListTile extends StatelessWidget {
         final stateColor = publicState.color;
         final stateLabel = publicState.label;
 
-        final lastConfirmed = data.state.lastConfirmedAt ?? data.state.updatedAt;
+        final lastConfirmed =
+            data.state.lastConfirmedAt ?? data.state.updatedAt;
         final relativeTime = _formatTimeAgo(lastConfirmed);
 
         final Color badgeBg;
@@ -2960,7 +2968,8 @@ class _PlaceListTile extends StatelessWidget {
         final Color badgeText;
 
         if (data.state.state == DimensionStateValue.degraded ||
-            data.state.state == DimensionStateValue.officiallyVerifiedDegraded) {
+            data.state.state ==
+                DimensionStateValue.officiallyVerifiedDegraded) {
           badgeBg = const Color(0xfff5efe6);
           badgeDot = const Color(0xffd4944a);
           badgeText = const Color(0xff8b6033);
@@ -2970,19 +2979,20 @@ class _PlaceListTile extends StatelessWidget {
           badgeText = stateColor;
         }
 
-        final isDegradedOrAging = data.state.state == DimensionStateValue.degraded ||
-            data.state.state == DimensionStateValue.officiallyVerifiedDegraded ||
+        final isDegradedOrAging =
+            data.state.state == DimensionStateValue.degraded ||
+            data.state.state ==
+                DimensionStateValue.officiallyVerifiedDegraded ||
             data.pulse.level == DimensionPulseLevel.moderate ||
             data.pulse.level == DimensionPulseLevel.weak;
-        final activeBarColor = isDegradedOrAging ? const Color(0xffd4944a) : const Color(0xff4da87a);
+        final activeBarColor = isDegradedOrAging
+            ? const Color(0xffd4944a)
+            : const Color(0xff4da87a);
 
         return Container(
           decoration: BoxDecoration(
             color: Colors.white,
-            border: Border.all(
-              color: const Color(0xffdde5e0),
-              width: 0.8,
-            ),
+            border: Border.all(color: const Color(0xffdde5e0), width: 0.8),
             borderRadius: BorderRadius.circular(16),
           ),
           clipBehavior: Clip.antiAlias,
@@ -3101,11 +3111,23 @@ class _PlaceListTile extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            _buildBar(9, data.pulse.score >= 0.2, activeBarColor),
+                            _buildBar(
+                              9,
+                              data.pulse.score >= 0.2,
+                              activeBarColor,
+                            ),
                             const SizedBox(width: 2),
-                            _buildBar(12, data.pulse.score >= 0.5, activeBarColor),
+                            _buildBar(
+                              12,
+                              data.pulse.score >= 0.5,
+                              activeBarColor,
+                            ),
                             const SizedBox(width: 2),
-                            _buildBar(15, data.pulse.score >= 0.8, activeBarColor),
+                            _buildBar(
+                              15,
+                              data.pulse.score >= 0.8,
+                              activeBarColor,
+                            ),
                           ],
                         ),
                         const SizedBox(height: 6),
@@ -3174,9 +3196,17 @@ String _formatTimeAgo(DateTime dateTime) {
 
 String _getPlaceTypeIcon(String placeType) {
   final type = placeType.toLowerCase();
-  if (type.contains('hospital') || type.contains('clinic') || type.contains('health')) {
+  if (type.contains('hospital') ||
+      type.contains('clinic') ||
+      type.contains('health')) {
     return 'assets/icons/default_icon_hospital.svg';
-  } else if (type.contains('train') || type.contains('station') || type.contains('transit') || type.contains('subway') || type.contains('metro') || type.contains('transport') || type.contains('hub')) {
+  } else if (type.contains('train') ||
+      type.contains('station') ||
+      type.contains('transit') ||
+      type.contains('subway') ||
+      type.contains('metro') ||
+      type.contains('transport') ||
+      type.contains('hub')) {
     return 'assets/icons/default_icon_train.svg';
   } else {
     return 'assets/icons/default_icon_building.svg';
@@ -4184,7 +4214,7 @@ class _AiGuidanceCard extends StatelessWidget {
                   const SizedBox(height: 12),
                   FilledButton.icon(
                     icon: const Icon(Icons.arrow_forward),
-                    label: const Text('Continue anyway'),
+                    label: const Text('Continue'),
                     onPressed: onContinueAnyway,
                   ),
                   const SizedBox(height: 12),

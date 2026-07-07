@@ -52,7 +52,7 @@ void main() {
       scrollable: placeDetailScrollable,
     );
     expect(find.text('PLACE MEMORY'), findsOneWidget);
-    expect(find.text('Confirm Your Visit'), findsOneWidget);
+    expect(find.text('Confirm'), findsOneWidget);
     expect(find.text('Add Evidence'), findsOneWidget);
   });
 
@@ -69,7 +69,7 @@ void main() {
 
     await tester.tap(find.text('Quezon City Hall Main Entrance'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Confirm Your Visit'));
+    await tester.tap(find.text('Confirm'));
     await tester.pumpAndSettle();
 
     // Step 1: Usable independently? -> Choose "No, I needed help"
@@ -208,9 +208,9 @@ void main() {
     expect(find.text('AI Guidance'), findsOneWidget);
     expect(find.text('Recommended next step'), findsOneWidget);
     expect(find.text('Add another photo'), findsOneWidget);
-    expect(find.text('Continue anyway'), findsOneWidget);
+    expect(find.text('Continue'), findsOneWidget);
     expect(find.text('Skip'), findsOneWidget);
-    await tester.tap(find.text('Continue anyway'));
+    await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
 
     final structureReviewScrollable = _stepScrollable('step-structure-review');
@@ -249,10 +249,7 @@ void main() {
     await tester.tap(find.text('Submit'));
     await tester.pumpAndSettle();
 
-    expect(
-      find.text('Review packet submitted'),
-      findsOneWidget,
-    );
+    expect(find.text('Review packet submitted'), findsOneWidget);
     expect(find.text('⚠ DEGRADED'), findsOneWidget);
     expect(find.text('Open — awaiting LGU review'), findsOneWidget);
   });
@@ -308,7 +305,7 @@ void main() {
     expect(find.text('Almost Ready'), findsWidgets);
     expect(find.text('Recommended next step'), findsOneWidget);
     expect(find.text('Add another photo'), findsOneWidget);
-    expect(find.text('Continue anyway'), findsOneWidget);
+    expect(find.text('Continue'), findsOneWidget);
     expect(find.text('Skip'), findsOneWidget);
     expect(find.text('Review packet'), findsNothing);
 
