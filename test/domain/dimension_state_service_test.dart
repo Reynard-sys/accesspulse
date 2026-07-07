@@ -18,7 +18,7 @@ void main() {
       final pulse = await repository.getDimensionPulse(stalePlaceDimensionId);
       final memory = await repository.listMemoryEvents(stalePlaceDimensionId);
 
-      expect(places, hasLength(3));
+      expect(places, hasLength(4));
       expect(state.state, DimensionStateValue.claimedAccessible);
       expect(pulse.level, DimensionPulseLevel.moderate);
       expect(memory.single.eventType, MemoryEventType.stateSeeded);

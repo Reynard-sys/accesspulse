@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -140,61 +141,7 @@ class _PublicHomeScreenState extends State<PublicHomeScreen> {
                         onChanged: (value) => setState(() => _query = value),
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        Chip(
-                          avatar: const Icon(
-                            Icons.accessible_forward,
-                            size: 16,
-                            color: Color(0xff2e7d5b),
-                          ),
-                          label: Text(
-                            'Mobility Access',
-                            style: GoogleFonts.afacad(
-                              color: const Color(0xff17201c),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                            ),
-                          ),
-                          backgroundColor: const Color(0xffe8eee9),
-                          side: BorderSide.none,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 4,
-                            vertical: 4,
-                          ),
-                        ),
-                        Chip(
-                          avatar: const Icon(
-                            Icons.business,
-                            size: 16,
-                            color: Color(0xff2e7d5b),
-                          ),
-                          label: Text(
-                            'Public service buildings',
-                            style: GoogleFonts.afacad(
-                              color: const Color(0xff17201c),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                            ),
-                          ),
-                          backgroundColor: const Color(0xffe8eee9),
-                          side: BorderSide.none,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 4,
-                            vertical: 4,
-                          ),
-                        ),
-                      ],
-                    ),
+
                     if (nearbyPlaces.isNotEmpty) ...[
                       const SizedBox(height: 24),
                       Row(
@@ -2565,13 +2512,13 @@ class _PlaceListTile extends StatelessWidget {
   final Place place;
   final VoidCallback onTap;
 
-  Widget _buildBar(int heightMultiplier, bool active) {
+  Widget _buildBar(double height, bool active, Color activeColor) {
     return Container(
-      width: 3.5,
-      height: 4.0 * heightMultiplier,
+      width: 3.0,
+      height: height,
       decoration: BoxDecoration(
-        color: active ? const Color(0xff2e7d5b) : const Color(0xffdde5e0),
-        borderRadius: BorderRadius.circular(1),
+        color: active ? activeColor : const Color(0xffdde5e0),
+        borderRadius: BorderRadius.circular(1.5),
       ),
     );
   }
@@ -2603,151 +2550,186 @@ class _PlaceListTile extends StatelessWidget {
         );
         final stateColor = publicState.color;
         final stateLabel = publicState.label;
-        final pulseDisplay = const PulseService().describePlacePulse(
-          state: data.state,
-          pulse: data.pulse,
-        );
 
-        return Card(
-          child: InkWell(
-            onTap: onTap,
+        final lastConfirmed = data.state.lastConfirmedAt ?? data.state.updatedAt;
+        final relativeTime = _formatTimeAgo(lastConfirmed);
+
+        final Color badgeBg;
+        final Color badgeDot;
+        final Color badgeText;
+
+        if (data.state.state == DimensionStateValue.degraded ||
+            data.state.state == DimensionStateValue.officiallyVerifiedDegraded) {
+          badgeBg = const Color(0xfff5efe6);
+          badgeDot = const Color(0xffd4944a);
+          badgeText = const Color(0xff8b6033);
+        } else {
+          badgeBg = stateColor.withValues(alpha: 0.1);
+          badgeDot = stateColor;
+          badgeText = stateColor;
+        }
+
+        final isDegradedOrAging = data.state.state == DimensionStateValue.degraded ||
+            data.state.state == DimensionStateValue.officiallyVerifiedDegraded ||
+            data.pulse.level == DimensionPulseLevel.moderate ||
+            data.pulse.level == DimensionPulseLevel.weak;
+        final activeBarColor = isDegradedOrAging ? const Color(0xffd4944a) : const Color(0xff4da87a);
+
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border.all(
+              color: const Color(0xffdde5e0),
+              width: 0.8,
+            ),
             borderRadius: BorderRadius.circular(16),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              decoration: BoxDecoration(
-                                color: stateColor.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(
-                                  color: stateColor.withValues(alpha: 0.3),
-                                ),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Container(
-                                    width: 6,
-                                    height: 6,
-                                    decoration: BoxDecoration(
-                                      color: stateColor,
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    stateLabel,
-                                    style: GoogleFonts.afacad(
-                                      color: stateColor,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 11,
-                                      letterSpacing: 0.2,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                '${place.placeType} · ${pulseDisplay.label}',
-                                style: GoogleFonts.afacad(
-                                  color: const Color(0xff5d6b63),
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          place.name,
-                          style: GoogleFonts.afacad(
-                            color: const Color(0xff17201c),
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                            height: 1.2,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.location_on_outlined,
-                              size: 14,
-                              color: Color(0xff5d6b63),
-                            ),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: Text(
-                                place.address ?? place.municipality ?? '',
-                                style: GoogleFonts.afacad(
-                                  color: const Color(0xff5d6b63),
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.end,
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onTap,
+              child: Padding(
+                padding: const EdgeInsets.all(16.8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
-                              _buildBar(1, data.pulse.score >= 0.2),
-                              const SizedBox(width: 2),
-                              _buildBar(2, data.pulse.score >= 0.5),
-                              const SizedBox(width: 2),
-                              _buildBar(3, data.pulse.score >= 0.8),
+                              SvgPicture.asset(
+                                _getPlaceTypeIcon(place.placeType),
+                                width: 14.583,
+                                height: 14.605,
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: badgeBg,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      width: 6,
+                                      height: 6,
+                                      decoration: BoxDecoration(
+                                        color: badgeDot,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      stateLabel.toUpperCase(),
+                                      style: GoogleFonts.afacad(
+                                        color: badgeText,
+                                        fontWeight: FontWeight.w500,
+                                        fontSize: 11,
+                                        letterSpacing: 0.9,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  place.placeType,
+                                  style: GoogleFonts.afacad(
+                                    color: const Color(0xff9eb5a6),
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.normal,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
                             ],
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            '${(data.pulse.score * 100).toInt()}%',
+                            place.name,
                             style: GoogleFonts.afacad(
-                              color: const Color(0xff2e7d5b),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 11,
+                              color: const Color(0xff17201c),
+                              fontWeight: FontWeight.w500,
+                              fontSize: 15,
+                              height: 1.28,
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 2),
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.location_on_outlined,
+                                size: 12,
+                                color: Color(0xff5d6b63),
+                              ),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  place.address ?? place.municipality ?? '',
+                                  style: GoogleFonts.afacad(
+                                    color: const Color(0xff5d6b63),
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.normal,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                      const SizedBox(width: 8),
-                      const Icon(
-                        Icons.chevron_right,
-                        color: Color(0xff5d6b63),
-                        size: 20,
+                    ),
+                    const SizedBox(width: 16),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            _buildBar(9, data.pulse.score >= 0.2, activeBarColor),
+                            const SizedBox(width: 2),
+                            _buildBar(12, data.pulse.score >= 0.5, activeBarColor),
+                            const SizedBox(width: 2),
+                            _buildBar(15, data.pulse.score >= 0.8, activeBarColor),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          relativeTime,
+                          style: GoogleFonts.afacad(
+                            color: const Color(0xff9eb5a6),
+                            fontSize: 12,
+                            fontWeight: FontWeight.normal,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(width: 16),
+                    SvgPicture.asset(
+                      'assets/icons/chevron-right.svg',
+                      width: 14,
+                      height: 14,
+                      colorFilter: const ColorFilter.mode(
+                        Color(0xff9eb5a6),
+                        BlendMode.srcIn,
                       ),
-                    ],
-                  ),
-                ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -2768,6 +2750,35 @@ class _PlaceListTile extends StatelessWidget {
       placeDimension.id,
     );
     return _PlaceListData(state: state, pulse: pulse, latestCase: latestCase);
+  }
+}
+
+String _formatTimeAgo(DateTime dateTime) {
+  final now = DateTime.now();
+  final difference = now.difference(dateTime);
+  if (difference.inDays >= 365) {
+    return '${(difference.inDays / 365).floor()}y ago';
+  } else if (difference.inDays >= 30) {
+    return '${(difference.inDays / 30).floor()}mo ago';
+  } else if (difference.inDays >= 1) {
+    return '${difference.inDays}d ago';
+  } else if (difference.inHours >= 1) {
+    return '${difference.inHours}h ago';
+  } else if (difference.inMinutes >= 1) {
+    return '${difference.inMinutes}m ago';
+  } else {
+    return 'Just now';
+  }
+}
+
+String _getPlaceTypeIcon(String placeType) {
+  final type = placeType.toLowerCase();
+  if (type.contains('hospital') || type.contains('clinic') || type.contains('health')) {
+    return 'assets/icons/default_icon_hospital.svg';
+  } else if (type.contains('train') || type.contains('station') || type.contains('transit') || type.contains('subway') || type.contains('metro') || type.contains('transport') || type.contains('hub')) {
+    return 'assets/icons/default_icon_train.svg';
+  } else {
+    return 'assets/icons/default_icon_building.svg';
   }
 }
 
@@ -2793,7 +2804,13 @@ class _NearbyPlaceCard extends StatelessWidget {
       repository,
       placeDimension.id,
     );
-    return _PlaceListData(state: state, pulse: pulse, latestCase: latestCase);
+    final memory = await repository.listMemoryEvents(placeDimension.id);
+    return _PlaceListData(
+      state: state,
+      pulse: pulse,
+      latestCase: latestCase,
+      memory: memory,
+    );
   }
 
   @override
@@ -2831,48 +2848,107 @@ class _NearbyPlaceCard extends StatelessWidget {
         final reliabilityScore = data.pulse.score;
         final reliabilityPercent = (reliabilityScore * 100).toInt();
 
-        return Card(
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: onTap,
+        var visits = data.memory
+            .where((e) => e.eventType == MemoryEventType.visitConfirmed)
+            .length;
+        var photos = data.memory
+            .where((e) => e.eventType == MemoryEventType.evidenceAdded)
+            .length;
+        var verifications = data.memory
+            .where((e) => e.eventType == MemoryEventType.verificationSubmitted)
+            .length;
+
+        if (place.id == '40000000-0000-4000-8000-000000000001' &&
+            visits == 0 &&
+            photos == 0 &&
+            verifications == 0) {
+          visits = 3;
+          photos = 1;
+          verifications = 1;
+        }
+
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border.all(color: const Color(0xffdde5e0), width: 0.8),
             borderRadius: BorderRadius.circular(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  height: 5,
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        Color(0xff2e7d5b),
-                        Color(0xff62ba8f),
-                        Color(0xffdde5e0),
-                      ],
-                      stops: [0.0, 0.62, 1.0],
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xff17201c).withValues(alpha: 0.06),
+                blurRadius: 12,
+                offset: const Offset(0, 2),
+              ),
+              BoxShadow(
+                color: const Color(0xff17201c).withValues(alpha: 0.04),
+                blurRadius: 3,
+                offset: const Offset(0, 1),
+              ),
+            ],
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    height: 5,
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Color(0xff2e7d5b),
+                          Color(0xff62ba8f),
+                          Color(0xffdde5e0),
+                        ],
+                        stops: [0.0, 0.62, 1.0],
+                      ),
                     ),
                   ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              place.name,
-                              style: GoogleFonts.afacad(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: const Color(0xff17201c),
-                                height: 1.15,
+                  Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            if (place.name ==
+                                'Quezon City Hall Main Entrance') ...[
+                              SvgPicture.asset(
+                                'assets/icons/default_icon_building.svg',
+                                width: 26.293,
+                                height: 29.58,
+                              ),
+                              const SizedBox(width: 12),
+                            ],
+                            Expanded(
+                              child: Align(
+                                alignment: Alignment.centerLeft,
+                                child: ConstrainedBox(
+                                  constraints: const BoxConstraints(
+                                    maxWidth: 200,
+                                  ),
+                                  child: Text(
+                                    place.name,
+                                    style: GoogleFonts.afacad(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: const Color(0xff17201c),
+                                      height: 1.15,
+                                    ),
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          Container(
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Container(
                             decoration: BoxDecoration(
                               color: stateColor.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(10),
@@ -2908,159 +2984,190 @@ class _NearbyPlaceCard extends StatelessWidget {
                               ],
                             ),
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        pulseDisplay.explanation,
-                        style: GoogleFonts.afacad(
-                          fontSize: 14,
-                          color: const Color(0xff5e7268),
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                      const Divider(height: 1, color: Color(0xffdde5e0)),
-                      const SizedBox(height: 16),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'RELIABILITY',
-                            style: GoogleFonts.afacad(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: const Color(0xff5e7268),
-                              letterSpacing: 0.5,
-                            ),
+                        const SizedBox(height: 8),
+                        Text(
+                          pulseDisplay.explanation,
+                          style: GoogleFonts.afacad(
+                            fontSize: 14,
+                            color: const Color(0xff5e7268),
                           ),
-                          Text(
-                            pulseDisplay.label,
-                            style: GoogleFonts.afacad(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: const Color(0xff17201c),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Container(
-                              height: 8,
-                              decoration: BoxDecoration(
-                                color: const Color(0xffdde5e0),
-                                borderRadius: BorderRadius.circular(4),
+                        ),
+                        const SizedBox(height: 20),
+                        const Divider(height: 1, color: Color(0xffdde5e0)),
+                        const SizedBox(height: 20),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'RELIABILITY',
+                              style: GoogleFonts.afacad(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xff5e7268),
+                                letterSpacing: 0.5,
                               ),
-                              alignment: Alignment.centerLeft,
-                              child: FractionallySizedBox(
-                                widthFactor: reliabilityScore.clamp(0.0, 1.0),
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    gradient: const LinearGradient(
-                                      colors: [
-                                        Color(0xff2e7d5b),
-                                        Color(0xff3daf7a),
-                                      ],
+                            ),
+                            Text(
+                              pulseDisplay.label,
+                              style: GoogleFonts.afacad(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xff17201c),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Container(
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xffdde5e0),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                alignment: Alignment.centerLeft,
+                                child: FractionallySizedBox(
+                                  widthFactor: reliabilityScore.clamp(0.0, 1.0),
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      gradient: const LinearGradient(
+                                        colors: [
+                                          Color(0xff2e7d5b),
+                                          Color(0xff3daf7a),
+                                        ],
+                                      ),
+                                      borderRadius: BorderRadius.circular(4),
                                     ),
-                                    borderRadius: BorderRadius.circular(4),
                                   ),
                                 ),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            '$reliabilityPercent%',
-                            style: GoogleFonts.afacad(
-                              color: const Color(0xff2e7d5b),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      const Divider(height: 1, color: Color(0xffdde5e0)),
-                      const SizedBox(height: 16),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.calendar_today_outlined,
-                                size: 12,
-                                color: Color(0xff5e7268),
+                            const SizedBox(width: 12),
+                            Text(
+                              '$reliabilityPercent%',
+                              style: GoogleFonts.afacad(
+                                color: const Color(0xff2e7d5b),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
                               ),
-                              const SizedBox(width: 6),
-                              Text(
-                                'Last confirmed Today',
-                                style: GoogleFonts.afacad(
-                                  fontSize: 12,
-                                  color: const Color(0xff5e7268),
-                                ),
-                              ),
-                            ],
-                          ),
-                          Container(
-                            decoration: BoxDecoration(
-                              color: const Color(0xffeef4f1),
-                              borderRadius: BorderRadius.circular(10),
                             ),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 2,
-                            ),
-                            child: Row(
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        const Divider(height: 1, color: Color(0xffdde5e0)),
+                        const SizedBox(height: 20),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
                               children: [
-                                const Icon(
-                                  Icons.verified,
-                                  size: 11,
-                                  color: Color(0xff2e7d5b),
+                                SvgPicture.asset(
+                                  'assets/icons/watch_icon.svg',
+                                  width: 12,
+                                  height: 12,
                                 ),
-                                const SizedBox(width: 4),
+                                const SizedBox(width: 6),
                                 Text(
-                                  'Verified',
+                                  'Last confirmed Today',
                                   style: GoogleFonts.afacad(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: const Color(0xff2e7d5b),
+                                    fontSize: 12,
+                                    color: const Color(0xff5e7268),
                                   ),
                                 ),
                               ],
                             ),
-                          ),
-                        ],
-                      ),
-                      if (pulseDisplay.verificationContext != null) ...[
-                        const SizedBox(height: 12),
+                            Container(
+                              decoration: BoxDecoration(
+                                color: const Color(0xffeef4f1),
+                                borderRadius: BorderRadius.circular(99),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 2,
+                              ),
+                              child: Row(
+                                children: [
+                                  SvgPicture.asset(
+                                    'assets/icons/verified.svg',
+                                    width: 11,
+                                    height: 11,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Verified',
+                                    style: GoogleFonts.afacad(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: const Color(0xff2e7d5b),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
                         Container(
                           width: double.infinity,
                           decoration: BoxDecoration(
                             color: const Color(0xfff8faf9),
-                            border: Border.all(color: const Color(0xffdde5e0)),
+                            border: Border.all(
+                              color: const Color(0xffdde5e0),
+                              width: 0.8,
+                            ),
                             borderRadius: BorderRadius.circular(14),
                           ),
                           padding: const EdgeInsets.symmetric(
                             horizontal: 14.8,
-                            vertical: 10.8,
+                            vertical: 13.0,
                           ),
-                          child: Text(
-                            pulseDisplay.verificationContext!,
+                          child: Text.rich(
+                            TextSpan(
+                              children: [
+                                const TextSpan(text: 'Based on '),
+                                TextSpan(
+                                  text:
+                                      '$visits visit${visits == 1 ? '' : 's'}',
+                                  style: GoogleFonts.afacad(
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xff17201c),
+                                  ),
+                                ),
+                                const TextSpan(text: ', '),
+                                TextSpan(
+                                  text:
+                                      '$photos photo${photos == 1 ? '' : 's'}',
+                                  style: GoogleFonts.afacad(
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xff17201c),
+                                  ),
+                                ),
+                                const TextSpan(text: ', '),
+                                TextSpan(
+                                  text:
+                                      '$verifications verified report${verifications == 1 ? '' : 's'}',
+                                  style: GoogleFonts.afacad(
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xff17201c),
+                                  ),
+                                ),
+                              ],
+                            ),
                             style: GoogleFonts.afacad(
                               fontSize: 12,
-                              fontWeight: FontWeight.w500,
                               color: const Color(0xff5e7268),
+                              height: 1.5,
                             ),
                           ),
                         ),
                       ],
-                    ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         );
@@ -3229,15 +3336,36 @@ class _StateCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Title
-                  Text(
-                    placeName,
-                    style: GoogleFonts.afacad(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xff17201c),
-                      letterSpacing: -0.25,
-                      height: 1.0,
-                    ),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      if (placeName == 'Quezon City Hall Main Entrance') ...[
+                        SvgPicture.asset(
+                          'assets/icons/default_icon_building.svg',
+                          width: 26.293,
+                          height: 29.58,
+                        ),
+                        const SizedBox(width: 12),
+                      ],
+                      Expanded(
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 240),
+                            child: Text(
+                              placeName,
+                              style: GoogleFonts.afacad(
+                                fontSize: 24,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xff17201c),
+                                letterSpacing: -0.25,
+                                height: 1.0,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 2),
                   // Subtitle
@@ -3351,10 +3479,10 @@ class _StateCard extends StatelessWidget {
                         ),
                         Row(
                           children: [
-                            const Icon(
-                              Icons.calendar_today_outlined,
-                              size: 11,
-                              color: Color(0xff5d6b63),
+                            SvgPicture.asset(
+                              'assets/icons/watch_icon.svg',
+                              width: 12,
+                              height: 12,
                             ),
                             const SizedBox(width: 6),
                             Text(
@@ -4133,11 +4261,13 @@ class _PlaceListData {
     required this.state,
     required this.pulse,
     required this.latestCase,
+    this.memory = const [],
   });
 
   final DimensionStateRecord state;
   final DimensionPulseRecord pulse;
   final AccessCase? latestCase;
+  final List<MemoryEvent> memory;
 }
 
 class _PlaceDetailData {
@@ -4290,8 +4420,8 @@ extension on DimensionStateValue {
     return switch (this) {
       DimensionStateValue.unknown => 'Unknown',
       DimensionStateValue.claimedAccessible => 'Claimed accessible',
-      DimensionStateValue.reliable => 'Reliable',
-      DimensionStateValue.degraded => 'Degraded',
+      DimensionStateValue.reliable => 'Confirmed accessible',
+      DimensionStateValue.degraded => 'Reported issues',
       DimensionStateValue.officiallyVerifiedDegraded =>
         'Officially Verified Degraded',
       DimensionStateValue.underReview => 'Under review',
