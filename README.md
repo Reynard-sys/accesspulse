@@ -2,35 +2,21 @@
 
 ## Project Information
 
-| Field | Details |
-| --- | --- |
-| Team Name | Mainit pa ang Kanin |
-| Project Name | AccessPulse |
-| Team Members | Reynard John Rabanal [Lead]<br>John Dinon Isaig<br>Emmanuel Azarcon<br>Gabriel Nicolai Pelagio |
+**Team Name:** Mainit pa ang Kanin
 
-## Project Brief
+**Project Name:** AccessPulse
 
-AccessPulse is a civic technology prototype that helps transform lived
-accessibility experiences into trusted institutional intelligence. Built for the
-Philippine accessibility context, it addresses the gap between what institutions
-are expected to provide and what communities, especially Persons with
-Disabilities, actually experience in public spaces. Instead of treating
-accessibility as a static label, AccessPulse models each place as having a
-living accessibility state that changes over time through community
-observations, AI-assisted evidence structuring, LGU review, inspector
-verification, and remediation follow-through.
+**Team Members:** 
+Reynard John Rabanal [Lead]
+John Dinon Isaig
+Emmanuel Azarcon
+Gabriel Nicolai Pelagio
 
-The current MVP is built in Flutter and focuses on one accessibility dimension:
-mobility access for public service building entrances. It includes Public, LGU,
-and Inspector flows in a single demo experience, where users can submit evidence
-such as photos, notes, and optional ramp slope readings, while AI helps
-structure this evidence into clearer, institution-ready signals without
-replacing human judgment. AccessPulse is not just a reporting app. It
-demonstrates a new civic-tech model where accessibility is treated as a living
-state of places, updated by real experiences, structured by AI, and made
-actionable for institutions.
+**Project Brief:** AccessPulse is a civic technology prototype that helps transform lived accessibility experiences into trusted institutional intelligence. Built for the Philippine accessibility context, it addresses the gap between what institutions are expected to provide and what communities—especially Persons with Disabilities—actually experience in public spaces. Instead of treating accessibility as a static label, AccessPulse models each place as having a living accessibility state that changes over time through community observations, AI-assisted evidence structuring, LGU review, inspector verification, and remediation follow-through.
 
-## Google Technologies Used
+The current MVP is built in Flutter and focuses on one accessibility dimension: mobility access for public service building entrances. It includes Public, LGU, and Inspector flows in a single demo experience, where users can submit evidence such as photos, notes, and optional ramp slope readings, while AI helps structure this evidence into clearer, institution-ready signals without replacing human judgment. AccessPulse is not just a reporting app—it demonstrates a new civic-tech model where accessibility is treated as a living state of places, updated by real experiences, structured by AI, and made actionable for institutions.
+
+**Google Technologies Used:**
 
 - Flutter
 - Gemini API
