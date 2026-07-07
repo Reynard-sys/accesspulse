@@ -52,7 +52,7 @@ void main() {
       scrollable: placeDetailScrollable,
     );
     expect(find.text('PLACE MEMORY'), findsOneWidget);
-    expect(find.text('Confirm Your Visit'), findsOneWidget);
+    expect(find.text('Confirm'), findsOneWidget);
     expect(find.text('Add Evidence'), findsOneWidget);
   });
 
@@ -69,23 +69,29 @@ void main() {
 
     await tester.tap(find.text('Quezon City Hall Main Entrance'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Confirm Your Visit'));
+    await tester.tap(find.text('Confirm'));
     await tester.pumpAndSettle();
 
     // Step 1: Usable independently? -> Choose "No, I needed help"
-    await tester.tap(find.text('No, I needed help'));
+    final step1Choice = find.text('No, I needed help');
+    await tester.scrollUntilVisible(step1Choice, 50.0);
+    await tester.tap(step1Choice);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
 
     // Step 2: Need help to enter? -> Choose "Yes"
-    await tester.tap(find.text('Yes'));
+    final step2Choice = find.text('Yes');
+    await tester.scrollUntilVisible(step2Choice, 50.0);
+    await tester.tap(step2Choice);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
 
     // Step 3: Ramp present? -> Choose "No"
-    await tester.tap(find.text('No'));
+    final step3Choice = find.text('No');
+    await tester.scrollUntilVisible(step3Choice, 50.0);
+    await tester.tap(step3Choice);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
@@ -96,7 +102,7 @@ void main() {
 
     // Confirmation screen
     expect(find.text('Visit confirmed'), findsOneWidget);
-    await tester.tap(find.text('Back to place'));
+    await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
 
     // Verify detail screen is updated
@@ -202,9 +208,9 @@ void main() {
     expect(find.text('AI Guidance'), findsOneWidget);
     expect(find.text('Recommended next step'), findsOneWidget);
     expect(find.text('Add another photo'), findsOneWidget);
-    expect(find.text('Continue anyway'), findsOneWidget);
+    expect(find.text('Continue'), findsOneWidget);
     expect(find.text('Skip'), findsOneWidget);
-    await tester.tap(find.text('Continue anyway'));
+    await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
 
     final structureReviewScrollable = _stepScrollable('step-structure-review');
@@ -218,11 +224,11 @@ void main() {
     expect(find.text('Institution Ready'), findsWidgets);
     expect(find.text('Missing evidence'), findsOneWidget);
     await tester.scrollUntilVisible(
-      find.text('Continue to review packet'),
+      find.text('Continue'),
       300,
       scrollable: structureReviewScrollable,
     );
-    await tester.tap(find.text('Continue to review packet'));
+    await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
 
     final reviewPacketScrollable = _stepScrollable('step-review-packet');
@@ -236,19 +242,16 @@ void main() {
     expect(find.text('Ramp reading included'), findsOneWidget);
 
     await tester.scrollUntilVisible(
-      find.text('Submit Review Packet'),
+      find.text('Submit'),
       300,
       scrollable: reviewPacketScrollable,
     );
-    await tester.tap(find.text('Submit Review Packet'));
+    await tester.tap(find.text('Submit'));
     await tester.pumpAndSettle();
 
-    expect(
-      find.text('Evidence strengthened this place memory'),
-      findsOneWidget,
-    );
-    expect(find.text('Degraded'), findsOneWidget);
-    expect(find.text('Under review'), findsOneWidget);
+    expect(find.text('Review packet submitted'), findsOneWidget);
+    expect(find.text('⚠ DEGRADED'), findsOneWidget);
+    expect(find.text('Open — awaiting LGU review'), findsOneWidget);
   });
 
   testWidgets('AI guidance card re-evaluates after adding another photo', (
@@ -302,7 +305,7 @@ void main() {
     expect(find.text('Almost Ready'), findsWidgets);
     expect(find.text('Recommended next step'), findsOneWidget);
     expect(find.text('Add another photo'), findsOneWidget);
-    expect(find.text('Continue anyway'), findsOneWidget);
+    expect(find.text('Continue'), findsOneWidget);
     expect(find.text('Skip'), findsOneWidget);
     expect(find.text('Review packet'), findsNothing);
 
