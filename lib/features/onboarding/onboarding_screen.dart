@@ -2,10 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class OnboardingScreen extends StatefulWidget {
-  const OnboardingScreen({
-    required this.onCompleted,
-    super.key,
-  });
+  const OnboardingScreen({required this.onCompleted, super.key});
 
   final VoidCallback onCompleted;
 
@@ -43,12 +40,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 480),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 24.0),
+              padding: const EdgeInsets.symmetric(vertical: 24.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 32),
-                  
+
                   Expanded(
                     child: PageView(
                       controller: _pageController,
@@ -102,7 +99,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                     color: const Color(0xff2e7d5b),
                                   ),
                                 ),
-                                const TextSpan(text: 'turns experience into action.'),
+                                const TextSpan(
+                                  text: 'turns experience into action.',
+                                ),
                               ],
                             ),
                             style: GoogleFonts.afacad(
@@ -120,7 +119,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       ],
                     ),
                   ),
-                  _buildBottomControls(),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32.0),
+                    child: _buildBottomControls(),
+                  ),
                   const SizedBox(height: 16),
                 ],
               ),
@@ -141,34 +143,55 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Spacer(),
-        titleWidget,
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32.0),
+          child: titleWidget,
+        ),
         const SizedBox(height: 20),
-        Text(
-          description,
-          style: GoogleFonts.afacad(
-            fontSize: 20,
-            fontWeight: FontWeight.w500,
-            color: const Color(0xff5d6b63),
-            height: 1.20,
-            letterSpacing: -0.32,
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32.0),
+          child: Text(
+            description,
+            style: GoogleFonts.afacad(
+              fontSize: 20,
+              fontWeight: FontWeight.w500,
+              color: const Color(0xff5d6b63),
+              height: 1.20,
+              letterSpacing: -0.32,
+            ),
           ),
         ),
         Expanded(
           flex: 2,
           child: Align(
             alignment: Alignment.bottomCenter,
-            child: Padding(
-              padding: const EdgeInsets.only(top: 24.0, bottom: 8.0),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxHeight: MediaQuery.of(context).size.height * 0.5,
-                ),
-                child: Image.asset(
-                  imagePath,
-                  fit: BoxFit.contain,
-                ),
-              ),
-            ),
+            child: imagePath == 'assets/images/female_in_wheelchair.png'
+                ? Transform.translate(
+                    offset: const Offset(0.0, 30.0),
+                    child: Image.asset(
+                      imagePath,
+                      fit: BoxFit.fitWidth,
+                      width: double.infinity,
+                    ),
+                  )
+                : imagePath == 'assets/images/teacher_and_girl.png'
+                    ? Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                        child: Image.asset(
+                          imagePath,
+                          fit: BoxFit.fitWidth,
+                          width: double.infinity,
+                        ),
+                      )
+                    : Padding(
+                        padding: const EdgeInsets.only(top: 24.0, bottom: 8.0),
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxHeight: MediaQuery.of(context).size.height * 0.5,
+                          ),
+                          child: Image.asset(imagePath, fit: BoxFit.contain),
+                        ),
+                      ),
           ),
         ),
       ],
