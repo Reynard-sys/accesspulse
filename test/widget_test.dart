@@ -73,19 +73,25 @@ void main() {
     await tester.pumpAndSettle();
 
     // Step 1: Usable independently? -> Choose "No, I needed help"
-    await tester.tap(find.text('No, I needed help'));
+    final step1Choice = find.text('No, I needed help');
+    await tester.scrollUntilVisible(step1Choice, 50.0);
+    await tester.tap(step1Choice);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
 
     // Step 2: Need help to enter? -> Choose "Yes"
-    await tester.tap(find.text('Yes'));
+    final step2Choice = find.text('Yes');
+    await tester.scrollUntilVisible(step2Choice, 50.0);
+    await tester.tap(step2Choice);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
 
     // Step 3: Ramp present? -> Choose "No"
-    await tester.tap(find.text('No'));
+    final step3Choice = find.text('No');
+    await tester.scrollUntilVisible(step3Choice, 50.0);
+    await tester.tap(step3Choice);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
@@ -96,7 +102,7 @@ void main() {
 
     // Confirmation screen
     expect(find.text('Visit confirmed'), findsOneWidget);
-    await tester.tap(find.text('Back to place'));
+    await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
 
     // Verify detail screen is updated

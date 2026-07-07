@@ -1408,8 +1408,8 @@ class _VisitConfirmedScreen extends StatelessWidget {
                 ),
               ),
               padding: const EdgeInsets.only(
-                left: 20,
-                right: 20,
+                left: 24,
+                right: 24,
                 bottom: 17,
                 top: 12,
               ),
@@ -1466,7 +1466,7 @@ class _VisitConfirmedScreen extends StatelessWidget {
             ),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
+                padding: const EdgeInsets.symmetric(horizontal: 48),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -1521,7 +1521,7 @@ class _VisitConfirmedScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 32),
-                    // Back to place button
+                    // Continue button
                     SizedBox(
                       width: double.infinity,
                       height: 54,
@@ -1547,7 +1547,7 @@ class _VisitConfirmedScreen extends StatelessWidget {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Text(
-                                  'Back to place',
+                                  'Continue',
                                   style: GoogleFonts.afacad(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w600,
