@@ -7,12 +7,15 @@ class AddPlaceForm extends StatelessWidget {
     required this.nameController,
     required this.addressController,
     required this.cityController,
+    required this.barangayController,
     required this.noteController,
     required this.latitudeController,
     required this.longitudeController,
     required this.placeType,
     required this.onPlaceTypeChanged,
     required this.isSubmitting,
+    this.isAutofilling = false,
+    this.autofillMessage,
     this.locationPicker,
     super.key,
   });
@@ -21,12 +24,15 @@ class AddPlaceForm extends StatelessWidget {
   final TextEditingController nameController;
   final TextEditingController addressController;
   final TextEditingController cityController;
+  final TextEditingController barangayController;
   final TextEditingController noteController;
   final TextEditingController latitudeController;
   final TextEditingController longitudeController;
   final String placeType;
   final ValueChanged<String?> onPlaceTypeChanged;
   final bool isSubmitting;
+  final bool isAutofilling;
+  final String? autofillMessage;
   final Widget? locationPicker;
 
   static const Map<String, String> placeTypeLabels = <String, String>{
@@ -80,10 +86,22 @@ class AddPlaceForm extends StatelessWidget {
           TextFormField(
             controller: cityController,
             textInputAction: TextInputAction.next,
-            decoration: const InputDecoration(labelText: 'City o municipality'),
+            decoration: const InputDecoration(labelText: 'City'),
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
-                return 'Ilagay ang city o municipality';
+                return 'Ilagay ang city';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 14),
+          TextFormField(
+            controller: barangayController,
+            textInputAction: TextInputAction.next,
+            decoration: const InputDecoration(labelText: 'Barangay'),
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Ilagay ang barangay';
               }
               return null;
             },
@@ -101,6 +119,14 @@ class AddPlaceForm extends StatelessWidget {
           const SizedBox(height: 20),
           if (locationPicker != null) ...[
             locationPicker!,
+            if (isAutofilling || autofillMessage != null) ...[
+              const SizedBox(height: 10),
+              _AutofillStatus(
+                message:
+                    autofillMessage ?? 'Kinukuha ang details mula sa mapa...',
+                isLoading: isAutofilling,
+              ),
+            ],
             const SizedBox(height: 16),
           ],
           Container(
@@ -182,5 +208,57 @@ class AddPlaceForm extends StatelessWidget {
       return 'Hindi valid ang $label';
     }
     return null;
+  }
+}
+
+class _AutofillStatus extends StatelessWidget {
+  const _AutofillStatus({required this.message, required this.isLoading});
+
+  final String message;
+  final bool isLoading;
+
+  @override
+  Widget build(BuildContext context) {
+    final statusText = message.startsWith('Na-autofill')
+        ? '$message Na-fill ito base sa mapa. Pwede mong baguhin bago i-save.'
+        : message;
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: const Color(0xfff8faf9),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xffd7e4dc)),
+      ),
+      padding: const EdgeInsets.all(12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (isLoading)
+            const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          else
+            const Icon(
+              Icons.edit_location_alt_outlined,
+              size: 18,
+              color: Color(0xff2e7d5b),
+            ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              statusText,
+              style: GoogleFonts.afacad(
+                fontSize: 14,
+                color: const Color(0xff5d6b63),
+                height: 1.25,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

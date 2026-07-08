@@ -139,17 +139,27 @@ class _InstitutionDashboardScreenState
                         _CaseQueueTile(
                           summary: summary,
                           onTap: () async {
-                            await Navigator.of(context).push(
-                              _institutionRoute<void>(
-                                _CaseDetailScreen(
-                                  repository: widget.repository,
-                                  stateService: widget.stateService,
-                                  summary: summary,
-                                  role: widget.role,
-                                ),
-                              ),
-                            );
+                            final result = await Navigator.of(context)
+                                .push<VerificationResult>(
+                                  _institutionRoute<VerificationResult>(
+                                    _CaseDetailScreen(
+                                      repository: widget.repository,
+                                      stateService: widget.stateService,
+                                      summary: summary,
+                                      role: widget.role,
+                                    ),
+                                  ),
+                                );
                             _refresh();
+                            if (context.mounted && result != null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Verification submitted for ${summary.place.name}.',
+                                  ),
+                                ),
+                              );
+                            }
                           },
                         ),
                         const SizedBox(height: 12),
@@ -297,8 +307,8 @@ class _CaseDetailScreenState extends State<_CaseDetailScreen> {
   }
 
   Future<void> _openVerification(_CaseDetailData detail) async {
-    await Navigator.of(context).push(
-      _institutionRoute<void>(
+    final result = await Navigator.of(context).push<VerificationResult>(
+      _institutionRoute<VerificationResult>(
         _InspectorVerificationScreen(
           place: widget.summary.place,
           detail: detail,
@@ -306,6 +316,13 @@ class _CaseDetailScreenState extends State<_CaseDetailScreen> {
         ),
       ),
     );
+    if (!mounted) {
+      return;
+    }
+    if (result != null) {
+      Navigator.of(context).pop(result);
+      return;
+    }
     _refresh();
   }
 
@@ -472,11 +489,7 @@ class _InspectorVerificationScreenState
     if (!mounted) {
       return;
     }
-    await Navigator.of(context).pushReplacement(
-      _institutionRoute<void>(
-        _VerificationResultScreen(place: widget.place, result: result),
-      ),
-    );
+    Navigator.of(context).pop(result);
   }
 
   @override
@@ -564,103 +577,6 @@ class _InspectorVerificationScreenState
                       : const Icon(Icons.verified),
                   label: const Text('Submit verification'),
                   onPressed: _isSubmitting ? null : _submit,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _VerificationResultScreen extends StatelessWidget {
-  const _VerificationResultScreen({required this.place, required this.result});
-
-  final Place place;
-  final VerificationResult result;
-
-  @override
-  Widget build(BuildContext context) {
-    final previousPulseDisplay = const PulseService().describePlacePulse(
-      state: result.previousState,
-      pulse: result.previousPulse,
-    );
-    final currentPulseDisplay = const PulseService().describePlacePulse(
-      state: result.currentState,
-      pulse: result.currentPulse,
-    );
-    return Scaffold(
-      appBar: AppBar(title: const Text('Verification update')),
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 760),
-            child: ListView(
-              padding: const EdgeInsets.all(20),
-              children: [
-                TweenAnimationBuilder<double>(
-                  tween: Tween(begin: 0.82, end: 1),
-                  duration: const Duration(milliseconds: 260),
-                  curve: Curves.easeOutBack,
-                  builder: (context, value, child) {
-                    return Transform.scale(scale: value, child: child);
-                  },
-                  child: Icon(
-                    Icons.verified_outlined,
-                    size: 56,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'Human verification updated this place',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(place.name, textAlign: TextAlign.center),
-                const SizedBox(height: 20),
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _TransitionRow(
-                          label: 'Current accessibility state',
-                          before: result.previousState.state.label,
-                          after: result.currentState.state.label,
-                        ),
-                        const Divider(height: 24),
-                        _MetricRow(
-                          label: 'Case status',
-                          value: result.accessCase.status.label,
-                        ),
-                        const Divider(height: 24),
-                        _TransitionRow(
-                          label: 'Pulse / freshness',
-                          before: _institutionPulseLabel(previousPulseDisplay),
-                          after: _institutionPulseLabel(currentPulseDisplay),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(result.currentState.explanation),
-                        const SizedBox(height: 8),
-                        Text(
-                          currentPulseDisplay.explanation,
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                FilledButton.icon(
-                  icon: const Icon(Icons.dashboard_outlined),
-                  label: const Text('Back to queue'),
-                  onPressed: () => Navigator.of(context).pop(),
                 ),
               ],
             ),
@@ -1387,38 +1303,6 @@ class _MetricRow extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _TransitionRow extends StatelessWidget {
-  const _TransitionRow({
-    required this.label,
-    required this.before,
-    required this.after,
-  });
-
-  final String label;
-  final String before;
-  final String after;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: Theme.of(context).textTheme.labelLarge),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            Chip(label: Text(before)),
-            const Icon(Icons.arrow_forward),
-            Chip(label: Text(after)),
-          ],
-        ),
-      ],
     );
   }
 }

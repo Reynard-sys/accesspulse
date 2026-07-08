@@ -12,7 +12,8 @@ void main() {
 
     final result = await service.createPublicPlace(
       name: 'Barangay Hall Annex Entrance',
-      city: 'Quezon City',
+      city: 'Manila',
+      barangay: 'Santa Mesa',
       latitude: 14.6512,
       longitude: 121.0514,
       addressOrLandmark: 'Near the public plaza',
@@ -34,6 +35,8 @@ void main() {
 
     expect(places, hasLength(5));
     expect(result.place.name, 'Barangay Hall Annex Entrance');
+    expect(result.place.city, 'Manila');
+    expect(result.place.barangay, 'Santa Mesa');
     expect(savedDimension.placeId, result.place.id);
     expect(savedState.state, DimensionStateValue.unknown);
     expect(savedState.source, 'place_creation');
@@ -59,7 +62,8 @@ void main() {
     expect(
       () => service.createPublicPlace(
         name: '   ',
-        city: 'Quezon City',
+        city: 'Manila',
+        barangay: 'Santa Mesa',
         latitude: 14.65,
         longitude: 121.05,
       ),
@@ -75,6 +79,23 @@ void main() {
       () => service.createPublicPlace(
         name: 'Barangay Hall Annex Entrance',
         city: '   ',
+        barangay: 'Santa Mesa',
+        latitude: 14.65,
+        longitude: 121.05,
+      ),
+      throwsArgumentError,
+    );
+  });
+
+  test('rejects missing barangay', () async {
+    final repository = InMemoryAccessPulseRepository.seeded();
+    final service = PlaceCreationService(repository: repository);
+
+    expect(
+      () => service.createPublicPlace(
+        name: 'Barangay Hall Annex Entrance',
+        city: 'Manila',
+        barangay: '   ',
         latitude: 14.65,
         longitude: 121.05,
       ),
@@ -87,13 +108,13 @@ void main() {
     final service = PlaceCreationService(repository: repository);
 
     final duplicate = await service.findPossibleDuplicate(
-      name: 'Quezon City Hall Main Entrance',
-      latitude: 14.65091,
-      longitude: 121.05092,
+      name: 'Polytechnic University of the Philippines',
+      latitude: 14.59791,
+      longitude: 121.01082,
     );
 
     expect(duplicate, isNotNull);
-    expect(duplicate!.place.name, 'Quezon City Hall Main Entrance');
+    expect(duplicate!.place.name, 'Polytechnic University of the Philippines');
     expect(duplicate.distanceMeters, lessThan(75));
   });
 
@@ -102,7 +123,7 @@ void main() {
     final service = PlaceCreationService(repository: repository);
 
     final duplicate = await service.findPossibleDuplicate(
-      name: 'Quezon City Hall Main Entrance',
+      name: 'Polytechnic University of the Philippines',
       latitude: 14.5800,
       longitude: 121.0000,
     );

@@ -99,6 +99,8 @@ class Place {
     required this.id,
     required this.name,
     required this.placeType,
+    required this.city,
+    required this.barangay,
     this.address,
     this.municipality,
     this.province,
@@ -110,6 +112,8 @@ class Place {
   final String id;
   final String name;
   final String placeType;
+  final String city;
+  final String barangay;
   final String? address;
   final String? municipality;
   final String? province;

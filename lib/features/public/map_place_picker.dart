@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -20,7 +22,8 @@ class MapPlacePicker extends StatefulWidget {
   final List<Place> places;
   final double latitude;
   final double longitude;
-  final void Function(double latitude, double longitude) onLocationSelected;
+  final FutureOr<void> Function(double latitude, double longitude)
+  onLocationSelected;
   final MapsConfig config;
 
   @override
@@ -119,6 +122,10 @@ class _MapPlacePickerState extends State<MapPlacePicker> {
                   },
                   onTap: (position) {
                     setState(() => _selectedLocation = position);
+                    widget.onLocationSelected(
+                      position.latitude,
+                      position.longitude,
+                    );
                   },
                   mapToolbarEnabled: false,
                   myLocationButtonEnabled: false,

@@ -25,11 +25,14 @@ void main() {
 
     expect(find.text(AccessPulseCopy.mapUnavailable), findsOneWidget);
     await tester.scrollUntilVisible(
-      find.text('Quezon City Hall Main Entrance'),
+      find.text('Polytechnic University of the Philippines'),
       200,
       scrollable: find.byType(Scrollable).first,
     );
-    expect(find.text('Quezon City Hall Main Entrance'), findsOneWidget);
+    expect(
+      find.text('Polytechnic University of the Philippines'),
+      findsOneWidget,
+    );
     expect(find.text(AccessPulseCopy.chooseFromMapOrList), findsWidgets);
   });
 }
