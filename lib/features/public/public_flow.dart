@@ -1579,106 +1579,119 @@ class _VisitConfirmedScreen extends StatelessWidget {
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 48),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // Big Check circle
-                    Container(
-                      width: 72,
-                      height: 72,
-                      decoration: const BoxDecoration(
-                        color: Color(0xffeaf7f0),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const CustomPaint(painter: _CheckmarkPainter()),
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      'Visit confirmed',
-                      style: GoogleFonts.afacad(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xff17201c),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      "Your check-in has been added to ${place.name}'s access record.",
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.afacad(
-                        fontSize: 16,
-                        color: const Color(0xff5d6b63),
-                        height: 1.25,
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-                    // Info banner
-                    Container(
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          color: const Color(0xffdde5e0),
-                          width: 0.8,
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    return SingleChildScrollView(
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          minHeight: constraints.maxHeight,
                         ),
-                        borderRadius: BorderRadius.circular(16),
-                        color: Colors.white,
-                      ),
-                      padding: const EdgeInsets.all(20),
-                      child: Text(
-                        "You've helped future visitors make better decisions before they go.",
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.afacad(
-                          fontSize: 15,
-                          color: const Color(0xff5d6b63),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-                    // Continue button
-                    SizedBox(
-                      width: double.infinity,
-                      height: 54,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: const Color(0xff2e7d5b),
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.15),
-                              blurRadius: 8,
-                              offset: const Offset(0, 4),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              width: 72,
+                              height: 72,
+                              decoration: const BoxDecoration(
+                                color: Color(0xffeaf7f0),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const CustomPaint(
+                                painter: _CheckmarkPainter(),
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            Text(
+                              'Visit confirmed',
+                              style: GoogleFonts.afacad(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xff17201c),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              "Your check-in has been added to ${place.name}'s access record.",
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.afacad(
+                                fontSize: 16,
+                                color: const Color(0xff5d6b63),
+                                height: 1.25,
+                              ),
+                            ),
+                            const SizedBox(height: 32),
+                            Container(
+                              decoration: BoxDecoration(
+                                border: Border.all(
+                                  color: const Color(0xffdde5e0),
+                                  width: 0.8,
+                                ),
+                                borderRadius: BorderRadius.circular(16),
+                                color: Colors.white,
+                              ),
+                              padding: const EdgeInsets.all(20),
+                              child: Text(
+                                "You've helped future visitors make better decisions before they go.",
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.afacad(
+                                  fontSize: 15,
+                                  color: const Color(0xff5d6b63),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 32),
+                            SizedBox(
+                              width: double.infinity,
+                              height: 54,
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  color: const Color(0xff2e7d5b),
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(
+                                        alpha: 0.15,
+                                      ),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: Material(
+                                  color: Colors.transparent,
+                                  borderRadius: BorderRadius.circular(16),
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(16),
+                                    onTap: () => Navigator.of(context).pop(),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Text(
+                                          'Continue',
+                                          style: GoogleFonts.afacad(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        const Icon(
+                                          Icons.chevron_right,
+                                          color: Colors.white,
+                                          size: 18,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ),
                           ],
                         ),
-                        child: Material(
-                          color: Colors.transparent,
-                          borderRadius: BorderRadius.circular(16),
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(16),
-                            onTap: () => Navigator.of(context).pop(),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  'Continue',
-                                  style: GoogleFonts.afacad(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                const Icon(
-                                  Icons.chevron_right,
-                                  color: Colors.white,
-                                  size: 18,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
                       ),
-                    ),
-                  ],
+                    );
+                  },
                 ),
               ),
             ),

@@ -83,7 +83,10 @@ void main() {
       ),
       findsOneWidget,
     );
-    final verifyButton = find.widgetWithText(FilledButton, 'Verify');
+    final verifyButton = find.widgetWithText(
+      FilledButton,
+      'Request inspection',
+    );
     await tester.ensureVisible(verifyButton);
     await tester.pumpAndSettle();
     expect(verifyButton, findsOneWidget);
@@ -310,13 +313,43 @@ void main() {
       find.text('Polytechnic University of the Philippines'),
       findsOneWidget,
     );
-    expect(find.text('VERIFIED'), findsOneWidget);
+    expect(find.text('VERIFIED ISSUE'), findsOneWidget);
 
     final accessCase = await repository.getCase(seededPupCaseId);
     final state = await repository.getDimensionState(placeDimensionId);
 
     expect(accessCase.status, CaseStatus.verified);
     expect(state.state, DimensionStateValue.officiallyVerifiedDegraded);
+
+    final verifiedCaseCard = find.byKey(
+      const ValueKey('case-card-$seededPupCaseId'),
+    );
+    await tester.ensureVisible(verifiedCaseCard);
+    await tester.pumpAndSettle();
+    await tester.tap(verifiedCaseCard);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.text('Case Detail'), findsOneWidget);
+    expect(find.text('Request remediation'), findsOneWidget);
+
+    await tester.tap(find.text('Request remediation'));
+    await tester.pumpAndSettle();
+
+    final remediationCase = await repository.getCase(seededPupCaseId);
+    expect(remediationCase.status, CaseStatus.remediationRequested);
+    expect(find.text('BEING FIXED'), findsOneWidget);
+    expect(find.text('Request fix check'), findsOneWidget);
+
+    await tester.tap(find.text('Request fix check'));
+    await tester.pumpAndSettle();
+
+    final verificationCase = await repository.getCase(seededPupCaseId);
+    expect(
+      verificationCase.status,
+      CaseStatus.remediationVerificationRequested,
+    );
+    expect(find.text('CHECKING FIX'), findsOneWidget);
   });
 
   testWidgets('remediation verification request appears in inspector queue', (

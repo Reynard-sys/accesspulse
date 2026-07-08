@@ -203,6 +203,9 @@ class _InstitutionDashboardScreenState
   }
 
   AccessCase _getOrCreateCaseForOtherPlace(_OtherPlaceSummary other) {
+    if (other.accessCase != null) {
+      return other.accessCase!;
+    }
     final status =
         (other.state.state == DimensionStateValue.reliable ||
             other.state.state == DimensionStateValue.resolved)
@@ -1201,15 +1204,25 @@ class _CaseDetailScreenState extends State<_CaseDetailScreen> {
     final freshCase = await widget.repository.getCase(
       widget.summary.accessCase.id,
     );
-    final signal = freshCase.barrierSignalId == null
-        ? null
-        : await widget.repository.getBarrierSignal(freshCase.barrierSignalId!);
-    final evidence = signal?.evidenceId == null
-        ? null
-        : await widget.repository.getEvidence(signal!.evidenceId!);
-    final rampMeasurement = evidence == null
-        ? null
-        : await widget.repository.getRampMeasurementForEvidence(evidence.id);
+    BarrierSignal? signal;
+    Evidence? evidence;
+    RampMeasurement? rampMeasurement;
+    if (freshCase.barrierSignalId != null) {
+      try {
+        signal = await widget.repository.getBarrierSignal(
+          freshCase.barrierSignalId!,
+        );
+        if (signal.evidenceId != null) {
+          evidence = await widget.repository.getEvidence(signal.evidenceId!);
+          rampMeasurement = await widget.repository
+              .getRampMeasurementForEvidence(evidence.id);
+        }
+      } on StateError {
+        signal = null;
+        evidence = null;
+        rampMeasurement = null;
+      }
+    }
     final state = await widget.repository.getDimensionState(
       freshCase.placeDimensionId,
     );
@@ -1278,19 +1291,6 @@ class _CaseDetailScreenState extends State<_CaseDetailScreen> {
     );
   }
 
-  Future<void> _close() async {
-    setState(() => _isActing = true);
-    await widget.stateService.closeCase(
-      caseId: widget.summary.accessCase.id,
-      reviewerId: _demoReviewerId,
-      note: 'Closed during demo after review.',
-    );
-    if (!mounted) {
-      return;
-    }
-    Navigator.of(context).pop();
-  }
-
   Future<void> _requestRemediation() async {
     setState(() => _isActing = true);
     await widget.stateService.requestRemediation(
@@ -1302,6 +1302,9 @@ class _CaseDetailScreenState extends State<_CaseDetailScreen> {
     }
     setState(() => _isActing = false);
     _refresh();
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Remediation requested.')));
   }
 
   Future<void> _requestRemediationVerification() async {
@@ -1315,6 +1318,9 @@ class _CaseDetailScreenState extends State<_CaseDetailScreen> {
     }
     setState(() => _isActing = false);
     _refresh();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Remediation verification requested.')),
+    );
   }
 
   Future<void> _openVerification(_CaseDetailData detail) async {
@@ -1451,11 +1457,48 @@ class _CaseDetailScreenState extends State<_CaseDetailScreen> {
     );
   }
 
+  ({IconData icon, String label, VoidCallback? onPressed})? _primaryLguAction(
+    _CaseDetailData detail,
+  ) {
+    if (_isActing) {
+      return (
+        icon: Icons.hourglass_empty,
+        label: 'Working...',
+        onPressed: null,
+      );
+    }
+    return switch (detail.accessCase.status) {
+      CaseStatus.open || CaseStatus.triaging => (
+        icon: Icons.send_outlined,
+        label: 'Request inspection',
+        onPressed: () => _requestInspection(detail),
+      ),
+      CaseStatus.verified => (
+        icon: Icons.construction_outlined,
+        label: 'Request remediation',
+        onPressed: _requestRemediation,
+      ),
+      CaseStatus.remediationRequested => (
+        icon: Icons.fact_check_outlined,
+        label: 'Request fix check',
+        onPressed: _requestRemediationVerification,
+      ),
+      CaseStatus.inspectionRequested ||
+      CaseStatus.remediationVerificationRequested ||
+      CaseStatus.disputed ||
+      CaseStatus.resolved ||
+      CaseStatus.closed => null,
+    };
+  }
+
   Widget _buildCaseTitleSection(BuildContext context, _CaseDetailData detail) {
     final status = detail.accessCase.status;
     final isBlocked =
-        detail.state.state == DimensionStateValue.degraded ||
-        detail.state.state == DimensionStateValue.officiallyVerifiedDegraded;
+        (detail.state.state == DimensionStateValue.degraded ||
+            detail.state.state ==
+                DimensionStateValue.officiallyVerifiedDegraded) &&
+        status != CaseStatus.remediationRequested &&
+        status != CaseStatus.remediationVerificationRequested;
     final String tagLabel = isBlocked
         ? 'BLOCKED'
         : status == CaseStatus.triaging
@@ -1566,6 +1609,13 @@ class _CaseDetailScreenState extends State<_CaseDetailScreen> {
             child: FutureBuilder<_CaseDetailData>(
               future: _detailFuture,
               builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return _CaseDetailError(
+                    onRetry: _refresh,
+                    message:
+                        'Case details could not be loaded. Please retry from the queue.',
+                  );
+                }
                 if (!snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());
                 }
@@ -1649,26 +1699,38 @@ class _CaseDetailScreenState extends State<_CaseDetailScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildPremiumFilledButton(
-                          icon: Icons.send_outlined,
-                          label: 'Verify',
-                          onPressed: _isActing
-                              ? null
-                              : () => _requestInspection(detail),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildPremiumOutlinedButton(
-                          icon: Icons.rate_review_outlined,
-                          label: 'Review',
-                          onPressed: _isActing ? null : () => _triage(detail),
-                        ),
-                      ),
-                    ],
+                  Builder(
+                    builder: (context) {
+                      final primaryAction = _primaryLguAction(detail);
+                      if (primaryAction == null) {
+                        return const SizedBox.shrink();
+                      }
+                      final canReview =
+                          !_isActing &&
+                          (detail.accessCase.status == CaseStatus.open ||
+                              detail.accessCase.status == CaseStatus.triaging);
+                      return Row(
+                        children: [
+                          Expanded(
+                            child: _buildPremiumFilledButton(
+                              icon: primaryAction.icon,
+                              label: primaryAction.label,
+                              onPressed: primaryAction.onPressed,
+                            ),
+                          ),
+                          if (canReview) ...[
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _buildPremiumOutlinedButton(
+                                icon: Icons.rate_review_outlined,
+                                label: 'Review',
+                                onPressed: () => _triage(detail),
+                              ),
+                            ),
+                          ],
+                        ],
+                      );
+                    },
                   ),
                   const SizedBox(height: 10),
                   Padding(
@@ -2877,6 +2939,40 @@ class _CaseQueueTile extends StatelessWidget {
   }
 }
 
+class _CaseDetailError extends StatelessWidget {
+  const _CaseDetailError({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline, size: 40, color: Color(0xffb6461a)),
+            const SizedBox(height: 12),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.afacad(fontSize: 16),
+            ),
+            const SizedBox(height: 16),
+            OutlinedButton.icon(
+              icon: const Icon(Icons.refresh),
+              label: const Text('Retry'),
+              onPressed: onRetry,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _InstitutionStateCard extends StatelessWidget {
   const _InstitutionStateCard({
     required this.placeName,
@@ -3682,103 +3778,6 @@ class _RolePill extends StatelessWidget {
   }
 }
 
-class _StatusPill extends StatelessWidget {
-  const _StatusPill({
-    required this.icon,
-    required this.label,
-    required this.color,
-  });
-
-  final IconData icon;
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withValues(alpha: 0.45)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: color, size: 18),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(color: color, fontWeight: FontWeight.w700),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _MetricRow extends StatelessWidget {
-  const _MetricRow({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(child: Text(label)),
-          const SizedBox(width: 12),
-          Flexible(
-            child: Text(
-              value,
-              textAlign: TextAlign.end,
-              style: const TextStyle(fontWeight: FontWeight.w700),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TransitionRow extends StatelessWidget {
-  const _TransitionRow({
-    required this.label,
-    required this.before,
-    required this.after,
-  });
-
-  final String label;
-  final String before;
-  final String after;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: Theme.of(context).textTheme.labelLarge),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            Chip(label: Text(before)),
-            const Icon(Icons.arrow_forward),
-            Chip(label: Text(after)),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
 class _PriorityExplanation {
   const _PriorityExplanation({
     required this.whyThisMatters,
@@ -3979,126 +3978,10 @@ extension on DimensionStateValue {
       DimensionStateValue.resolved => pillLabelForState(this),
     };
   }
-
-  Color get color {
-    return switch (this) {
-      DimensionStateValue.unknown => const Color(0xff52616b),
-      DimensionStateValue.claimedAccessible => const Color(0xff8a6d00),
-      DimensionStateValue.reliable => const Color(0xff17643a),
-      DimensionStateValue.degraded => const Color(0xffb6461a),
-      DimensionStateValue.officiallyVerifiedDegraded => const Color(0xff9d1b1e),
-      DimensionStateValue.underReview => const Color(0xff1765a6),
-      DimensionStateValue.resolved => const Color(0xff17643a),
-    };
-  }
-}
-
-extension on PlacePulseStatus {
-  Color get color {
-    return switch (this) {
-      PlacePulseStatus.reliable => const Color(0xff17643a),
-      PlacePulseStatus.reliableAging => const Color(0xff8a6d00),
-      PlacePulseStatus.unknown => const Color(0xff52616b),
-      PlacePulseStatus.underReview => const Color(0xff1765a6),
-      PlacePulseStatus.recentlyRefreshed => const Color(0xff17643a),
-    };
-  }
-}
-
-extension on ConfidenceLevel {
-  String get label {
-    return switch (this) {
-      ConfidenceLevel.low => 'Low',
-      ConfidenceLevel.moderate => 'Moderate',
-      ConfidenceLevel.high => 'High',
-    };
-  }
-}
-
-extension on EvidenceReadiness {
-  String get label {
-    return switch (this) {
-      EvidenceReadiness.draft => 'Draft',
-      EvidenceReadiness.almostReady => 'Almost Ready',
-      EvidenceReadiness.institutionReady => 'Institution Ready',
-    };
-  }
-}
-
-ConfidenceLevel _confidenceLevelFromScore(double confidence) {
-  if (confidence >= 0.8) {
-    return ConfidenceLevel.high;
-  }
-  if (confidence >= 0.5) {
-    return ConfidenceLevel.moderate;
-  }
-  return ConfidenceLevel.low;
 }
 
 String _institutionPulseLabel(PlacePulseDisplay display) {
   return pillLabelForPulseStatus(display.status);
-}
-
-String _confidenceExplanationFromScore(double confidence) {
-  return switch (_confidenceLevelFromScore(confidence)) {
-    ConfidenceLevel.high =>
-      'Evidence is strong enough to support institutional review.',
-    ConfidenceLevel.moderate =>
-      'Evidence supports review, with some uncertainty still visible.',
-    ConfidenceLevel.low =>
-      'Evidence is limited and may need more context before action.',
-  };
-}
-
-ConfidenceLevel _signalConfidenceLevel(BarrierSignal signal) {
-  final value = signal.aiExplanation['confidenceLevel'];
-  if (value is String) {
-    final normalized = value.toLowerCase();
-    if (normalized == ConfidenceLevel.high.name) {
-      return ConfidenceLevel.high;
-    }
-    if (normalized == ConfidenceLevel.moderate.name) {
-      return ConfidenceLevel.moderate;
-    }
-    if (normalized == ConfidenceLevel.low.name) {
-      return ConfidenceLevel.low;
-    }
-  }
-  return _confidenceLevelFromScore(signal.confidence);
-}
-
-String _signalConfidenceExplanation(BarrierSignal signal) {
-  final value = signal.aiExplanation['confidenceExplanation'];
-  if (value is String && value.trim().isNotEmpty) {
-    return value;
-  }
-  return switch (_signalConfidenceLevel(signal)) {
-    ConfidenceLevel.high =>
-      'The evidence strongly supports the mobility-access concern.',
-    ConfidenceLevel.moderate =>
-      'The evidence supports the concern, but some context is still missing.',
-    ConfidenceLevel.low =>
-      'The evidence is too limited for a strong review signal.',
-  };
-}
-
-EvidenceReadiness _signalEvidenceReadiness(BarrierSignal signal) {
-  final value = signal.aiExplanation['evidenceReadiness'];
-  if (value is String) {
-    final normalized = value.toLowerCase();
-    if (normalized == EvidenceReadiness.institutionReady.name) {
-      return EvidenceReadiness.institutionReady;
-    }
-    if (normalized == EvidenceReadiness.almostReady.name) {
-      return EvidenceReadiness.almostReady;
-    }
-    if (normalized == EvidenceReadiness.draft.name) {
-      return EvidenceReadiness.draft;
-    }
-  }
-  return signal.aiExplanation['institutionReady'] == true
-      ? EvidenceReadiness.institutionReady
-      : EvidenceReadiness.almostReady;
 }
 
 extension on CaseStatus {
@@ -4115,30 +3998,6 @@ extension on CaseStatus {
       CaseStatus.disputed => pillLabelForCaseStatus(this),
       CaseStatus.resolved => pillLabelForCaseStatus(this),
       CaseStatus.closed => pillLabelForCaseStatus(this),
-    };
-  }
-
-  IconData get icon {
-    return switch (this) {
-      CaseStatus.open => Icons.notification_important_outlined,
-      CaseStatus.triaging => Icons.rule,
-      CaseStatus.inspectionRequested => Icons.assignment_turned_in,
-      CaseStatus.verified => Icons.verified_outlined,
-      CaseStatus.remediationRequested => Icons.construction_outlined,
-      CaseStatus.remediationVerificationRequested => Icons.fact_check_outlined,
-      CaseStatus.disputed => Icons.report_gmailerrorred,
-      CaseStatus.resolved => Icons.task_alt,
-      CaseStatus.closed => Icons.close,
-    };
-  }
-}
-
-extension on CaseSeverity {
-  String get label {
-    return switch (this) {
-      CaseSeverity.low => 'Low',
-      CaseSeverity.medium => 'Medium',
-      CaseSeverity.high => 'High',
     };
   }
 }
