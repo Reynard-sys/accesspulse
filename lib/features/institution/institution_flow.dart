@@ -52,7 +52,6 @@ class _InstitutionDashboardScreenState
     final filtered = cases.where((accessCase) {
       if (widget.role == InstitutionRole.inspector) {
         return accessCase.status == CaseStatus.inspectionRequested ||
-            accessCase.status == CaseStatus.verified ||
             accessCase.status == CaseStatus.remediationVerificationRequested ||
             accessCase.status == CaseStatus.disputed;
       }
@@ -1127,9 +1126,7 @@ class _InstitutionDashboardScreenState
                           decoration: BoxDecoration(
                             color: const Color(0xffe8f2ec),
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: const Color(0xffc5ddd1),
-                            ),
+                            border: Border.all(color: const Color(0xffc5ddd1)),
                           ),
                           padding: const EdgeInsets.all(16),
                           child: Row(
@@ -1444,6 +1441,19 @@ class _CaseDetailScreenState extends State<_CaseDetailScreen> {
     );
   }
 
+  Future<void> _closeCase() async {
+    setState(() => _isActing = true);
+    await widget.stateService.closeCase(
+      caseId: widget.summary.accessCase.id,
+      reviewerId: _demoReviewerId,
+      note: 'LGU reviewer closed the case after final review.',
+    );
+    if (!mounted) {
+      return;
+    }
+    Navigator.of(context).pop();
+  }
+
   Future<void> _openVerification(_CaseDetailData detail) async {
     final result = await Navigator.of(context).push<VerificationResult>(
       _institutionRoute<VerificationResult>(
@@ -1594,21 +1604,43 @@ class _CaseDetailScreenState extends State<_CaseDetailScreen> {
         label: 'Request inspection',
         onPressed: () => _requestInspection(detail),
       ),
-      CaseStatus.verified => (
-        icon: Icons.construction_outlined,
-        label: 'Request remediation',
-        onPressed: _requestRemediation,
-      ),
+      CaseStatus.verified
+          when detail.state.state != DimensionStateValue.reliable =>
+        (
+          icon: Icons.construction_outlined,
+          label: 'Request remediation',
+          onPressed: _requestRemediation,
+        ),
       CaseStatus.remediationRequested => (
         icon: Icons.fact_check_outlined,
         label: 'Request fix check',
         onPressed: _requestRemediationVerification,
       ),
+      CaseStatus.verified ||
       CaseStatus.inspectionRequested ||
       CaseStatus.remediationVerificationRequested ||
       CaseStatus.disputed ||
       CaseStatus.resolved ||
       CaseStatus.closed => null,
+    };
+  }
+
+  ({IconData icon, String label, VoidCallback? onPressed})? _secondaryLguAction(
+    _CaseDetailData detail,
+  ) {
+    if (_isActing) {
+      return null;
+    }
+    return switch (detail.accessCase.status) {
+      CaseStatus.verified
+          when detail.state.state == DimensionStateValue.reliable =>
+        (icon: Icons.close, label: 'Close case', onPressed: _closeCase),
+      CaseStatus.resolved || CaseStatus.disputed => (
+        icon: Icons.close,
+        label: 'Close case',
+        onPressed: _closeCase,
+      ),
+      _ => null,
     };
   }
 
@@ -1823,7 +1855,8 @@ class _CaseDetailScreenState extends State<_CaseDetailScreen> {
                   Builder(
                     builder: (context) {
                       final primaryAction = _primaryLguAction(detail);
-                      if (primaryAction == null) {
+                      final secondaryAction = _secondaryLguAction(detail);
+                      if (primaryAction == null && secondaryAction == null) {
                         return const SizedBox.shrink();
                       }
                       final canReview =
@@ -1832,23 +1865,33 @@ class _CaseDetailScreenState extends State<_CaseDetailScreen> {
                               detail.accessCase.status == CaseStatus.triaging);
                       return Row(
                         children: [
-                          Expanded(
-                            child: _buildPremiumFilledButton(
-                              icon: primaryAction.icon,
-                              label: primaryAction.label,
-                              onPressed: primaryAction.onPressed,
+                          if (primaryAction != null)
+                            Expanded(
+                              child: _buildPremiumFilledButton(
+                                icon: primaryAction.icon,
+                                label: primaryAction.label,
+                                onPressed: primaryAction.onPressed,
+                              ),
                             ),
-                          ),
-                          if (canReview) ...[
+                          if (primaryAction != null &&
+                              (canReview || secondaryAction != null))
                             const SizedBox(width: 12),
+                          if (canReview)
                             Expanded(
                               child: _buildPremiumOutlinedButton(
                                 icon: Icons.rate_review_outlined,
                                 label: 'Review',
                                 onPressed: () => _triage(detail),
                               ),
+                            )
+                          else if (secondaryAction != null)
+                            Expanded(
+                              child: _buildPremiumOutlinedButton(
+                                icon: secondaryAction.icon,
+                                label: secondaryAction.label,
+                                onPressed: secondaryAction.onPressed,
+                              ),
                             ),
-                          ],
                         ],
                       );
                     },
@@ -2783,11 +2826,11 @@ class _InspectorVerificationScreen extends StatefulWidget {
 class _InspectorVerificationScreenState
     extends State<_InspectorVerificationScreen> {
   VerificationOutcome _outcome = VerificationOutcome.confirmed;
-  int _selectedCondition = 0;
+  int _selectedCondition = 3;
   late final TextEditingController _noteController;
   bool _isSubmitting = false;
   VerificationResult? _submissionResult;
-  String _submittedNote = '';
+  final String _submittedNote = '';
 
   bool get _isRemediationVerification =>
       widget.detail.accessCase.status ==
@@ -2812,14 +2855,18 @@ class _InspectorVerificationScreenState
   void _selectCondition(int index) {
     setState(() {
       _selectedCondition = index;
-      _outcome = switch (index) {
-        0 => VerificationOutcome.confirmed,
-        1 => VerificationOutcome.insufficientEvidence,
-        2 => VerificationOutcome.disputed,
-        3 => VerificationOutcome.disputed,
-        _ => VerificationOutcome.confirmed,
-      };
+      _outcome = VerificationOutcome.confirmed;
     });
+  }
+
+  InspectorVerifiedCondition get _verifiedCondition {
+    return switch (_selectedCondition) {
+      0 => InspectorVerifiedCondition.reliable,
+      1 => InspectorVerifiedCondition.conditionallyUsable,
+      2 => InspectorVerifiedCondition.degraded,
+      3 => InspectorVerifiedCondition.blocked,
+      _ => InspectorVerifiedCondition.blocked,
+    };
   }
 
   Future<void> _submit() async {
@@ -2828,16 +2875,13 @@ class _InspectorVerificationScreenState
       caseId: widget.detail.accessCase.id,
       inspectorId: _demoInspectorId,
       outcome: _outcome,
+      verifiedCondition: _isRemediationVerification ? null : _verifiedCondition,
       note: _noteController.text,
     );
     if (!mounted) {
       return;
     }
-    setState(() {
-      _isSubmitting = false;
-      _submittedNote = _noteController.text;
-      _submissionResult = result;
-    });
+    Navigator.of(context).pop(result);
   }
 
   @override
@@ -2852,11 +2896,17 @@ class _InspectorVerificationScreenState
   Scaffold _buildCompleteScaffold(BuildContext context) {
     final stateVal = widget.detail.state.state;
     final conf = widget.detail.accessCase.confidence;
-    final String confLabel =
-        conf >= 0.8 ? 'High' : conf >= 0.5 ? 'Moderate' : 'Low';
-    final bool isRedState = stateVal == DimensionStateValue.degraded ||
+    final String confLabel = conf >= 0.8
+        ? 'High'
+        : conf >= 0.5
+        ? 'Moderate'
+        : 'Low';
+    final bool isRedState =
+        stateVal == DimensionStateValue.degraded ||
         stateVal == DimensionStateValue.officiallyVerifiedDegraded;
-    final String stateBadge = isRedState ? 'BLOCKED' : stateVal.label.toUpperCase();
+    final String stateBadge = isRedState
+        ? 'BLOCKED'
+        : stateVal.label.toUpperCase();
     final String caseStatusLabel = switch (_outcome) {
       VerificationOutcome.confirmed => 'Verified & Confirmed',
       VerificationOutcome.disputed => 'Escalated for review',
@@ -3000,7 +3050,12 @@ class _InspectorVerificationScreenState
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Padding(
-                              padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+                              padding: const EdgeInsets.fromLTRB(
+                                16,
+                                16,
+                                16,
+                                14,
+                              ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -3111,8 +3166,7 @@ class _InspectorVerificationScreenState
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(16),
-                          border:
-                              Border.all(color: const Color(0xffedeef1)),
+                          border: Border.all(color: const Color(0xffedeef1)),
                         ),
                         child: Column(
                           children: [
@@ -3164,10 +3218,7 @@ class _InspectorVerificationScreenState
                                 ],
                               ),
                             ),
-                            const Divider(
-                              height: 1,
-                              color: Color(0xfff0f1f4),
-                            ),
+                            const Divider(height: 1, color: Color(0xfff0f1f4)),
                             Padding(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 16,
@@ -3252,11 +3303,11 @@ class _InspectorVerificationScreenState
       DimensionStateValue.officiallyVerifiedDegraded => 'BLOCKED',
       _ => stateVal.label.toUpperCase(),
     };
-    final bool isBadgeRed = stateVal == DimensionStateValue.degraded ||
+    final bool isBadgeRed =
+        stateVal == DimensionStateValue.degraded ||
         stateVal == DimensionStateValue.officiallyVerifiedDegraded;
 
-    final diff =
-        DateTime.now().difference(widget.detail.accessCase.updatedAt);
+    final diff = DateTime.now().difference(widget.detail.accessCase.updatedAt);
     String assignedAgo = 'recently';
     if (diff.inDays > 0) {
       assignedAgo = '${diff.inDays}d ago';
@@ -3339,9 +3390,7 @@ class _InspectorVerificationScreenState
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: const Color(0xffedeef1),
-                            ),
+                            border: Border.all(color: const Color(0xffedeef1)),
                           ),
                           padding: const EdgeInsets.all(16),
                           child: Column(
@@ -3405,7 +3454,9 @@ class _InspectorVerificationScreenState
                                                     'Seminary Rd, Brgy. Kalusugan',
                                                 style: GoogleFonts.afacad(
                                                   fontSize: 12,
-                                                  color: const Color(0xff9eb5a6),
+                                                  color: const Color(
+                                                    0xff9eb5a6,
+                                                  ),
                                                 ),
                                                 maxLines: 1,
                                                 overflow: TextOverflow.ellipsis,
@@ -3619,8 +3670,7 @@ class _InspectorVerificationScreenState
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              padding:
-                                  const EdgeInsets.symmetric(vertical: 14),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
                             ),
                             icon: const Icon(
                               Icons.add_photo_alternate_outlined,
@@ -3731,10 +3781,7 @@ class _InspectorVerificationScreenState
                                         ),
                                       ),
                                       const SizedBox(width: 8),
-                                      const Icon(
-                                        Icons.arrow_forward,
-                                        size: 18,
-                                      ),
+                                      const Icon(Icons.arrow_forward, size: 18),
                                     ],
                                   ),
                           ),
@@ -3788,10 +3835,7 @@ class _InspectorChecklist extends StatelessWidget {
         children: [
           for (int i = 0; i < items.length; i++) ...[
             Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 13,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
               child: Row(
                 children: [
                   Container(
@@ -3877,8 +3921,7 @@ class _VerifiedConditionGrid extends StatelessWidget {
               textAlign: TextAlign.center,
               style: GoogleFonts.afacad(
                 fontSize: 12,
-                fontWeight:
-                    selected ? FontWeight.bold : FontWeight.normal,
+                fontWeight: selected ? FontWeight.bold : FontWeight.normal,
                 color: selected ? selColor : const Color(0xffb0b5c1),
                 height: 1.3,
               ),
@@ -3970,8 +4013,7 @@ class _InspectorStateBadge extends StatelessWidget {
             width: 5,
             height: 5,
             decoration: BoxDecoration(
-              color:
-                  isRed ? const Color(0xffc23232) : const Color(0xff2e7d4f),
+              color: isRed ? const Color(0xffc23232) : const Color(0xff2e7d4f),
               shape: BoxShape.circle,
             ),
           ),
@@ -3981,9 +4023,7 @@ class _InspectorStateBadge extends StatelessWidget {
             style: GoogleFonts.afacad(
               fontSize: 10,
               fontWeight: FontWeight.bold,
-              color: isRed
-                  ? const Color(0xff8b1e1e)
-                  : const Color(0xff2e7d4f),
+              color: isRed ? const Color(0xff8b1e1e) : const Color(0xff2e7d4f),
               letterSpacing: 0.4,
             ),
           ),
@@ -4002,25 +4042,39 @@ class _CaseQueueTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final stateVal = summary.state.state;
+    final status = summary.accessCase.status;
+    final showsCaseStatus =
+        status == CaseStatus.inspectionRequested ||
+        status == CaseStatus.verified ||
+        status == CaseStatus.remediationRequested ||
+        status == CaseStatus.remediationVerificationRequested ||
+        status == CaseStatus.disputed ||
+        status == CaseStatus.resolved ||
+        status == CaseStatus.closed;
     final bool isRedState =
-        stateVal == DimensionStateValue.degraded ||
-        stateVal == DimensionStateValue.officiallyVerifiedDegraded;
+        !showsCaseStatus &&
+        (stateVal == DimensionStateValue.degraded ||
+            stateVal == DimensionStateValue.officiallyVerifiedDegraded);
 
-    final String badgeLabel = switch (stateVal) {
-      DimensionStateValue.degraded => 'BLOCKED',
-      DimensionStateValue.officiallyVerifiedDegraded => 'BLOCKED',
-      _ => stateVal.label.toUpperCase(),
-    };
-    final Color badgeBg =
-        isRedState ? const Color(0xfffdeaea) : const Color(0xfffff3e0);
-    final Color badgeText =
-        isRedState ? const Color(0xff8b1e1e) : const Color(0xff7a5000);
-    final Color badgeDot =
-        isRedState ? const Color(0xffc23232) : const Color(0xffc08a00);
+    final String badgeLabel = showsCaseStatus
+        ? status.label.toUpperCase()
+        : switch (stateVal) {
+            DimensionStateValue.degraded => 'BLOCKED',
+            DimensionStateValue.officiallyVerifiedDegraded => 'BLOCKED',
+            _ => stateVal.label.toUpperCase(),
+          };
+    final Color badgeBg = isRedState
+        ? const Color(0xfffdeaea)
+        : const Color(0xfffff3e0);
+    final Color badgeText = isRedState
+        ? const Color(0xff8b1e1e)
+        : const Color(0xff7a5000);
+    final Color badgeDot = isRedState
+        ? const Color(0xffc23232)
+        : const Color(0xffc08a00);
 
     // Time ago from last update
-    final difference =
-        DateTime.now().difference(summary.accessCase.updatedAt);
+    final difference = DateTime.now().difference(summary.accessCase.updatedAt);
     String timeAgo = 'now';
     if (difference.inDays > 0) {
       timeAgo = '${difference.inDays}d ago';
@@ -5019,131 +5073,6 @@ class _RolePill extends StatelessWidget {
   }
 }
 
-class _PriorityExplanation {
-  const _PriorityExplanation({
-    required this.whyThisMatters,
-    required this.whyNow,
-    required this.suggestedNextAction,
-  });
-
-  final List<String> whyThisMatters;
-  final List<String> whyNow;
-  final String suggestedNextAction;
-
-  String get queueSummary {
-    final primaryReason = whyThisMatters.isEmpty
-        ? 'Institutional review needed'
-        : whyThisMatters.first;
-    return 'Priority: $primaryReason; $suggestedNextAction';
-  }
-
-  static _PriorityExplanation fromCase({
-    required Place place,
-    required AccessCase accessCase,
-    required DimensionStateRecord state,
-    required DimensionPulseRecord pulse,
-    BarrierSignal? signal,
-    Evidence? evidence,
-  }) {
-    final whyThisMatters = <String>[];
-    final whyNow = <String>[];
-    final combinedText = [
-      place.placeType,
-      accessCase.title,
-      accessCase.summary,
-      state.explanation,
-      signal?.issueType,
-      signal?.possibleBarrier,
-      signal?.structuredSummary,
-      evidence?.note,
-      ...?signal?.observedFeatures,
-    ].whereType<String>().join(' ').toLowerCase();
-
-    if (place.placeType == 'public_service_building') {
-      whyThisMatters.add('Public service building');
-    }
-    if (combinedText.contains('entrance')) {
-      whyThisMatters.add('Public service entrance affected');
-    }
-    whyThisMatters.add('Mobility access affected');
-    if (combinedText.contains('assist') || combinedText.contains('help')) {
-      whyThisMatters.add('Assistance may be required');
-    }
-    if (combinedText.contains('purpose')) {
-      whyThisMatters.add('Visit purpose may not be completed');
-    }
-
-    final pulseDisplay = const PulseService().describePlacePulse(
-      state: state,
-      pulse: pulse,
-    );
-    if (state.source == 'ai_structured_barrier_signal') {
-      whyNow.add('Recent evidence updated place state');
-    }
-    if (state.state == DimensionStateValue.degraded) {
-      whyNow.add('State just degraded');
-    }
-    if (state.state == DimensionStateValue.underReview ||
-        accessCase.status == CaseStatus.inspectionRequested) {
-      whyNow.add('Active review needed');
-    }
-    if (accessCase.confidence >= 0.8) {
-      whyNow.add('AI confidence: High');
-    } else if (accessCase.confidence >= 0.5) {
-      whyNow.add('AI confidence: Moderate');
-    } else {
-      whyNow.add('AI confidence: Low');
-    }
-    whyNow.add('Pulse: ${_institutionPulseLabel(pulseDisplay)}');
-
-    return _PriorityExplanation(
-      whyThisMatters: _unique(whyThisMatters),
-      whyNow: _unique(whyNow),
-      suggestedNextAction: _suggestedNextAction(accessCase, signal),
-    );
-  }
-
-  static String _suggestedNextAction(
-    AccessCase accessCase,
-    BarrierSignal? signal,
-  ) {
-    if (accessCase.status == CaseStatus.inspectionRequested) {
-      return 'Complete site inspection';
-    }
-    if (accessCase.status == CaseStatus.verified) {
-      return 'Record remediation follow-up';
-    }
-    if (accessCase.status == CaseStatus.remediationRequested) {
-      return 'Request remediation verification';
-    }
-    if (accessCase.status == CaseStatus.remediationVerificationRequested) {
-      return 'Complete remediation verification';
-    }
-    if (accessCase.status == CaseStatus.disputed) {
-      return 'Review contradictory evidence';
-    }
-    if (accessCase.status == CaseStatus.closed ||
-        accessCase.status == CaseStatus.resolved) {
-      return 'Close if out of scope';
-    }
-    if (signal?.missingEvidence.any(
-          (item) => item.toLowerCase().contains('entrance'),
-        ) ??
-        false) {
-      return 'Review alternate entrance';
-    }
-    return 'Request inspection';
-  }
-
-  static List<String> _unique(List<String> values) {
-    final seen = <String>{};
-    return [
-      for (final value in values)
-        if (seen.add(value)) value,
-    ];
-  }
-}
-
 class _CaseSummary {
   const _CaseSummary({
     required this.accessCase,
@@ -5219,10 +5148,6 @@ extension on DimensionStateValue {
       DimensionStateValue.resolved => pillLabelForState(this),
     };
   }
-}
-
-String _institutionPulseLabel(PlacePulseDisplay display) {
-  return pillLabelForPulseStatus(display.status);
 }
 
 extension on CaseStatus {

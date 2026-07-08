@@ -140,12 +140,7 @@ void main() {
     await tester.tap(find.text('Open verification'));
     await tester.pumpAndSettle();
 
-    expect(
-      find.text(
-        'Human verification is authoritative. AI evidence remains supporting context.',
-      ),
-      findsOneWidget,
-    );
+    expect(find.text('Inspecting Case'), findsOneWidget);
     expect(find.text('Submitted photo reference'), findsOneWidget);
     expect(
       find.text(
@@ -155,11 +150,11 @@ void main() {
     );
 
     await tester.scrollUntilVisible(
-      find.text('Submit verification'),
+      find.text('Submit'),
       300,
-      scrollable: find.byType(Scrollable).first,
+      scrollable: find.byType(Scrollable).last,
     );
-    await tester.tap(find.text('Submit verification'));
+    await tester.tap(find.text('Submit'));
     await tester.pumpAndSettle();
 
     final verifiedCase = await repository.getCase(seededPupCaseId);
@@ -173,8 +168,9 @@ void main() {
     );
     expect(
       find.text('Polytechnic University of the Philippines'),
-      findsOneWidget,
+      findsNothing,
     );
+    expect(find.text('LRT 2 Pureza'), findsOneWidget);
     expect(find.text('Verified'), findsNothing);
   });
 
@@ -402,6 +398,123 @@ void main() {
     expect(find.text('CHECKING FIX'), findsOneWidget);
   });
 
+  testWidgets('inspector condition buttons submit the selected condition', (
+    WidgetTester tester,
+  ) async {
+    final repository = InMemoryAccessPulseRepository.seeded();
+    final stateService = DimensionStateService(repository: repository);
+    await stateService.requestInspection(
+      caseId: seededPupCaseId,
+      reviewerId: '20000000-0000-4000-8000-000000000002',
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        key: UniqueKey(),
+        home: InstitutionDashboardScreen(
+          repository: repository,
+          stateService: stateService,
+          role: InstitutionRole.inspector,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final caseCard = find.byKey(const ValueKey('case-card-$seededPupCaseId'));
+    await tester.ensureVisible(caseCard);
+    await tester.tap(caseCard);
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.text('Open verification'),
+      300,
+      scrollable: find
+          .descendant(
+            of: find.byKey(const ValueKey('case-detail-scroll')),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    await tester.tap(find.text('Open verification'));
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.text('Degraded'),
+      300,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.tap(find.text('Degraded'));
+    await tester.scrollUntilVisible(
+      find.text('Submit'),
+      300,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.tap(find.text('Submit'));
+    await tester.pumpAndSettle();
+
+    final accessCase = await repository.getCase(seededPupCaseId);
+    final state = await repository.getDimensionState(placeDimensionId);
+
+    expect(accessCase.status, CaseStatus.verified);
+    expect(state.state, DimensionStateValue.degraded);
+    expect(find.text('Inspector verification'), findsOneWidget);
+    expect(
+      find.text('Polytechnic University of the Philippines'),
+      findsNothing,
+    );
+  });
+
+  testWidgets('LGU can close a reliable inspector-verified case immediately', (
+    WidgetTester tester,
+  ) async {
+    final repository = InMemoryAccessPulseRepository.seeded();
+    final stateService = DimensionStateService(repository: repository);
+    await stateService.requestInspection(
+      caseId: seededPupCaseId,
+      reviewerId: '20000000-0000-4000-8000-000000000002',
+    );
+    await stateService.submitVerification(
+      caseId: seededPupCaseId,
+      inspectorId: '20000000-0000-4000-8000-000000000003',
+      outcome: VerificationOutcome.confirmed,
+      verifiedCondition: InspectorVerifiedCondition.reliable,
+      note: 'Inspector verified the route as reliable.',
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        key: UniqueKey(),
+        home: InstitutionDashboardScreen(
+          repository: repository,
+          stateService: stateService,
+          role: InstitutionRole.lguReviewer,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final verifiedCaseCard = find.byKey(
+      const ValueKey('case-card-$seededPupCaseId'),
+    );
+    await tester.scrollUntilVisible(
+      verifiedCaseCard,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(verifiedCaseCard);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Close case'), findsOneWidget);
+    expect(find.text('Request remediation'), findsNothing);
+
+    await tester.tap(find.text('Close case'));
+    await tester.pumpAndSettle();
+
+    final closedCase = await repository.getCase(seededPupCaseId);
+    expect(closedCase.status, CaseStatus.closed);
+  });
+
   testWidgets('inspector can confirm remediation from verification queue', (
     WidgetTester tester,
   ) async {
@@ -478,5 +591,71 @@ void main() {
       findsNothing,
     );
     expect(find.text('LRT 2 Pureza'), findsOneWidget);
+  });
+
+  testWidgets('LGU can close a resolved case after remediation verification', (
+    WidgetTester tester,
+  ) async {
+    final repository = InMemoryAccessPulseRepository.seeded();
+    final stateService = DimensionStateService(repository: repository);
+    await stateService.requestInspection(
+      caseId: seededPupCaseId,
+      reviewerId: '20000000-0000-4000-8000-000000000002',
+    );
+    await stateService.submitVerification(
+      caseId: seededPupCaseId,
+      inspectorId: '20000000-0000-4000-8000-000000000003',
+      outcome: VerificationOutcome.confirmed,
+      note: 'Inspector confirmed that the main entrance requires assistance.',
+    );
+    await stateService.requestRemediation(
+      caseId: seededPupCaseId,
+      reviewerId: '20000000-0000-4000-8000-000000000002',
+    );
+    await stateService.requestRemediationVerification(
+      caseId: seededPupCaseId,
+      reviewerId: '20000000-0000-4000-8000-000000000002',
+    );
+    await stateService.submitVerification(
+      caseId: seededPupCaseId,
+      inspectorId: '20000000-0000-4000-8000-000000000003',
+      outcome: VerificationOutcome.confirmed,
+      note: 'Inspector confirmed that remediation resolved the barrier.',
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        key: UniqueKey(),
+        home: InstitutionDashboardScreen(
+          repository: repository,
+          stateService: stateService,
+          role: InstitutionRole.lguReviewer,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final resolvedCaseCard = find.byKey(
+      const ValueKey('case-card-$seededPupCaseId'),
+    );
+    await tester.ensureVisible(resolvedCaseCard);
+    await tester.pumpAndSettle();
+    expect(find.text('FIXED'), findsOneWidget);
+
+    await tester.tap(resolvedCaseCard);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Case Detail'), findsOneWidget);
+    expect(find.text('Close case'), findsOneWidget);
+
+    await tester.tap(find.text('Close case'));
+    await tester.pumpAndSettle();
+
+    final closedCase = await repository.getCase(seededPupCaseId);
+    expect(closedCase.status, CaseStatus.closed);
+    expect(
+      find.byKey(const ValueKey('case-card-$seededPupCaseId')),
+      findsNothing,
+    );
   });
 }

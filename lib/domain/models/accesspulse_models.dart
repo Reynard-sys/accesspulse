@@ -48,6 +48,13 @@ enum CaseSeverity { low, medium, high }
 
 enum VerificationOutcome { confirmed, disputed, insufficientEvidence }
 
+enum InspectorVerifiedCondition {
+  reliable,
+  conditionallyUsable,
+  degraded,
+  blocked,
+}
+
 enum MemoryEventType {
   placeSeeded,
   stateSeeded,
@@ -408,6 +415,7 @@ class Verification {
     required this.note,
     required this.performedAt,
     this.verifiedBy,
+    this.verifiedCondition,
   });
 
   final String id;
@@ -415,6 +423,7 @@ class Verification {
   final String placeDimensionId;
   final String? verifiedBy;
   final VerificationOutcome outcome;
+  final InspectorVerifiedCondition? verifiedCondition;
   final String note;
   final DateTime performedAt;
 }

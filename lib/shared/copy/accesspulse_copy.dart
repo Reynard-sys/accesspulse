@@ -42,7 +42,7 @@ class AccessPulseCopy {
   static const underReview = 'Nire-review';
   static const recentlyRefreshed = 'Bagong update';
   static const resolved = 'Naayos na';
-  static const recentlyRevalidated = 'Bagong na-verify ulit';
+  static const recentlyRevalidated = 'Accessible ngayon';
 
   static const mapUnavailable =
       'Hindi muna ma-load ang mapa. Pwede ka pa ring pumili sa listahan.';

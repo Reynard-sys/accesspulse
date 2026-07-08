@@ -7,6 +7,7 @@ void main() {
   const communityUserId = '20000000-0000-4000-8000-000000000001';
   const reviewerId = '20000000-0000-4000-8000-000000000002';
   const inspectorId = '20000000-0000-4000-8000-000000000003';
+  const seededPupCaseId = '83000000-0000-4000-8000-000000000001';
 
   test(
     'seeded repository preserves place dimension state, pulse, and memory',
@@ -238,6 +239,47 @@ void main() {
       isTrue,
     );
   });
+
+  test(
+    'inspector verified condition buttons map to matching state outcomes',
+    () async {
+      Future<(DimensionStateValue, CaseStatus)> verify(
+        InspectorVerifiedCondition condition,
+      ) async {
+        final repository = InMemoryAccessPulseRepository.seeded();
+        final service = DimensionStateService(repository: repository);
+        await service.requestInspection(
+          caseId: seededPupCaseId,
+          reviewerId: reviewerId,
+        );
+        final result = await service.submitVerification(
+          caseId: seededPupCaseId,
+          inspectorId: inspectorId,
+          outcome: VerificationOutcome.confirmed,
+          verifiedCondition: condition,
+          note: 'Inspector selected ${condition.name}.',
+        );
+        return (result.currentState.state, result.accessCase.status);
+      }
+
+      expect(await verify(InspectorVerifiedCondition.reliable), (
+        DimensionStateValue.reliable,
+        CaseStatus.verified,
+      ));
+      expect(await verify(InspectorVerifiedCondition.conditionallyUsable), (
+        DimensionStateValue.claimedAccessible,
+        CaseStatus.verified,
+      ));
+      expect(await verify(InspectorVerifiedCondition.degraded), (
+        DimensionStateValue.degraded,
+        CaseStatus.verified,
+      ));
+      expect(await verify(InspectorVerifiedCondition.blocked), (
+        DimensionStateValue.officiallyVerifiedDegraded,
+        CaseStatus.verified,
+      ));
+    },
+  );
 
   test('LGU can request remediation after inspector confirms barrier', () async {
     final repository = InMemoryAccessPulseRepository.seeded();
