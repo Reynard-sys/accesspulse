@@ -340,10 +340,6 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const _AccessPulseBrandTitle(),
-        automaticallyImplyLeading: false,
-      ),
       bottomNavigationBar: FutureBuilder<_PlaceDetailData>(
         future: _detailFuture,
         builder: (context, snapshot) {
@@ -1972,10 +1968,6 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
     };
 
     return Scaffold(
-      appBar: AppBar(
-        title: const _AccessPulseBrandTitle(),
-        automaticallyImplyLeading: false,
-      ),
       backgroundColor: const Color(0xfff8faf9),
       body: SafeArea(
         child: Center(
@@ -2630,10 +2622,6 @@ class SubmissionResultScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const _AccessPulseBrandTitle(),
-        automaticallyImplyLeading: false,
-      ),
       backgroundColor: const Color(0xfff8faf9),
       body: SafeArea(
         child: Center(
@@ -5159,35 +5147,6 @@ class _BeenToPlacesCard extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _AccessPulseBrandTitle extends StatelessWidget {
-  const _AccessPulseBrandTitle();
-
-  @override
-  Widget build(BuildContext context) {
-    return Text.rich(
-      TextSpan(
-        children: [
-          TextSpan(
-            text: 'Access',
-            style: GoogleFonts.afacad(
-              color: const Color(0xff17201c),
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          TextSpan(
-            text: 'Pulse',
-            style: GoogleFonts.afacad(
-              color: const Color(0xff2e7d5b),
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
-      style: const TextStyle(fontSize: 20),
     );
   }
 }

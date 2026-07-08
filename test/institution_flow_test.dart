@@ -67,12 +67,8 @@ void main() {
     expect(find.text('LGU dashboard'), findsOneWidget);
     expect(find.text('Quezon City Hall Main Entrance'), findsOneWidget);
     expect(find.textContaining('Reported'), findsOneWidget);
-    expect(
-      find.textContaining(
-        'Priority: Public service building; Request inspection',
-      ),
-      findsOneWidget,
-    );
+    expect(find.text('REPORTED'), findsOneWidget);
+    expect(find.text('82%'), findsOneWidget);
 
     await tester.tap(find.text('Quezon City Hall Main Entrance'));
     await tester.pumpAndSettle();
