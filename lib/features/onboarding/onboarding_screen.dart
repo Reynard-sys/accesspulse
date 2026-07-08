@@ -175,23 +175,23 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     ),
                   )
                 : imagePath == 'assets/images/teacher_and_girl.png'
-                    ? Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                        child: Image.asset(
-                          imagePath,
-                          fit: BoxFit.fitWidth,
-                          width: double.infinity,
-                        ),
-                      )
-                    : Padding(
-                        padding: const EdgeInsets.only(top: 24.0, bottom: 8.0),
-                        child: ConstrainedBox(
-                          constraints: BoxConstraints(
-                            maxHeight: MediaQuery.of(context).size.height * 0.5,
-                          ),
-                          child: Image.asset(imagePath, fit: BoxFit.contain),
-                        ),
+                ? Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Image.asset(
+                      imagePath,
+                      fit: BoxFit.fitWidth,
+                      width: double.infinity,
+                    ),
+                  )
+                : Padding(
+                    padding: const EdgeInsets.only(top: 24.0, bottom: 8.0),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxHeight: MediaQuery.of(context).size.height * 0.5,
                       ),
+                      child: Image.asset(imagePath, fit: BoxFit.contain),
+                    ),
+                  ),
           ),
         ),
       ],

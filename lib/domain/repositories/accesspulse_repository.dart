@@ -3,7 +3,11 @@ import '../models/accesspulse_models.dart';
 abstract class AccessPulseRepository {
   Future<List<Place>> listPlaces();
 
+  Future<Place> addPlace(Place place);
+
   Future<List<AccessibilityDimension>> listDimensions();
+
+  Future<PlaceDimension> addPlaceDimension(PlaceDimension placeDimension);
 
   Future<PlaceDimension> getPlaceDimension(String placeDimensionId);
 

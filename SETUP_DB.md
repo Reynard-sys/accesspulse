@@ -8,6 +8,8 @@ Use this guide when setting up the AccessPulse MVP database manually through the
 - Access to the project dashboard
 - The SQL files in this repository:
   - `supabase/migrations/20260629133000_accesspulse_mvp_schema.sql`
+  - `supabase/migrations/20260630041000_accesspulse_ramp_measurements.sql`
+  - `supabase/migrations/20260708000100_accesspulse_place_creation_alignment.sql`
   - `supabase/seed.sql`
 
 ## Step 1 - Open SQL Editor
@@ -18,11 +20,16 @@ Use this guide when setting up the AccessPulse MVP database manually through the
 
 ## Step 2 - Run the schema migration
 
-1. Open `supabase/migrations/20260629133000_accesspulse_mvp_schema.sql` locally.
-2. Copy the entire file contents.
-3. Paste it into the Supabase SQL Editor.
-4. Click **Run**.
-5. Wait for the query to complete successfully.
+1. Run these migration files in order:
+   - `supabase/migrations/20260629133000_accesspulse_mvp_schema.sql`
+   - `supabase/migrations/20260630041000_accesspulse_ramp_measurements.sql`
+   - `supabase/migrations/20260708000100_accesspulse_place_creation_alignment.sql`
+2. For each file:
+   - open it locally
+   - copy the entire file contents
+   - paste it into the Supabase SQL Editor
+   - click **Run**
+3. Wait for each query to complete successfully before running the next one.
 
 This creates the AccessPulse MVP database structure, including:
 
@@ -38,6 +45,8 @@ This creates the AccessPulse MVP database structure, including:
 - cases
 - verifications
 - append-only memory events
+- ramp measurements
+- future-facing place provenance fields for added places
 
 ## Step 3 - Run the seed data
 
@@ -86,7 +95,45 @@ Expected result:
 - one place starts as `reliable` with `strong` pulse
 - one place starts as `unknown` with `weak` pulse
 
-## Step 5 - Verify memory events
+## Step 5 - Verify place columns and remediation statuses
+
+Run this query:
+
+```sql
+select
+  column_name,
+  data_type,
+  is_nullable
+from information_schema.columns
+where table_schema = 'public'
+  and table_name = 'places'
+  and column_name in (
+    'latitude',
+    'longitude',
+    'created_by',
+    'created_from',
+    'pending_review'
+  )
+order by column_name;
+```
+
+Expected result:
+
+- `latitude` and `longitude` exist
+- optional future fields exist for `created_by`, `created_from`, and `pending_review`
+
+Run this query:
+
+```sql
+select unnest(enum_range(null::public.case_status)) as case_status;
+```
+
+Expected result includes:
+
+- `remediation_requested`
+- `remediation_verification_requested`
+
+## Step 6 - Verify memory events
 
 Run this query:
 
@@ -110,7 +157,7 @@ Expected result:
 - each seeded place has an initial memory event
 - memory describes how the initial Mobility Access state was created
 
-## Step 6 - Optional append-only memory check
+## Step 7 - Optional append-only memory check
 
 Run this only if you want to confirm that memory events cannot be edited:
 

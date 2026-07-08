@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../domain/accesspulse_domain.dart';
+import '../../shared/copy/accesspulse_display.dart';
 
 const _demoReviewerId = '20000000-0000-4000-8000-000000000002';
 const _demoInspectorId = '20000000-0000-4000-8000-000000000003';
@@ -372,11 +373,12 @@ class _CaseDetailScreenState extends State<_CaseDetailScreen> {
                         spacing: 12,
                         runSpacing: 12,
                         children: [
-                          OutlinedButton.icon(
-                            icon: const Icon(Icons.rule),
-                            label: const Text('Mark triaging'),
-                            onPressed: _isActing ? null : _triage,
-                          ),
+                          if (detail.accessCase.status != CaseStatus.triaging)
+                            OutlinedButton.icon(
+                              icon: const Icon(Icons.rule),
+                              label: const Text('Acknowledged'),
+                              onPressed: _isActing ? null : _triage,
+                            ),
                           FilledButton.icon(
                             icon: const Icon(Icons.assignment_turned_in),
                             label: const Text('Request inspection'),
@@ -640,8 +642,8 @@ class _VerificationResultScreen extends StatelessWidget {
                         const Divider(height: 24),
                         _TransitionRow(
                           label: 'Pulse / freshness',
-                          before: previousPulseDisplay.label,
-                          after: currentPulseDisplay.label,
+                          before: _institutionPulseLabel(previousPulseDisplay),
+                          after: _institutionPulseLabel(currentPulseDisplay),
                         ),
                         const SizedBox(height: 12),
                         Text(result.currentState.explanation),
@@ -775,7 +777,7 @@ class _CaseQueueTile extends StatelessWidget {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              '${summary.state.state.label} · ${pulseDisplay.label}',
+                              '${summary.state.state.label} · ${_institutionPulseLabel(pulseDisplay)}',
                               style: GoogleFonts.afacad(
                                 color: const Color(0xff5d6b63),
                                 fontSize: 13,
@@ -900,7 +902,7 @@ class _InstitutionStateCard extends StatelessWidget {
                 ),
                 _StatusPill(
                   icon: Icons.monitor_heart_outlined,
-                  label: pulseDisplay.label,
+                  label: _institutionPulseLabel(pulseDisplay),
                   color: pulseDisplay.status.color,
                 ),
                 _StatusPill(
@@ -911,7 +913,10 @@ class _InstitutionStateCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
-            _MetricRow(label: 'Freshness / pulse', value: pulseDisplay.label),
+            _MetricRow(
+              label: 'Freshness / pulse',
+              value: _institutionPulseLabel(pulseDisplay),
+            ),
             _MetricRow(
               label: 'Case confidence',
               value: _confidenceLevelFromScore(accessCase.confidence).label,
@@ -970,13 +975,13 @@ class _SignalPanel extends StatelessWidget {
             const SizedBox(height: 12),
             _MetricRow(
               label: 'Issue type',
-              value: signal.issueType.replaceAll('_', ' '),
+              value: humanizeEvidenceText(signal.issueType),
             ),
             _MetricRow(label: 'AI confidence', value: confidenceLevel.label),
             _MetricRow(label: 'Evidence readiness', value: readiness.label),
             _MetricRow(
               label: 'Recommended action',
-              value: signal.recommendedAction.replaceAll('_', ' '),
+              value: humanizeEvidenceText(signal.recommendedAction),
             ),
             if (evidence?.note != null)
               _MetricRow(label: 'Contributor note', value: evidence!.note!),
@@ -999,7 +1004,7 @@ class _SignalPanel extends StatelessWidget {
               runSpacing: 8,
               children: [
                 for (final feature in signal.observedFeatures)
-                  Chip(label: Text(feature)),
+                  Chip(label: Text(humanizeEvidenceText(feature))),
               ],
             ),
             const SizedBox(height: 12),
@@ -1016,10 +1021,42 @@ class _SignalPanel extends StatelessWidget {
                   children: [
                     const Icon(Icons.info_outline, size: 18),
                     const SizedBox(width: 8),
-                    Expanded(child: Text(missing)),
+                    Expanded(child: Text(humanizeEvidenceText(missing))),
                   ],
                 ),
               ),
+            if (signal.aiExplanation['flaggedAsSpam'] == true) ...[
+              const SizedBox(height: 12),
+              Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xfffdf0ea),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xfff0c4a0)),
+                ),
+                padding: const EdgeInsets.all(10),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(
+                      Icons.flag_outlined,
+                      color: Color(0xffb6461a),
+                      size: 18,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        (signal.aiExplanation['flagReason'] as String?) ??
+                            'Possible spam, prank, or unclear report',
+                        style: const TextStyle(
+                          color: Color(0xff8b6033),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -1482,7 +1519,7 @@ class _PriorityExplanation {
     } else {
       whyNow.add('AI confidence: Low');
     }
-    whyNow.add('Pulse: ${pulseDisplay.label}');
+    whyNow.add('Pulse: ${_institutionPulseLabel(pulseDisplay)}');
 
     return _PriorityExplanation(
       whyThisMatters: _unique(whyThisMatters),
@@ -1598,14 +1635,13 @@ Route<T> _institutionRoute<T>(Widget child) {
 extension on DimensionStateValue {
   String get label {
     return switch (this) {
-      DimensionStateValue.unknown => 'Unknown',
-      DimensionStateValue.claimedAccessible => 'Claimed accessible',
-      DimensionStateValue.reliable => 'Reliable',
-      DimensionStateValue.degraded => 'Degraded',
-      DimensionStateValue.officiallyVerifiedDegraded =>
-        'Officially verified degraded',
-      DimensionStateValue.underReview => 'Under review',
-      DimensionStateValue.resolved => 'Resolved',
+      DimensionStateValue.unknown => pillLabelForState(this),
+      DimensionStateValue.claimedAccessible => pillLabelForState(this),
+      DimensionStateValue.reliable => pillLabelForState(this),
+      DimensionStateValue.degraded => pillLabelForState(this),
+      DimensionStateValue.officiallyVerifiedDegraded => pillLabelForState(this),
+      DimensionStateValue.underReview => pillLabelForState(this),
+      DimensionStateValue.resolved => pillLabelForState(this),
     };
   }
 
@@ -1662,6 +1698,10 @@ ConfidenceLevel _confidenceLevelFromScore(double confidence) {
     return ConfidenceLevel.moderate;
   }
   return ConfidenceLevel.low;
+}
+
+String _institutionPulseLabel(PlacePulseDisplay display) {
+  return pillLabelForPulseStatus(display.status);
 }
 
 String _confidenceExplanationFromScore(double confidence) {
@@ -1729,16 +1769,17 @@ EvidenceReadiness _signalEvidenceReadiness(BarrierSignal signal) {
 extension on CaseStatus {
   String get label {
     return switch (this) {
-      CaseStatus.open => 'Open',
-      CaseStatus.triaging => 'Triaging',
-      CaseStatus.inspectionRequested => 'Inspection requested',
-      CaseStatus.verified => 'Verified',
-      CaseStatus.remediationRequested => 'Remediation requested',
-      CaseStatus.remediationVerificationRequested =>
-        'Awaiting remediation verification',
-      CaseStatus.disputed => 'Disputed',
-      CaseStatus.resolved => 'Resolved',
-      CaseStatus.closed => 'Closed',
+      CaseStatus.open => pillLabelForCaseStatus(this),
+      CaseStatus.triaging => pillLabelForCaseStatus(this),
+      CaseStatus.inspectionRequested => pillLabelForCaseStatus(this),
+      CaseStatus.verified => pillLabelForCaseStatus(this),
+      CaseStatus.remediationRequested => pillLabelForCaseStatus(this),
+      CaseStatus.remediationVerificationRequested => pillLabelForCaseStatus(
+        this,
+      ),
+      CaseStatus.disputed => pillLabelForCaseStatus(this),
+      CaseStatus.resolved => pillLabelForCaseStatus(this),
+      CaseStatus.closed => pillLabelForCaseStatus(this),
     };
   }
 

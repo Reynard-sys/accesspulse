@@ -4,6 +4,7 @@ import 'package:accesspulse/data/in_memory_accesspulse_repository.dart';
 import 'package:accesspulse/domain/accesspulse_domain.dart';
 import 'package:accesspulse/features/public/public_flow.dart';
 import 'package:accesspulse/main.dart';
+import 'package:accesspulse/shared/copy/accesspulse_copy.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image_picker/image_picker.dart';
@@ -34,26 +35,44 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('AccessPulse'), findsOneWidget);
-    expect(find.text('Current accessibility state'), findsOneWidget);
+    expect(find.text(AccessPulseCopy.publicHomeTitle), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Quezon City Hall Main Entrance'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('Quezon City Hall Main Entrance'), findsOneWidget);
-    expect(find.textContaining('Claimed accessible'), findsOneWidget);
-    expect(find.textContaining('Reliable, aging'), findsOneWidget);
+    expect(find.textContaining('Claimed'), findsOneWidget);
+    expect(find.textContaining('Old Info'), findsOneWidget);
 
-    await tester.tap(find.text('Quezon City Hall Main Entrance'));
+    await tester.tap(
+      find
+          .ancestor(
+            of: find.text('Quezon City Hall Main Entrance'),
+            matching: find.byType(InkWell),
+          )
+          .first,
+    );
     await tester.pumpAndSettle();
 
-    expect(find.text('For you: Mobility Access'), findsOneWidget);
-    expect(find.text('Freshness / pulse'), findsOneWidget);
-    expect(find.text('Reliable, aging'), findsWidgets);
+    expect(
+      find.text('For you: ${AccessPulseCopy.mobilityAccess}'),
+      findsOneWidget,
+    );
+    expect(find.text(AccessPulseCopy.pulseFreshness), findsOneWidget);
+    expect(find.text('Old Info'), findsWidgets);
     final placeDetailScrollable = find.byType(Scrollable).first;
     await tester.scrollUntilVisible(
-      find.text('PLACE MEMORY'),
+      find.text(AccessPulseCopy.placeMemory.toUpperCase()),
       300,
       scrollable: placeDetailScrollable,
     );
-    expect(find.text('PLACE MEMORY'), findsOneWidget);
-    expect(find.text('Confirm'), findsOneWidget);
-    expect(find.text('Add Evidence'), findsOneWidget);
+    expect(
+      find.text(AccessPulseCopy.placeMemory.toUpperCase()),
+      findsOneWidget,
+    );
+    expect(find.text(AccessPulseCopy.confirmVisit), findsOneWidget);
+    expect(find.text(AccessPulseCopy.addEvidence), findsOneWidget);
   });
 
   testWidgets('confirm visit visibly updates a place state', (
@@ -69,13 +88,13 @@ void main() {
 
     await tester.tap(find.text('Quezon City Hall Main Entrance'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Confirm'));
+    await tester.tap(find.text(AccessPulseCopy.confirmVisit));
     await tester.pumpAndSettle();
 
     // Step 1: Usable independently? -> Choose "No, I needed help"
     final step1Choice = find.text('No, I needed help');
     await tester.scrollUntilVisible(step1Choice, 50.0);
-    await tester.tap(step1Choice);
+    await _tapChoiceText(tester, step1Choice);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
@@ -83,7 +102,7 @@ void main() {
     // Step 2: Need help to enter? -> Choose "Yes"
     final step2Choice = find.text('Yes');
     await tester.scrollUntilVisible(step2Choice, 50.0);
-    await tester.tap(step2Choice);
+    await _tapChoiceText(tester, step2Choice);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
@@ -91,7 +110,7 @@ void main() {
     // Step 3: Ramp present? -> Choose "No"
     final step3Choice = find.text('No');
     await tester.scrollUntilVisible(step3Choice, 50.0);
-    await tester.tap(step3Choice);
+    await _tapChoiceText(tester, step3Choice);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
@@ -106,8 +125,8 @@ void main() {
     await tester.pumpAndSettle();
 
     // Verify detail screen is updated
-    expect(find.text('Degraded'), findsOneWidget);
-    expect(find.text('Recently refreshed'), findsOneWidget);
+    expect(find.text('Reported'), findsOneWidget);
+    expect(find.text('Recently Accessible'), findsOneWidget);
   });
 
   testWidgets('evidence flow shows AI structure and submits a signal', (
@@ -188,11 +207,14 @@ void main() {
       'step-add-evidence',
     );
     await tester.scrollUntilVisible(
-      find.text('Analyze evidence'),
+      find.text(AccessPulseCopy.aiCheck),
       300,
       scrollable: addEvidenceScrollableAfterCapture,
     );
-    final analyzeButton = find.widgetWithText(FilledButton, 'Analyze evidence');
+    final analyzeButton = find.widgetWithText(
+      FilledButton,
+      AccessPulseCopy.aiCheck,
+    );
     await tester.scrollUntilVisible(
       analyzeButton,
       300,
@@ -205,7 +227,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const ValueKey('step-ai-guidance')), findsOneWidget);
-    expect(find.text('AI Guidance'), findsOneWidget);
+    expect(find.text(AccessPulseCopy.aiGuidance), findsOneWidget);
     expect(find.text('Recommended next step'), findsOneWidget);
     expect(find.text('Add another photo'), findsOneWidget);
     expect(find.text('Continue'), findsOneWidget);
@@ -233,23 +255,23 @@ void main() {
 
     final reviewPacketScrollable = _stepScrollable('step-review-packet');
     await tester.scrollUntilVisible(
-      find.text('Review packet'),
+      find.text(AccessPulseCopy.reviewSummary),
       300,
       scrollable: reviewPacketScrollable,
     );
-    expect(find.text('Review packet'), findsOneWidget);
+    expect(find.text(AccessPulseCopy.reviewSummary), findsOneWidget);
     expect(find.text('Confidence: High'), findsOneWidget);
     expect(find.text('Ramp reading included'), findsOneWidget);
 
     await tester.scrollUntilVisible(
-      find.text('Submit'),
+      find.text(AccessPulseCopy.submitToLguReview),
       300,
       scrollable: reviewPacketScrollable,
     );
-    await tester.tap(find.text('Submit'));
+    await tester.tap(find.text(AccessPulseCopy.submitToLguReview));
     await tester.pumpAndSettle();
 
-    expect(find.text('Review packet submitted'), findsOneWidget);
+    expect(find.text('Na-submit na ang ebidensya'), findsOneWidget);
     expect(find.text('⚠ DEGRADED'), findsOneWidget);
     expect(find.text('Open — awaiting LGU review'), findsOneWidget);
   });
@@ -283,11 +305,14 @@ void main() {
     final addEvidenceScrollable = _stepScrollable('step-add-evidence');
 
     await tester.scrollUntilVisible(
-      find.text('Analyze evidence'),
+      find.text(AccessPulseCopy.aiCheck),
       300,
       scrollable: addEvidenceScrollable,
     );
-    final analyzeButton = find.widgetWithText(FilledButton, 'Analyze evidence');
+    final analyzeButton = find.widgetWithText(
+      FilledButton,
+      AccessPulseCopy.aiCheck,
+    );
     await tester.scrollUntilVisible(
       analyzeButton,
       300,
@@ -301,13 +326,13 @@ void main() {
 
     final aiGuidanceScrollable = _stepScrollable('step-ai-guidance');
     expect(find.byKey(const ValueKey('step-ai-guidance')), findsOneWidget);
-    expect(find.text('AI Guidance'), findsOneWidget);
+    expect(find.text(AccessPulseCopy.aiGuidance), findsOneWidget);
     expect(find.text('Almost Ready'), findsWidgets);
     expect(find.text('Recommended next step'), findsOneWidget);
     expect(find.text('Add another photo'), findsOneWidget);
     expect(find.text('Continue'), findsOneWidget);
     expect(find.text('Skip'), findsOneWidget);
-    expect(find.text('Review packet'), findsNothing);
+    expect(find.text(AccessPulseCopy.reviewSummary), findsNothing);
 
     final addAnotherPhotoButton = find.widgetWithText(
       OutlinedButton,
@@ -333,9 +358,9 @@ void main() {
       status: CaseStatus.verified,
     );
     await _pumpPublicDetail(tester, degraded);
-    expect(find.text('Officially Verified Degraded'), findsWidgets);
+    expect(find.text('Verified Issue'), findsWidgets);
     await _scrollPublicDetailToIssueSummary(tester);
-    expect(find.text('Current Issue Summary'), findsOneWidget);
+    expect(find.text(AccessPulseCopy.issueSummary), findsOneWidget);
     expect(
       find.text(
         'Ramp access was reported to be unreliable for independent wheelchair access.',
@@ -349,7 +374,7 @@ void main() {
       status: CaseStatus.remediationRequested,
     );
     await _pumpPublicDetail(tester, underRemediation);
-    expect(find.text('Under Remediation'), findsWidgets);
+    expect(find.text('Inaayos ngayon'), findsWidgets);
     await _scrollPublicDetailToIssueSummary(tester);
     expect(
       find.text(
@@ -364,7 +389,7 @@ void main() {
       status: CaseStatus.resolved,
     );
     await _pumpPublicDetail(tester, resolved);
-    expect(find.text('Resolved'), findsWidgets);
+    expect(find.text(AccessPulseCopy.resolved), findsWidgets);
     await _scrollPublicDetailToIssueSummary(tester);
     expect(
       find.text(
@@ -379,13 +404,13 @@ void main() {
       status: CaseStatus.closed,
     );
     await _pumpPublicDetail(tester, closed);
-    expect(find.text('Recently Revalidated'), findsWidgets);
+    expect(find.text(AccessPulseCopy.recentlyRevalidated), findsWidgets);
     await _scrollPublicDetailToIssueSummary(tester);
     expect(
       find.text('This place was recently revalidated after remediation.'),
       findsOneWidget,
     );
-    expect(find.text('Claimed accessible'), findsNothing);
+    expect(find.text('Claimed'), findsNothing);
   });
 }
 
@@ -396,6 +421,13 @@ Finder _stepScrollable(String stepKey) {
         matching: find.byType(Scrollable),
       )
       .first;
+}
+
+Future<void> _tapChoiceText(WidgetTester tester, Finder textFinder) async {
+  await tester.drag(find.byType(Scrollable).first, const Offset(0, -140));
+  await tester.pumpAndSettle();
+  final option = find.ancestor(of: textFinder, matching: find.byType(InkWell));
+  await tester.tap(option.first);
 }
 
 Future<XFile?> Function(ImageSource source, int? imageQuality) _fakePicker(
@@ -437,7 +469,7 @@ Future<void> _pumpPublicDetail(
 
 Future<void> _scrollPublicDetailToIssueSummary(WidgetTester tester) async {
   await tester.scrollUntilVisible(
-    find.text('Current Issue Summary'),
+    find.text(AccessPulseCopy.issueSummary),
     200,
     scrollable: find.byType(Scrollable).first,
   );

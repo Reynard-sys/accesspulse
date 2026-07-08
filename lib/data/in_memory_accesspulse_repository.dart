@@ -55,8 +55,22 @@ class InMemoryAccessPulseRepository implements AccessPulseRepository {
   }
 
   @override
+  Future<Place> addPlace(Place place) async {
+    _places[place.id] = place;
+    return place;
+  }
+
+  @override
   Future<List<AccessibilityDimension>> listDimensions() async {
     return _dimensions.values.toList(growable: false);
+  }
+
+  @override
+  Future<PlaceDimension> addPlaceDimension(
+    PlaceDimension placeDimension,
+  ) async {
+    _placeDimensions[placeDimension.id] = placeDimension;
+    return placeDimension;
   }
 
   @override

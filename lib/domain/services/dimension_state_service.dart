@@ -272,6 +272,8 @@ class DimensionStateService {
         'evidenceReadiness': assessment.evidenceReadiness.name,
         'institutionReady': assessment.institutionReady,
         'nextBestAction': assessment.nextBestAction,
+        'flaggedAsSpam': assessment.flaggedAsSpam,
+        if (assessment.flagReason != null) 'flagReason': assessment.flagReason,
       },
       createdAt: timestamp,
     );

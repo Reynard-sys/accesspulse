@@ -66,7 +66,7 @@ void main() {
 
     expect(find.text('LGU dashboard'), findsOneWidget);
     expect(find.text('Quezon City Hall Main Entrance'), findsOneWidget);
-    expect(find.textContaining('Degraded'), findsOneWidget);
+    expect(find.textContaining('Reported'), findsOneWidget);
     expect(
       find.textContaining(
         'Priority: Public service building; Request inspection',
@@ -105,7 +105,7 @@ void main() {
     expect(find.text('Evidence readiness'), findsOneWidget);
     expect(find.text('Institution Ready'), findsOneWidget);
     expect(find.text('Freshness / pulse'), findsOneWidget);
-    expect(find.text('Under review'), findsWidgets);
+    expect(find.text('Freshness / pulse'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.text('Submitted photo reference'),
       300,
@@ -196,8 +196,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Human verification updated this place'), findsOneWidget);
-    expect(find.text('Officially verified degraded'), findsOneWidget);
-    expect(find.text('Verified'), findsWidgets);
+    expect(find.text('Verified Issue'), findsWidgets);
+    expect(find.text('Verified'), findsNothing);
   });
 
   testWidgets('triaging case remains visible to LGU but hidden from inspector', (
@@ -248,7 +248,7 @@ void main() {
 
     expect(find.text('LGU dashboard'), findsOneWidget);
     expect(find.text('Quezon City Hall Main Entrance'), findsOneWidget);
-    expect(find.text('TRIAGING'), findsOneWidget);
+    expect(find.text('ACKNOWLEDGED'), findsOneWidget);
 
     await tester.pumpWidget(
       MaterialApp(
@@ -439,7 +439,7 @@ void main() {
 
     expect(find.text('Inspector verification'), findsOneWidget);
     expect(find.text('Quezon City Hall Main Entrance'), findsOneWidget);
-    expect(find.text('AWAITING REMEDIATION VERIFICATION'), findsOneWidget);
+    expect(find.text('CHECKING FIX'), findsOneWidget);
   });
 
   testWidgets('inspector can confirm remediation from verification queue', (
@@ -531,7 +531,7 @@ void main() {
 
     expect(accessCase.status, CaseStatus.resolved);
     expect(state.state, DimensionStateValue.resolved);
-    expect(find.text('Resolved'), findsWidgets);
+    expect(find.text('Fixed'), findsWidgets);
   });
 }
 

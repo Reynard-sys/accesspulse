@@ -6,6 +6,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../domain/accesspulse_domain.dart';
+import '../../shared/copy/accesspulse_copy.dart';
+import '../../shared/copy/accesspulse_display.dart';
+import 'add_place_flow.dart';
+import 'public_places_map.dart';
 
 const _mobilityDimensionKey = 'mobility_access';
 const _demoUserId = '20000000-0000-4000-8000-000000000001';
@@ -34,6 +38,37 @@ class PublicHomeScreen extends StatefulWidget {
 
 class _PublicHomeScreenState extends State<PublicHomeScreen> {
   String _query = '';
+
+  Future<void> _openPlaceDetail(Place place, {String? bannerMessage}) async {
+    await Navigator.of(context).push(
+      _accessPulseRoute<void>(
+        PlaceDetailScreen(
+          repository: widget.repository,
+          stateService: widget.stateService,
+          aiService: widget.aiService,
+          place: place,
+          imagePickerOverride: widget.imagePickerOverride,
+          initialBannerMessage: bannerMessage,
+        ),
+      ),
+    );
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  Future<void> _openAddPlaceFlow() async {
+    final result = await Navigator.of(context).push<AddPlaceFlowResult>(
+      _accessPulseRoute<AddPlaceFlowResult>(
+        AddPlaceFlowScreen(repository: widget.repository),
+      ),
+    );
+    if (!mounted || result == null) {
+      return;
+    }
+    setState(() {});
+    await _openPlaceDetail(result.place, bannerMessage: result.bannerMessage);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -100,7 +135,7 @@ class _PublicHomeScreenState extends State<PublicHomeScreen> {
                   children: [
                     const SizedBox(height: 12),
                     Text(
-                      'Current accessibility state',
+                      AccessPulseCopy.publicHomeTitle,
                       style: GoogleFonts.afacad(
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
@@ -111,13 +146,41 @@ class _PublicHomeScreenState extends State<PublicHomeScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Check public service buildings and help update living accessibility knowledge.',
+                      AccessPulseCopy.publicHomeSubtitle,
                       style: GoogleFonts.afacad(
                         fontSize: 16,
                         color: const Color(0xff5d6b63),
                         height: 1.3,
                         fontWeight: FontWeight.w500,
                       ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: FilledButton.icon(
+                            onPressed: _openAddPlaceFlow,
+                            icon: const Icon(Icons.add_location_alt_outlined),
+                            label: const Text(AccessPulseCopy.addPlace),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    Text(
+                      AccessPulseCopy.chooseFromMapOrList,
+                      style: GoogleFonts.afacad(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xff5d6b63),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    PublicPlacesMap(
+                      places: snapshot.data!,
+                      onPlaceSelected: (place) {
+                        _openPlaceDetail(place);
+                      },
                     ),
                     const SizedBox(height: 20),
                     Semantics(
@@ -133,7 +196,7 @@ class _PublicHomeScreenState extends State<PublicHomeScreen> {
                             Icons.search,
                             color: Color(0xff5d6b63),
                           ),
-                          hintText: 'Search places',
+                          hintText: AccessPulseCopy.searchPlace,
                           contentPadding: const EdgeInsets.symmetric(
                             vertical: 14,
                           ),
@@ -141,6 +204,10 @@ class _PublicHomeScreenState extends State<PublicHomeScreen> {
                         onChanged: (value) => setState(() => _query = value),
                       ),
                     ),
+                    if (places.isEmpty) ...[
+                      const SizedBox(height: 18),
+                      _EmptyPublicSearchState(onAddPlace: _openAddPlaceFlow),
+                    ],
 
                     if (nearbyPlaces.isNotEmpty) ...[
                       const SizedBox(height: 24),
@@ -167,23 +234,7 @@ class _PublicHomeScreenState extends State<PublicHomeScreen> {
                         _NearbyPlaceCard(
                           repository: widget.repository,
                           place: place,
-                          onTap: () async {
-                            await Navigator.of(context).push(
-                              _accessPulseRoute<void>(
-                                PlaceDetailScreen(
-                                  repository: widget.repository,
-                                  stateService: widget.stateService,
-                                  aiService: widget.aiService,
-                                  place: place,
-                                  imagePickerOverride:
-                                      widget.imagePickerOverride,
-                                ),
-                              ),
-                            );
-                            if (mounted) {
-                              setState(() {});
-                            }
-                          },
+                          onTap: () => _openPlaceDetail(place),
                         ),
                         const SizedBox(height: 12),
                       ],
@@ -204,21 +255,7 @@ class _PublicHomeScreenState extends State<PublicHomeScreen> {
                         _PlaceListTile(
                           repository: widget.repository,
                           place: place,
-                          onTap: () async {
-                            await Navigator.of(context).push(
-                              _accessPulseRoute<void>(
-                                PlaceDetailScreen(
-                                  repository: widget.repository,
-                                  stateService: widget.stateService,
-                                  aiService: widget.aiService,
-                                  place: place,
-                                ),
-                              ),
-                            );
-                            if (mounted) {
-                              setState(() {});
-                            }
-                          },
+                          onTap: () => _openPlaceDetail(place),
                         ),
                         const SizedBox(height: 12),
                       ],
@@ -244,6 +281,7 @@ class PlaceDetailScreen extends StatefulWidget {
     required this.aiService,
     required this.place,
     this.imagePickerOverride,
+    this.initialBannerMessage,
     super.key,
   });
 
@@ -252,6 +290,7 @@ class PlaceDetailScreen extends StatefulWidget {
   final AiEvidenceService aiService;
   final Place place;
   final ImagePickerOverride? imagePickerOverride;
+  final String? initialBannerMessage;
 
   @override
   State<PlaceDetailScreen> createState() => _PlaceDetailScreenState();
@@ -362,7 +401,7 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
-                                  'Add Evidence',
+                                  AccessPulseCopy.addEvidence,
                                   style: GoogleFonts.afacad(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w600,
@@ -422,7 +461,7 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
-                                  'Confirm',
+                                  AccessPulseCopy.confirmVisit,
                                   style: GoogleFonts.afacad(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w600,
@@ -489,6 +528,10 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
                 return ListView(
                   padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),
                   children: [
+                    if (widget.initialBannerMessage != null) ...[
+                      _PublicInfoBanner(message: widget.initialBannerMessage!),
+                      const SizedBox(height: 12),
+                    ],
                     Row(
                       children: [
                         InkWell(
@@ -544,7 +587,7 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
                     ),
                     const SizedBox(height: 24),
                     Text(
-                      'PLACE MEMORY',
+                      AccessPulseCopy.placeMemory.toUpperCase(),
                       style: GoogleFonts.afacad(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
@@ -767,26 +810,12 @@ class _ConfirmVisitScreenState extends State<ConfirmVisitScreen> {
         borderRadius: BorderRadius.circular(14),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 13),
-      child: Text.rich(
-        TextSpan(
-          children: [
-            TextSpan(
-              text: 'You are not filing a complaint. ',
-              style: GoogleFonts.afacad(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: const Color(0xff2558b0),
-              ),
-            ),
-            TextSpan(
-              text: 'You are confirming what happened.',
-              style: GoogleFonts.afacad(
-                fontSize: 14,
-                fontWeight: FontWeight.normal,
-                color: const Color(0xff3b75d1),
-              ),
-            ),
-          ],
+      child: Text(
+        AccessPulseCopy.notAComplaint,
+        style: GoogleFonts.afacad(
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+          color: const Color(0xff2558b0),
         ),
       ),
     );
@@ -1909,7 +1938,7 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
         _accessPulseRoute<void>(
           SubmissionResultScreen(
             place: widget.place,
-            title: 'Review packet submitted',
+            title: 'Na-submit na ang ebidensya',
             message:
                 'Your evidence has been sent for LGU review. A case has been opened for this place.',
             previousState: result.previousState,
@@ -1981,7 +2010,7 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Add Evidence',
+                AccessPulseCopy.addEvidence,
                 style: GoogleFonts.afacad(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
@@ -2095,14 +2124,17 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
                     ],
                   ),
                 const SizedBox(height: 20),
+                Text(
+                  'Review note',
+                  style: Theme.of(context).textTheme.labelLarge,
+                ),
+                const SizedBox(height: 8),
                 TextField(
                   controller: _noteController,
                   maxLines: 5,
                   minLines: 3,
                   decoration: InputDecoration(
-                    labelText: 'Review note',
                     hintText: 'e.g. Ramp is too steep...',
-                    alignLabelWithHint: true,
                     filled: true,
                     fillColor: const Color(0xfff8faf9),
                     border: OutlineInputBorder(
@@ -2157,7 +2189,9 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
                           )
                         : const Icon(Icons.auto_awesome),
                     label: Text(
-                      _isAnalyzing ? 'Analyzing...' : 'Analyze evidence',
+                      _isAnalyzing
+                          ? 'Inaayos ng AI...'
+                          : AccessPulseCopy.aiCheck,
                     ),
                     onPressed: _isAnalyzing ? null : _analyzeEvidence,
                   ),
@@ -2255,7 +2289,11 @@ class _EvidenceFlowScreenState extends State<EvidenceFlowScreen> {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.fact_check_outlined),
-            label: Text(_isSubmitting ? 'Submitting...' : 'Submit'),
+            label: Text(
+              _isSubmitting
+                  ? 'Sine-send...'
+                  : AccessPulseCopy.submitToLguReview,
+            ),
             onPressed: _isSubmitting ? null : _submitEvidence,
           ),
         ),
@@ -2679,7 +2717,7 @@ class SubmissionResultScreen extends StatelessWidget {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xff17201c).withOpacity(0.04),
+                        color: const Color(0xff17201c).withValues(alpha: 0.04),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
@@ -2775,7 +2813,7 @@ class SubmissionResultScreen extends StatelessWidget {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xff17201c).withOpacity(0.04),
+                        color: const Color(0xff17201c).withValues(alpha: 0.04),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
@@ -2840,7 +2878,7 @@ class SubmissionResultScreen extends StatelessWidget {
                           ),
                         ),
                         child: Text(
-                          'Official verification remains with human reviewers. AccessPulse does not determine legal compliance.',
+                          'Official verification ay sa inspector pa rin. AccessPulse does not determine legal compliance.',
                           style: GoogleFonts.afacad(
                             fontSize: 12,
                             height: 1.4,
@@ -2864,7 +2902,9 @@ class SubmissionResultScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     elevation: 3,
-                    shadowColor: const Color(0xff2e7d5b).withOpacity(0.22),
+                    shadowColor: const Color(
+                      0xff2e7d5b,
+                    ).withValues(alpha: 0.22),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -3440,7 +3480,7 @@ class _NearbyPlaceCard extends StatelessWidget {
                               ),
                             ),
                             Text(
-                              pulseDisplay.label,
+                              _publicPulseLabel(pulseDisplay),
                               style: GoogleFonts.afacad(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
@@ -3724,8 +3764,9 @@ class _StateCard extends StatelessWidget {
       state.confidence,
     );
     final lastConfirmedStr = state.lastConfirmedAt == null
-        ? 'Unknown'
+        ? AccessPulseCopy.unknown
         : _formatDate(state.lastConfirmedAt!);
+    final pulseLabel = _publicPulseLabel(pulseDisplay);
 
     final contextLines = [
       state.explanation,
@@ -3801,7 +3842,7 @@ class _StateCard extends StatelessWidget {
                   const SizedBox(height: 2),
                   // Subtitle
                   Text(
-                    'For you: Mobility Access',
+                    'For you: ${AccessPulseCopy.mobilityAccess}',
                     style: GoogleFonts.afacad(
                       fontSize: 12.5,
                       color: const Color(0xff5d6b63),
@@ -3831,7 +3872,7 @@ class _StateCard extends StatelessWidget {
                   // Detail rows
                   _FigmaDetailRow(
                     label: 'Dimension',
-                    value: 'Mobility Access',
+                    value: AccessPulseCopy.mobilityAccess,
                     hasBorder: true,
                   ),
                   _FigmaDetailRow(
@@ -3840,8 +3881,8 @@ class _StateCard extends StatelessWidget {
                     hasBorder: true,
                   ),
                   _FigmaDetailRow(
-                    label: 'Freshness / pulse',
-                    value: pulseDisplay.label,
+                    label: AccessPulseCopy.pulseFreshness,
+                    value: pulseLabel,
                     hasBorder: true,
                   ),
                   // Confidence row — value + sub-explanation stacked
@@ -4008,7 +4049,7 @@ class _IssueSummaryBlock extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                'Current Issue Summary',
+                AccessPulseCopy.issueSummary,
                 style: GoogleFonts.afacad(
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
@@ -4055,7 +4096,7 @@ class _AiResultPanel extends StatelessWidget {
             const SizedBox(height: 12),
             _MetricRow(
               label: 'Issue type',
-              value: assessment.issueType.replaceAll('_', ' '),
+              value: humanizeEvidenceText(assessment.issueType),
             ),
             const Divider(),
             _MetricRow(
@@ -4081,7 +4122,7 @@ class _AiResultPanel extends StatelessWidget {
                 for (final feature in assessment.observedFeatures)
                   Chip(
                     label: Text(
-                      feature,
+                      humanizeEvidenceText(feature),
                       style: const TextStyle(color: Color(0xFF17201C)),
                     ),
                     backgroundColor: const Color(0xFFC8DDD4),
@@ -4105,12 +4146,21 @@ class _AiResultPanel extends StatelessWidget {
                   children: [
                     const Icon(Icons.info_outline, size: 18),
                     const SizedBox(width: 8),
-                    Expanded(child: Text(missing)),
+                    Expanded(child: Text(humanizeEvidenceText(missing))),
                   ],
                 ),
               ),
             const Divider(height: 24),
             Text(assessment.explanation),
+            if (assessment.flaggedAsSpam) ...[
+              const SizedBox(height: 12),
+              _InlineNotice(
+                icon: Icons.flag_outlined,
+                message:
+                    assessment.flagReason ??
+                    'Possible spam, prank, or unclear report.',
+              ),
+            ],
           ],
         ),
       ),
@@ -4145,8 +4195,10 @@ class _AiGuidanceCard extends StatelessWidget {
           children: [
             const _SectionHeader(
               icon: Icons.tips_and_updates_outlined,
-              title: 'AI Guidance',
+              title: AccessPulseCopy.aiGuidance,
             ),
+            const SizedBox(height: 8),
+            const Text(AccessPulseCopy.aiSafetyNote),
             const SizedBox(height: 12),
             Text('Observed', style: Theme.of(context).textTheme.labelLarge),
             const SizedBox(height: 4),
@@ -4157,7 +4209,7 @@ class _AiGuidanceCard extends StatelessWidget {
                 for (final feature in assessment.observedFeatures)
                   Chip(
                     label: Text(
-                      feature,
+                      humanizeEvidenceText(feature),
                       style: const TextStyle(color: Color(0xFF17201C)),
                     ),
                     backgroundColor: const Color(0xFFC8DDD4),
@@ -4168,7 +4220,7 @@ class _AiGuidanceCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
-            _MetricRow(label: 'Missing', value: missing),
+            _MetricRow(label: 'Missing', value: humanizeEvidenceText(missing)),
             const Divider(),
             _MetricRow(
               label: 'Confidence',
@@ -4181,6 +4233,23 @@ class _AiGuidanceCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(assessment.confidenceExplanation),
+            if (assessment.confidenceLevel == ConfidenceLevel.low) ...[
+              const SizedBox(height: 12),
+              const _InlineNotice(
+                icon: Icons.info_outline,
+                message:
+                    'Mababa ang AI confidence, pero pwede mo pa ring ituloy para sa human review.',
+              ),
+            ],
+            if (assessment.flaggedAsSpam) ...[
+              const SizedBox(height: 12),
+              _InlineNotice(
+                icon: Icons.flag_outlined,
+                message:
+                    assessment.flagReason ??
+                    'Possible spam, prank, or unclear report.',
+              ),
+            ],
             const Divider(height: 24),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -4255,7 +4324,7 @@ class _ReviewPacketPanel extends StatelessWidget {
           children: [
             const _SectionHeader(
               icon: Icons.assignment_turned_in_outlined,
-              title: 'Review packet',
+              title: AccessPulseCopy.reviewSummary,
             ),
             const SizedBox(height: 12),
             _PacketStep(
@@ -4279,6 +4348,15 @@ class _ReviewPacketPanel extends StatelessWidget {
               body:
                   '${assessment.confidenceLevel.label}: ${assessment.confidenceExplanation}',
             ),
+            if (assessment.confidenceLevel == ConfidenceLevel.low) ...[
+              const SizedBox(height: 10),
+              const _PacketStep(
+                icon: Icons.info_outline,
+                title: 'Low confidence',
+                body:
+                    'Pwede mo pa ring i-submit ito. Lalabas lang na mas kailangan ng human review.',
+              ),
+            ],
             const SizedBox(height: 10),
             _PacketStep(
               icon: Icons.verified_outlined,
@@ -4286,6 +4364,16 @@ class _ReviewPacketPanel extends StatelessWidget {
               body:
                   '${assessment.evidenceReadiness.label}: ${assessment.institutionReady ? 'sufficient evidence collected for LGU review.' : 'useful evidence, with missing context kept visible.'}',
             ),
+            if (assessment.flaggedAsSpam) ...[
+              const SizedBox(height: 10),
+              _PacketStep(
+                icon: Icons.flag_outlined,
+                title: 'Flag',
+                body:
+                    assessment.flagReason ??
+                    'Possible spam, prank, or unclear report. You can still submit it for human review.',
+              ),
+            ],
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
@@ -4365,6 +4453,16 @@ class _ReviewPacketPanel extends StatelessWidget {
                   ),
                   shape: const StadiumBorder(),
                 ),
+                if (assessment.flaggedAsSpam)
+                  const Chip(
+                    avatar: Icon(
+                      Icons.flag_outlined,
+                      size: 18,
+                      color: Color(0xFFB6461A),
+                    ),
+                    label: Text('Possible spam'),
+                    shape: StadiumBorder(),
+                  ),
                 Chip(
                   avatar: hasRampMeasurement
                       ? const Icon(
@@ -4658,38 +4756,6 @@ class _FadeSlideIn extends StatelessWidget {
   }
 }
 
-class _TransitionRow extends StatelessWidget {
-  const _TransitionRow({
-    required this.label,
-    required this.before,
-    required this.after,
-  });
-
-  final String label;
-  final String before;
-  final String after;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: Theme.of(context).textTheme.labelLarge),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            Chip(label: Text(before)),
-            const Icon(Icons.arrow_forward),
-            Chip(label: Text(after)),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
 class _PlaceListData {
   const _PlaceListData({
     required this.state,
@@ -4775,7 +4841,7 @@ _PublicStateDisplay _publicStateDisplay({
   if (status == CaseStatus.remediationRequested ||
       status == CaseStatus.remediationVerificationRequested) {
     return const _PublicStateDisplay(
-      label: 'Under Remediation',
+      label: 'Being Fixed',
       color: Color(0xff8a6d00),
     );
   }
@@ -4783,12 +4849,12 @@ _PublicStateDisplay _publicStateDisplay({
   if (state.state == DimensionStateValue.resolved) {
     if (status == CaseStatus.closed) {
       return const _PublicStateDisplay(
-        label: 'Recently Revalidated',
+        label: AccessPulseCopy.recentlyRevalidated,
         color: Color(0xff17643a),
       );
     }
     return const _PublicStateDisplay(
-      label: 'Resolved',
+      label: AccessPulseCopy.resolved,
       color: Color(0xff17643a),
     );
   }
@@ -4852,14 +4918,13 @@ String _barrierSignalSummary(BarrierSignal signal) {
 extension on DimensionStateValue {
   String get label {
     return switch (this) {
-      DimensionStateValue.unknown => 'Unknown',
-      DimensionStateValue.claimedAccessible => 'Claimed accessible',
-      DimensionStateValue.reliable => 'Confirmed accessible',
-      DimensionStateValue.degraded => 'Reported issues',
-      DimensionStateValue.officiallyVerifiedDegraded =>
-        'Officially Verified Degraded',
-      DimensionStateValue.underReview => 'Under review',
-      DimensionStateValue.resolved => 'Resolved',
+      DimensionStateValue.unknown => pillLabelForState(this),
+      DimensionStateValue.claimedAccessible => pillLabelForState(this),
+      DimensionStateValue.reliable => pillLabelForState(this),
+      DimensionStateValue.degraded => pillLabelForState(this),
+      DimensionStateValue.officiallyVerifiedDegraded => pillLabelForState(this),
+      DimensionStateValue.underReview => pillLabelForState(this),
+      DimensionStateValue.resolved => pillLabelForState(this),
     };
   }
 
@@ -4874,6 +4939,18 @@ extension on DimensionStateValue {
       DimensionStateValue.resolved => const Color(0xff17643a),
     };
   }
+}
+
+String _publicPulseLabel(PlacePulseDisplay display) {
+  return switch (display.status) {
+    PlacePulseStatus.reliable => pillLabelForPulseStatus(display.status),
+    PlacePulseStatus.reliableAging => pillLabelForPulseStatus(display.status),
+    PlacePulseStatus.unknown => pillLabelForPulseStatus(display.status),
+    PlacePulseStatus.underReview => pillLabelForPulseStatus(display.status),
+    PlacePulseStatus.recentlyRefreshed => pillLabelForPulseStatus(
+      display.status,
+    ),
+  };
 }
 
 extension on ConfidenceLevel {
@@ -4944,6 +5021,87 @@ Route<T> _accessPulseRoute<T>(Widget child) {
       );
     },
   );
+}
+
+class _PublicInfoBanner extends StatelessWidget {
+  const _PublicInfoBanner({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: const Color(0xffedf6f1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xffcfe2d6)),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(top: 2),
+            child: Icon(Icons.info_outline, color: Color(0xff2e7d5b), size: 18),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: GoogleFonts.afacad(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xff1f4736),
+                height: 1.2,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyPublicSearchState extends StatelessWidget {
+  const _EmptyPublicSearchState({required this.onAddPlace});
+
+  final VoidCallback onAddPlace;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: const Color(0xffdde5e0), width: 1),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            AccessPulseCopy.noPlaceFound,
+            style: GoogleFonts.afacad(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xff17201c),
+              height: 1.2,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: OutlinedButton.icon(
+              onPressed: onAddPlace,
+              icon: const Icon(Icons.add_location_alt_outlined),
+              label: const Text(AccessPulseCopy.addPlace),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _BeenToPlacesCard extends StatelessWidget {

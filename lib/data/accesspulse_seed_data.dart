@@ -207,7 +207,8 @@ List<DimensionPulseRecord> buildSeedDimensionPulses() {
       hasRecentVerification: true,
       contradictionFlag: false,
       lastCalculatedAt: seedGeneratedAt,
-      explanation: 'The initial verification is strong, but there are no recent community visit reports.',
+      explanation:
+          'The initial verification is strong, but there are no recent community visit reports.',
     ),
   ];
 }

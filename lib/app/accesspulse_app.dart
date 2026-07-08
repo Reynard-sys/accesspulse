@@ -259,7 +259,10 @@ class _AccessPulseRoleShellState extends State<_AccessPulseRoleShell> {
           setState(() => _selectedIndex = index);
         },
         destinations: [
-          const NavigationDestination(icon: Icon(Icons.public), label: 'Public'),
+          const NavigationDestination(
+            icon: Icon(Icons.public),
+            label: 'Public',
+          ),
           NavigationDestination(
             icon: SvgPicture.asset(
               'assets/icons/lgu_navbar.svg',

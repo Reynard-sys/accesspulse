@@ -471,6 +471,8 @@ class AiEvidenceAssessment {
     required this.nextBestAction,
     required this.explanation,
     required this.institutionReady,
+    this.flaggedAsSpam = false,
+    this.flagReason,
   });
 
   final String dimension;
@@ -487,4 +489,6 @@ class AiEvidenceAssessment {
   final String nextBestAction;
   final String explanation;
   final bool institutionReady;
+  final bool flaggedAsSpam;
+  final String? flagReason;
 }
