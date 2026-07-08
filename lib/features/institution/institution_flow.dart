@@ -437,6 +437,7 @@ class _InstitutionDashboardScreenState
         side: const BorderSide(color: Color(0xffdde5e0), width: 0.8),
       ),
       child: InkWell(
+        key: ValueKey('case-card-${summary.accessCase.id}'),
         onTap: () => _onCaseTap(summary),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -713,6 +714,9 @@ class _InstitutionDashboardScreenState
         side: const BorderSide(color: Color(0xffdde5e0), width: 0.8),
       ),
       child: InkWell(
+        key: ValueKey(
+          'case-card-${other.accessCase?.id ?? 'place-${other.place.id}'}',
+        ),
         onTap: () {
           final mockSummary = _CaseSummary(
             accessCase: _getOrCreateCaseForOtherPlace(other),
@@ -1000,17 +1004,27 @@ class _InstitutionDashboardScreenState
                           _CaseQueueTile(
                             summary: summary,
                             onTap: () async {
-                              await Navigator.of(context).push(
-                                _institutionRoute<void>(
-                                  _CaseDetailScreen(
-                                    repository: widget.repository,
-                                    stateService: widget.stateService,
-                                    summary: summary,
-                                    role: widget.role,
-                                  ),
-                                ),
-                              );
+                              final result = await Navigator.of(context)
+                                  .push<VerificationResult>(
+                                    _institutionRoute<VerificationResult>(
+                                      _CaseDetailScreen(
+                                        repository: widget.repository,
+                                        stateService: widget.stateService,
+                                        summary: summary,
+                                        role: widget.role,
+                                      ),
+                                    ),
+                                  );
                               _refresh();
+                              if (context.mounted && result != null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'Verification submitted for ${summary.place.name}.',
+                                    ),
+                                  ),
+                                );
+                              }
                             },
                           ),
                           const SizedBox(height: 12),
@@ -1303,8 +1317,8 @@ class _CaseDetailScreenState extends State<_CaseDetailScreen> {
   }
 
   Future<void> _openVerification(_CaseDetailData detail) async {
-    await Navigator.of(context).push(
-      _institutionRoute<void>(
+    final result = await Navigator.of(context).push<VerificationResult>(
+      _institutionRoute<VerificationResult>(
         _InspectorVerificationScreen(
           place: widget.summary.place,
           detail: detail,
@@ -1312,6 +1326,13 @@ class _CaseDetailScreenState extends State<_CaseDetailScreen> {
         ),
       ),
     );
+    if (!mounted) {
+      return;
+    }
+    if (result != null) {
+      Navigator.of(context).pop(result);
+      return;
+    }
     _refresh();
   }
 
@@ -2612,11 +2633,7 @@ class _InspectorVerificationScreenState
     if (!mounted) {
       return;
     }
-    await Navigator.of(context).pushReplacement(
-      _institutionRoute<void>(
-        _VerificationResultScreen(place: widget.place, result: result),
-      ),
-    );
+    Navigator.of(context).pop(result);
   }
 
   @override
@@ -2713,103 +2730,6 @@ class _InspectorVerificationScreenState
   }
 }
 
-class _VerificationResultScreen extends StatelessWidget {
-  const _VerificationResultScreen({required this.place, required this.result});
-
-  final Place place;
-  final VerificationResult result;
-
-  @override
-  Widget build(BuildContext context) {
-    final previousPulseDisplay = const PulseService().describePlacePulse(
-      state: result.previousState,
-      pulse: result.previousPulse,
-    );
-    final currentPulseDisplay = const PulseService().describePlacePulse(
-      state: result.currentState,
-      pulse: result.currentPulse,
-    );
-    return Scaffold(
-      appBar: AppBar(title: const Text('Verification update')),
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 760),
-            child: ListView(
-              padding: const EdgeInsets.all(20),
-              children: [
-                TweenAnimationBuilder<double>(
-                  tween: Tween(begin: 0.82, end: 1),
-                  duration: const Duration(milliseconds: 260),
-                  curve: Curves.easeOutBack,
-                  builder: (context, value, child) {
-                    return Transform.scale(scale: value, child: child);
-                  },
-                  child: Icon(
-                    Icons.verified_outlined,
-                    size: 56,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'Human verification updated this place',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(place.name, textAlign: TextAlign.center),
-                const SizedBox(height: 20),
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _TransitionRow(
-                          label: 'Current accessibility state',
-                          before: result.previousState.state.label,
-                          after: result.currentState.state.label,
-                        ),
-                        const Divider(height: 24),
-                        _MetricRow(
-                          label: 'Case status',
-                          value: result.accessCase.status.label,
-                        ),
-                        const Divider(height: 24),
-                        _TransitionRow(
-                          label: 'Pulse / freshness',
-                          before: _institutionPulseLabel(previousPulseDisplay),
-                          after: _institutionPulseLabel(currentPulseDisplay),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(result.currentState.explanation),
-                        const SizedBox(height: 8),
-                        Text(
-                          currentPulseDisplay.explanation,
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                FilledButton.icon(
-                  icon: const Icon(Icons.dashboard_outlined),
-                  label: const Text('Back to queue'),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _CaseQueueTile extends StatelessWidget {
   const _CaseQueueTile({required this.summary, required this.onTap});
 
@@ -2847,6 +2767,7 @@ class _CaseQueueTile extends StatelessWidget {
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
+        key: ValueKey('case-card-${summary.accessCase.id}'),
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: IntrinsicHeight(
@@ -3094,91 +3015,104 @@ class _InstitutionStateCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.watch_later_outlined,
-                      size: 12,
-                      color: Color(0xff8891a8),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      timeAgo,
-                      style: GoogleFonts.afacad(
-                        fontSize: 12,
-                        color: Color(0xff8891a8),
-                      ),
-                    ),
-                  ],
-                ),
-                Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0xfff2f2f5),
-                    borderRadius: BorderRadius.circular(100),
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
+                Expanded(
                   child: Row(
                     children: [
-                      Text(
-                        '5 visits',
-                        style: GoogleFonts.afacad(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xff525870),
-                        ),
-                      ),
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 6),
-                        child: Text(
-                          '·',
-                          style: TextStyle(
-                            color: Color(0xffc5c9d1),
-                            fontSize: 11,
-                          ),
-                        ),
-                      ),
                       const Icon(
-                        Icons.camera_alt_outlined,
+                        Icons.watch_later_outlined,
                         size: 12,
-                        color: Color(0xff525870),
+                        color: Color(0xff8891a8),
                       ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '3',
-                        style: GoogleFonts.afacad(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xff525870),
-                        ),
-                      ),
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 6),
+                      const SizedBox(width: 6),
+                      Expanded(
                         child: Text(
-                          '·',
-                          style: TextStyle(
-                            color: Color(0xffc5c9d1),
-                            fontSize: 11,
+                          timeAgo,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.afacad(
+                            fontSize: 12,
+                            color: Color(0xff8891a8),
                           ),
-                        ),
-                      ),
-                      const Icon(
-                        Icons.verified_outlined,
-                        size: 12,
-                        color: Color(0xff525870),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '2',
-                        style: GoogleFonts.afacad(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xff525870),
                         ),
                       ),
                     ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerRight,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xfff2f2f5),
+                        borderRadius: BorderRadius.circular(100),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      child: Row(
+                        children: [
+                          Text(
+                            '5 visits',
+                            style: GoogleFonts.afacad(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xff525870),
+                            ),
+                          ),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 6),
+                            child: Text(
+                              '·',
+                              style: TextStyle(
+                                color: Color(0xffc5c9d1),
+                                fontSize: 11,
+                              ),
+                            ),
+                          ),
+                          const Icon(
+                            Icons.camera_alt_outlined,
+                            size: 12,
+                            color: Color(0xff525870),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '3',
+                            style: GoogleFonts.afacad(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xff525870),
+                            ),
+                          ),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 6),
+                            child: Text(
+                              '·',
+                              style: TextStyle(
+                                color: Color(0xffc5c9d1),
+                                fontSize: 11,
+                              ),
+                            ),
+                          ),
+                          const Icon(
+                            Icons.verified_outlined,
+                            size: 12,
+                            color: Color(0xff525870),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '2',
+                            style: GoogleFonts.afacad(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xff525870),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -3621,16 +3555,22 @@ class _MemoryPanel extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      eventTitle,
-                      style: GoogleFonts.afacad(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xff1a1f2e),
+                    Expanded(
+                      child: Text(
+                        eventTitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.afacad(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xff1a1f2e),
+                        ),
                       ),
                     ),
+                    const SizedBox(width: 8),
                     Text(
                       dateStr,
+                      maxLines: 1,
                       style: GoogleFonts.afacad(
                         fontSize: 11,
                         color: const Color(0xffb0b5c1),

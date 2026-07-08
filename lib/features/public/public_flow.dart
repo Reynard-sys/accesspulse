@@ -9,6 +9,7 @@ import '../../domain/accesspulse_domain.dart';
 import '../../shared/copy/accesspulse_copy.dart';
 import '../../shared/copy/accesspulse_display.dart';
 import 'add_place_flow.dart';
+import 'place_filtering.dart';
 import 'public_places_map.dart';
 
 const _mobilityDimensionKey = 'mobility_access';
@@ -38,6 +39,9 @@ class PublicHomeScreen extends StatefulWidget {
 
 class _PublicHomeScreenState extends State<PublicHomeScreen> {
   String _query = '';
+  String _selectedCity = 'Manila';
+  String _selectedBarangay = 'Santa Mesa';
+  String? _homeBannerMessage;
 
   Future<void> _openPlaceDetail(Place place, {String? bannerMessage}) async {
     await Navigator.of(context).push(
@@ -60,14 +64,25 @@ class _PublicHomeScreenState extends State<PublicHomeScreen> {
   Future<void> _openAddPlaceFlow() async {
     final result = await Navigator.of(context).push<AddPlaceFlowResult>(
       _accessPulseRoute<AddPlaceFlowResult>(
-        AddPlaceFlowScreen(repository: widget.repository),
+        AddPlaceFlowScreen(
+          repository: widget.repository,
+          initialCity: _selectedCity == allPlacesFilterValue
+              ? null
+              : _selectedCity,
+          initialBarangay: _selectedBarangay == allPlacesFilterValue
+              ? null
+              : _selectedBarangay,
+        ),
       ),
     );
     if (!mounted || result == null) {
       return;
     }
-    setState(() {});
-    await _openPlaceDetail(result.place, bannerMessage: result.bannerMessage);
+    setState(() {
+      _selectedCity = result.place.city;
+      _selectedBarangay = result.place.barangay;
+      _homeBannerMessage = result.bannerMessage;
+    });
   }
 
   @override
@@ -106,13 +121,28 @@ class _PublicHomeScreenState extends State<PublicHomeScreen> {
                 if (!snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());
                 }
-                final places = snapshot.data!
-                    .where(
-                      (place) => place.name.toLowerCase().contains(
-                        _query.toLowerCase(),
-                      ),
-                    )
-                    .toList();
+                final allPlaces = snapshot.data!;
+                final cityOptions = getCityOptions(allPlaces);
+                if (!cityOptions.contains(_selectedCity)) {
+                  _selectedCity = cityOptions.contains('Manila')
+                      ? 'Manila'
+                      : allPlacesFilterValue;
+                }
+                final barangayOptions = getBarangayOptions(
+                  allPlaces,
+                  _selectedCity,
+                );
+                if (!barangayOptions.contains(_selectedBarangay)) {
+                  _selectedBarangay = barangayOptions.contains('Santa Mesa')
+                      ? 'Santa Mesa'
+                      : allPlacesFilterValue;
+                }
+                final places = getVisiblePlaces(
+                  places: allPlaces,
+                  selectedCity: _selectedCity,
+                  selectedBarangay: _selectedBarangay,
+                  searchQuery: _query,
+                );
 
                 final nearbyPlaces = places
                     .where(
@@ -154,6 +184,10 @@ class _PublicHomeScreenState extends State<PublicHomeScreen> {
                         fontWeight: FontWeight.w500,
                       ),
                     ),
+                    if (_homeBannerMessage != null) ...[
+                      const SizedBox(height: 12),
+                      _PublicInfoBanner(message: _homeBannerMessage!),
+                    ],
                     const SizedBox(height: 16),
                     Row(
                       children: [
@@ -162,6 +196,58 @@ class _PublicHomeScreenState extends State<PublicHomeScreen> {
                             onPressed: _openAddPlaceFlow,
                             icon: const Icon(Icons.add_location_alt_outlined),
                             label: const Text(AccessPulseCopy.addPlace),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            initialValue: _selectedCity,
+                            decoration: const InputDecoration(
+                              labelText: 'City',
+                            ),
+                            items: cityOptions
+                                .map(
+                                  (city) => DropdownMenuItem<String>(
+                                    value: city,
+                                    child: Text(city),
+                                  ),
+                                )
+                                .toList(growable: false),
+                            onChanged: (value) {
+                              if (value == null) {
+                                return;
+                              }
+                              setState(() {
+                                _selectedCity = value;
+                                _selectedBarangay = allPlacesFilterValue;
+                              });
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            initialValue: _selectedBarangay,
+                            decoration: const InputDecoration(
+                              labelText: 'Barangay',
+                            ),
+                            items: barangayOptions
+                                .map(
+                                  (barangay) => DropdownMenuItem<String>(
+                                    value: barangay,
+                                    child: Text(barangay),
+                                  ),
+                                )
+                                .toList(growable: false),
+                            onChanged: (value) {
+                              if (value != null) {
+                                setState(() => _selectedBarangay = value);
+                              }
+                            },
                           ),
                         ),
                       ],
@@ -177,7 +263,7 @@ class _PublicHomeScreenState extends State<PublicHomeScreen> {
                     ),
                     const SizedBox(height: 12),
                     PublicPlacesMap(
-                      places: snapshot.data!,
+                      places: places,
                       onPlaceSelected: (place) {
                         _openPlaceDetail(place);
                       },
@@ -220,7 +306,7 @@ class _PublicHomeScreenState extends State<PublicHomeScreen> {
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            'Nearby public buildings · Quezon City, Metro Manila',
+                            'PUP area - Manila, Santa Mesa',
                             style: GoogleFonts.afacad(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
@@ -3375,7 +3461,7 @@ class _NearbyPlaceCard extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             if (place.name ==
-                                'Quezon City Hall Main Entrance') ...[
+                                'Polytechnic University of the Philippines') ...[
                               SvgPicture.asset(
                                 'assets/icons/default_icon_building.svg',
                                 width: 26.293,
@@ -3799,7 +3885,8 @@ class _StateCard extends StatelessWidget {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      if (placeName == 'Quezon City Hall Main Entrance') ...[
+                      if (placeName ==
+                          'Polytechnic University of the Philippines') ...[
                         SvgPicture.asset(
                           'assets/icons/default_icon_building.svg',
                           width: 26.293,

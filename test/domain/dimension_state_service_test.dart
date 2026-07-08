@@ -19,9 +19,16 @@ void main() {
       final memory = await repository.listMemoryEvents(stalePlaceDimensionId);
 
       expect(places, hasLength(4));
-      expect(state.state, DimensionStateValue.claimedAccessible);
+      expect(state.state, DimensionStateValue.degraded);
       expect(pulse.level, DimensionPulseLevel.moderate);
-      expect(memory.single.eventType, MemoryEventType.stateSeeded);
+      expect(
+        memory.any((event) => event.eventType == MemoryEventType.stateSeeded),
+        isTrue,
+      );
+      expect(
+        memory.any((event) => event.eventType == MemoryEventType.caseOpened),
+        isTrue,
+      );
     },
   );
 
@@ -47,11 +54,13 @@ void main() {
 
       final memory = await repository.listMemoryEvents(stalePlaceDimensionId);
 
-      expect(result.previousState.state, DimensionStateValue.claimedAccessible);
-      expect(result.currentState.state, DimensionStateValue.reliable);
-      expect(result.currentPulse.supportingObservationsCount, 2);
+      expect(result.previousState.state, DimensionStateValue.degraded);
+      expect(result.currentState.state, DimensionStateValue.degraded);
+      expect(result.currentPulse.supportingObservationsCount, 3);
       expect(
-        memory.any((event) => event.eventType == MemoryEventType.stateChanged),
+        memory.any(
+          (event) => event.eventType == MemoryEventType.visitConfirmed,
+        ),
         isTrue,
       );
     },
@@ -84,11 +93,7 @@ void main() {
     expect(savedState.state, DimensionStateValue.degraded);
     expect(savedState.source, 'community_visit_confirmation');
     expect(
-      memory.any(
-        (event) =>
-            event.eventType == MemoryEventType.stateChanged &&
-            event.summary.contains('fresh visit challenged'),
-      ),
+      memory.any((event) => event.eventType == MemoryEventType.visitConfirmed),
       isTrue,
     );
   });

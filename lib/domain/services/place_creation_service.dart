@@ -45,6 +45,7 @@ class PlaceCreationService {
   Future<PlaceCreationResult> createPublicPlace({
     required String name,
     required String city,
+    required String barangay,
     required double latitude,
     required double longitude,
     String? addressOrLandmark,
@@ -54,11 +55,15 @@ class PlaceCreationService {
   }) async {
     final normalizedName = name.trim();
     final normalizedCity = city.trim();
+    final normalizedBarangay = barangay.trim();
     if (normalizedName.isEmpty) {
       throw ArgumentError.value(name, 'name', 'Place name is required.');
     }
     if (normalizedCity.isEmpty) {
       throw ArgumentError.value(city, 'city', 'City is required.');
+    }
+    if (normalizedBarangay.isEmpty) {
+      throw ArgumentError.value(barangay, 'barangay', 'Barangay is required.');
     }
     if (latitude.isNaN || longitude.isNaN) {
       throw ArgumentError('Coordinates are required.');
@@ -77,6 +82,8 @@ class PlaceCreationService {
       id: _idFactory('place'),
       name: normalizedName,
       placeType: placeType,
+      city: normalizedCity,
+      barangay: normalizedBarangay,
       address: _trimOrNull(addressOrLandmark),
       municipality: normalizedCity,
       latitude: latitude,
