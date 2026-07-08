@@ -430,6 +430,7 @@ class _InstitutionDashboardScreenState
     final String timeAgo = _getTimeAgo(summary.accessCase.openedAt);
 
     return Card(
+      margin: const EdgeInsets.only(bottom: 12),
       clipBehavior: Clip.antiAlias,
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -1341,7 +1342,7 @@ class _CaseDetailScreenState extends State<_CaseDetailScreen> {
       decoration: const BoxDecoration(
         border: Border(bottom: BorderSide(color: Color(0xffdde5e0), width: 1)),
       ),
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 17),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 17),
       child: Row(
         children: [
           GestureDetector(
