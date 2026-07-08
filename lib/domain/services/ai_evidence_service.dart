@@ -28,6 +28,7 @@ class MockAiEvidenceService implements AiEvidenceService {
     RampSlopeMeasurement? rampSlopeMeasurement,
   }) async {
     final lowerNote = note.toLowerCase();
+    final flaggedAsSpam = _looksSuspicious(lowerNote);
     final mentionsSteps =
         lowerNote.contains('step') || lowerNote.contains('stairs');
     final mentionsRamp = lowerNote.contains('ramp');
@@ -37,14 +38,18 @@ class MockAiEvidenceService implements AiEvidenceService {
     final measurementText = measurement == null
         ? null
         : 'estimated ramp angle ${measurement.estimatedAngleDegrees.toStringAsFixed(1)} degrees';
-    final baseConfidence = mentionsSteps || mentionsRamp || mentionsAssistance
+    final baseConfidence = flaggedAsSpam
+        ? 0.22
+        : mentionsSteps || mentionsRamp || mentionsAssistance
         ? 0.82
         : 0.58;
     final confidence = measurement == null
         ? baseConfidence
         : (baseConfidence + 0.05).clamp(0.0, 0.9).toDouble();
     final hasPhoto = imagePath != null || imageBytes != null;
-    final readiness = measurement != null || hasPhoto
+    final readiness = flaggedAsSpam
+        ? EvidenceReadiness.draft
+        : measurement != null || hasPhoto
         ? EvidenceReadiness.institutionReady
         : EvidenceReadiness.almostReady;
     final confidenceLevel = _confidenceLevelFromScore(confidence);
@@ -75,6 +80,7 @@ class MockAiEvidenceService implements AiEvidenceService {
         hasMeasurement: measurement != null,
         hasPhoto: hasPhoto,
         mentionsRamp: mentionsRamp,
+        flaggedAsSpam: flaggedAsSpam,
       ),
       evidenceReadiness: readiness,
       summary: measurement == null
@@ -86,11 +92,16 @@ class MockAiEvidenceService implements AiEvidenceService {
         hasPhoto: hasPhoto,
         hasMeasurement: measurement != null,
         mentionsRamp: mentionsRamp,
+        flaggedAsSpam: flaggedAsSpam,
       ),
       explanation: measurement == null
           ? 'I can structure visible and described mobility-access signals, but I cannot determine legal compliance or official verification.'
           : 'I can use the estimated incline reading as supporting evidence, but it is not an official measurement and does not determine legal compliance.',
       institutionReady: readiness == EvidenceReadiness.institutionReady,
+      flaggedAsSpam: flaggedAsSpam,
+      flagReason: flaggedAsSpam
+          ? 'Possible spam, prank, or unclear report.'
+          : null,
     );
   }
 
@@ -109,7 +120,11 @@ class MockAiEvidenceService implements AiEvidenceService {
     required bool hasMeasurement,
     required bool hasPhoto,
     required bool mentionsRamp,
+    required bool flaggedAsSpam,
   }) {
+    if (flaggedAsSpam) {
+      return 'The report looks unclear or possibly unserious, so a human reviewer should treat it carefully.';
+    }
     return switch (confidenceLevel) {
       ConfidenceLevel.high =>
         hasMeasurement
@@ -129,7 +144,11 @@ class MockAiEvidenceService implements AiEvidenceService {
     required bool hasPhoto,
     required bool hasMeasurement,
     required bool mentionsRamp,
+    required bool flaggedAsSpam,
   }) {
+    if (flaggedAsSpam) {
+      return 'You can still submit this, but it may be flagged for spam, prank, or unclear context.';
+    }
     if (readiness == EvidenceReadiness.institutionReady) {
       return 'Submit for review.';
     }
@@ -140,6 +159,26 @@ class MockAiEvidenceService implements AiEvidenceService {
       return 'Add a side angle or ramp reading that shows the ramp slope and top landing.';
     }
     return 'Add one clearer detail about the entrance route before review.';
+  }
+
+  static bool _looksSuspicious(String lowerNote) {
+    final trimmed = lowerNote.trim();
+    if (trimmed.isEmpty || trimmed.length < 4) {
+      return true;
+    }
+    const suspiciousTerms = <String>[
+      'prank',
+      'joke',
+      'haha',
+      'hehe',
+      'lol',
+      'asdf',
+      'qwerty',
+      'test only',
+      'nonsense',
+      'wala lang',
+    ];
+    return suspiciousTerms.any(trimmed.contains);
   }
 }
 
@@ -266,6 +305,8 @@ class GeminiServerEvidenceService implements AiEvidenceService {
               ) ==
               EvidenceReadiness.institutionReady,
         ),
+        flaggedAsSpam: _boolValue(decoded['flaggedAsSpam'], false),
+        flagReason: _nullableStringValue(decoded['flagReason']),
       );
     } on Object {
       return _fallback.analyzeMobilityEvidence(
@@ -395,5 +436,12 @@ class GeminiServerEvidenceService implements AiEvidenceService {
           RegExp('confirms? legal non-compliance', caseSensitive: false),
           'supports review',
         );
+  }
+
+  String? _nullableStringValue(Object? value) {
+    if (value is String && value.trim().isNotEmpty) {
+      return value;
+    }
+    return null;
   }
 }

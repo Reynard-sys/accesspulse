@@ -7,6 +7,7 @@ void main() {
   const communityUserId = '20000000-0000-4000-8000-000000000001';
   const reviewerId = '20000000-0000-4000-8000-000000000002';
   const inspectorId = '20000000-0000-4000-8000-000000000003';
+  const seededPupCaseId = '83000000-0000-4000-8000-000000000001';
 
   test(
     'seeded repository preserves place dimension state, pulse, and memory',
@@ -18,10 +19,17 @@ void main() {
       final pulse = await repository.getDimensionPulse(stalePlaceDimensionId);
       final memory = await repository.listMemoryEvents(stalePlaceDimensionId);
 
-      expect(places, hasLength(3));
-      expect(state.state, DimensionStateValue.claimedAccessible);
+      expect(places, hasLength(4));
+      expect(state.state, DimensionStateValue.degraded);
       expect(pulse.level, DimensionPulseLevel.moderate);
-      expect(memory.single.eventType, MemoryEventType.stateSeeded);
+      expect(
+        memory.any((event) => event.eventType == MemoryEventType.stateSeeded),
+        isTrue,
+      );
+      expect(
+        memory.any((event) => event.eventType == MemoryEventType.caseOpened),
+        isTrue,
+      );
     },
   );
 
@@ -47,11 +55,13 @@ void main() {
 
       final memory = await repository.listMemoryEvents(stalePlaceDimensionId);
 
-      expect(result.previousState.state, DimensionStateValue.claimedAccessible);
-      expect(result.currentState.state, DimensionStateValue.reliable);
-      expect(result.currentPulse.supportingObservationsCount, 2);
+      expect(result.previousState.state, DimensionStateValue.degraded);
+      expect(result.currentState.state, DimensionStateValue.degraded);
+      expect(result.currentPulse.supportingObservationsCount, 3);
       expect(
-        memory.any((event) => event.eventType == MemoryEventType.stateChanged),
+        memory.any(
+          (event) => event.eventType == MemoryEventType.visitConfirmed,
+        ),
         isTrue,
       );
     },
@@ -84,11 +94,7 @@ void main() {
     expect(savedState.state, DimensionStateValue.degraded);
     expect(savedState.source, 'community_visit_confirmation');
     expect(
-      memory.any(
-        (event) =>
-            event.eventType == MemoryEventType.stateChanged &&
-            event.summary.contains('fresh visit challenged'),
-      ),
+      memory.any((event) => event.eventType == MemoryEventType.visitConfirmed),
       isTrue,
     );
   });
@@ -233,6 +239,47 @@ void main() {
       isTrue,
     );
   });
+
+  test(
+    'inspector verified condition buttons map to matching state outcomes',
+    () async {
+      Future<(DimensionStateValue, CaseStatus)> verify(
+        InspectorVerifiedCondition condition,
+      ) async {
+        final repository = InMemoryAccessPulseRepository.seeded();
+        final service = DimensionStateService(repository: repository);
+        await service.requestInspection(
+          caseId: seededPupCaseId,
+          reviewerId: reviewerId,
+        );
+        final result = await service.submitVerification(
+          caseId: seededPupCaseId,
+          inspectorId: inspectorId,
+          outcome: VerificationOutcome.confirmed,
+          verifiedCondition: condition,
+          note: 'Inspector selected ${condition.name}.',
+        );
+        return (result.currentState.state, result.accessCase.status);
+      }
+
+      expect(await verify(InspectorVerifiedCondition.reliable), (
+        DimensionStateValue.reliable,
+        CaseStatus.verified,
+      ));
+      expect(await verify(InspectorVerifiedCondition.conditionallyUsable), (
+        DimensionStateValue.claimedAccessible,
+        CaseStatus.verified,
+      ));
+      expect(await verify(InspectorVerifiedCondition.degraded), (
+        DimensionStateValue.degraded,
+        CaseStatus.verified,
+      ));
+      expect(await verify(InspectorVerifiedCondition.blocked), (
+        DimensionStateValue.officiallyVerifiedDegraded,
+        CaseStatus.verified,
+      ));
+    },
+  );
 
   test('LGU can request remediation after inspector confirms barrier', () async {
     final repository = InMemoryAccessPulseRepository.seeded();

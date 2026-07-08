@@ -2,10 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class OnboardingScreen extends StatefulWidget {
-  const OnboardingScreen({
-    required this.onCompleted,
-    super.key,
-  });
+  const OnboardingScreen({required this.onCompleted, super.key});
 
   final VoidCallback onCompleted;
 
@@ -43,13 +40,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 480),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 24.0),
+              padding: const EdgeInsets.symmetric(vertical: 24.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 32),
-                  
-                  // Sliding Pages
+
                   Expanded(
                     child: PageView(
                       controller: _pageController,
@@ -60,6 +56,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       },
                       children: [
                         _buildPageContent(
+                          context,
                           titleWidget: Text(
                             'Places have living accessibility states.',
                             style: GoogleFonts.afacad(
@@ -72,8 +69,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           ),
                           description:
                               'Accessibility changes when ramps are blocked, elevators break, entrances degrade, or fixes are made. A place is not accessible forever because it was once declared accessible.',
+                          imagePath: 'assets/images/man_in_wheelchair.png',
                         ),
                         _buildPageContent(
+                          context,
                           titleWidget: Text(
                             'Your visit can update what others know.',
                             style: GoogleFonts.afacad(
@@ -86,8 +85,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           ),
                           description:
                               'Answer a few simple questions after visiting a place. Your confirmation helps the next person decide before they go.',
+                          imagePath: 'assets/images/female_in_wheelchair.png',
                         ),
                         _buildPageContent(
+                          context,
                           titleWidget: Text.rich(
                             TextSpan(
                               children: [
@@ -98,7 +99,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                     color: const Color(0xff2e7d5b),
                                   ),
                                 ),
-                                const TextSpan(text: 'turns experience into action.'),
+                                const TextSpan(
+                                  text: 'turns experience into action.',
+                                ),
                               ],
                             ),
                             style: GoogleFonts.afacad(
@@ -111,13 +114,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           ),
                           description:
                               'AI helps strengthen evidence, and institutions receive structured accessibility intelligence.',
+                          imagePath: 'assets/images/teacher_and_girl.png',
                         ),
                       ],
                     ),
                   ),
-
-                  // Bottom Navigation controls
-                  _buildBottomControls(),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32.0),
+                    child: _buildBottomControls(),
+                  ),
                   const SizedBox(height: 16),
                 ],
               ),
@@ -128,54 +133,76 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-  Widget _buildPageContent({
+  Widget _buildPageContent(
+    BuildContext context, {
     required Widget titleWidget,
     required String description,
+    required String imagePath,
   }) {
-    return Center(
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            titleWidget,
-            const SizedBox(height: 20),
-            Text(
-              description,
-              style: GoogleFonts.afacad(
-                fontSize: 20,
-                fontWeight: FontWeight.w500,
-                color: const Color(0xff5d6b63),
-                height: 1.20,
-                letterSpacing: -0.32,
-              ),
-            ),
-          ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Spacer(),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32.0),
+          child: titleWidget,
         ),
-      ),
+        const SizedBox(height: 20),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32.0),
+          child: Text(
+            description,
+            style: GoogleFonts.afacad(
+              fontSize: 20,
+              fontWeight: FontWeight.w500,
+              color: const Color(0xff5d6b63),
+              height: 1.20,
+              letterSpacing: -0.32,
+            ),
+          ),
+        ),
+        Expanded(
+          flex: 2,
+          child: Align(
+            alignment: Alignment.bottomCenter,
+            child: imagePath == 'assets/images/female_in_wheelchair.png'
+                ? Transform.translate(
+                    offset: const Offset(0.0, 30.0),
+                    child: Image.asset(
+                      imagePath,
+                      fit: BoxFit.fitWidth,
+                      width: double.infinity,
+                    ),
+                  )
+                : imagePath == 'assets/images/teacher_and_girl.png'
+                ? Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Image.asset(
+                      imagePath,
+                      fit: BoxFit.fitWidth,
+                      width: double.infinity,
+                    ),
+                  )
+                : Padding(
+                    padding: const EdgeInsets.only(top: 24.0, bottom: 8.0),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxHeight: MediaQuery.of(context).size.height * 0.5,
+                      ),
+                      child: Image.asset(imagePath, fit: BoxFit.contain),
+                    ),
+                  ),
+          ),
+        ),
+      ],
     );
   }
 
   Widget _buildBottomControls() {
     if (_currentPage < 2) {
-      // Screens 1 and 2: Circular dark button on the right
       return Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          // Optional Skip button
-          TextButton(
-            key: const ValueKey('onboarding-skip-button'),
-            onPressed: widget.onCompleted,
-            style: TextButton.styleFrom(
-              foregroundColor: const Color(0xff5d6b63),
-              textStyle: GoogleFonts.afacad(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                letterSpacing: -0.15,
-              ),
-            ),
-            child: const Text('Skip'),
-          ),
           Semantics(
             label: 'Next onboarding page',
             button: true,
@@ -201,7 +228,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         ],
       );
     } else {
-      // Screen 3: Wide green button stretching bottom
       return SizedBox(
         width: double.infinity,
         child: Semantics(

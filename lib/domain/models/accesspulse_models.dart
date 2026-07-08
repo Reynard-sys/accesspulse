@@ -48,6 +48,13 @@ enum CaseSeverity { low, medium, high }
 
 enum VerificationOutcome { confirmed, disputed, insufficientEvidence }
 
+enum InspectorVerifiedCondition {
+  reliable,
+  conditionallyUsable,
+  degraded,
+  blocked,
+}
+
 enum MemoryEventType {
   placeSeeded,
   stateSeeded,
@@ -99,6 +106,8 @@ class Place {
     required this.id,
     required this.name,
     required this.placeType,
+    required this.city,
+    required this.barangay,
     this.address,
     this.municipality,
     this.province,
@@ -110,6 +119,8 @@ class Place {
   final String id;
   final String name;
   final String placeType;
+  final String city;
+  final String barangay;
   final String? address;
   final String? municipality;
   final String? province;
@@ -404,6 +415,7 @@ class Verification {
     required this.note,
     required this.performedAt,
     this.verifiedBy,
+    this.verifiedCondition,
   });
 
   final String id;
@@ -411,6 +423,7 @@ class Verification {
   final String placeDimensionId;
   final String? verifiedBy;
   final VerificationOutcome outcome;
+  final InspectorVerifiedCondition? verifiedCondition;
   final String note;
   final DateTime performedAt;
 }
@@ -471,6 +484,8 @@ class AiEvidenceAssessment {
     required this.nextBestAction,
     required this.explanation,
     required this.institutionReady,
+    this.flaggedAsSpam = false,
+    this.flagReason,
   });
 
   final String dimension;
@@ -487,4 +502,6 @@ class AiEvidenceAssessment {
   final String nextBestAction;
   final String explanation;
   final bool institutionReady;
+  final bool flaggedAsSpam;
+  final String? flagReason;
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../config/ai_config.dart';
@@ -232,6 +233,15 @@ class _AccessPulseRoleShellState extends State<_AccessPulseRoleShell> {
       ),
     };
 
+    final tabNavigator = Navigator(
+      onGenerateRoute: (settings) {
+        return MaterialPageRoute<void>(
+          settings: settings,
+          builder: (context) => body,
+        );
+      },
+    );
+
     return Scaffold(
       appBar: AppBar(title: const _AccessPulseBrandTitle(fontSize: 24)),
       body: AnimatedSwitcher(
@@ -250,21 +260,58 @@ class _AccessPulseRoleShellState extends State<_AccessPulseRoleShell> {
             ),
           );
         },
-        child: KeyedSubtree(key: ValueKey(_selectedIndex), child: body),
+        child: KeyedSubtree(key: ValueKey(_selectedIndex), child: tabNavigator),
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: (index) {
           setState(() => _selectedIndex = index);
         },
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.public), label: 'Public'),
+        destinations: [
+          const NavigationDestination(
+            icon: Icon(Icons.public),
+            label: 'Public',
+          ),
           NavigationDestination(
-            icon: Icon(Icons.dashboard_outlined),
+            icon: SvgPicture.asset(
+              'assets/icons/lgu_navbar.svg',
+              width: 24,
+              height: 24,
+              colorFilter: const ColorFilter.mode(
+                Color(0xff5d6b63),
+                BlendMode.srcIn,
+              ),
+            ),
+            selectedIcon: SvgPicture.asset(
+              'assets/icons/lgu_navbar.svg',
+              width: 24,
+              height: 24,
+              colorFilter: const ColorFilter.mode(
+                Color(0xff2e7d5b),
+                BlendMode.srcIn,
+              ),
+            ),
             label: 'LGU',
           ),
           NavigationDestination(
-            icon: Icon(Icons.verified_user_outlined),
+            icon: SvgPicture.asset(
+              'assets/icons/inspector_navbar.svg',
+              width: 24,
+              height: 24,
+              colorFilter: const ColorFilter.mode(
+                Color(0xff5d6b63),
+                BlendMode.srcIn,
+              ),
+            ),
+            selectedIcon: SvgPicture.asset(
+              'assets/icons/inspector_navbar.svg',
+              width: 24,
+              height: 24,
+              colorFilter: const ColorFilter.mode(
+                Color(0xff2e7d5b),
+                BlendMode.srcIn,
+              ),
+            ),
             label: 'Inspector',
           ),
         ],

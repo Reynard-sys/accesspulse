@@ -46,11 +46,28 @@ Then run the Flutter web app with:
 ```powershell
 flutter run -d chrome `
   --dart-define=ACCESSPULSE_AI_FUNCTION_URL=$env:ACCESSPULSE_AI_FUNCTION_URL `
-  --dart-define=ACCESSPULSE_SUPABASE_ANON_KEY=$env:ACCESSPULSE_SUPABASE_ANON_KEY
+  --dart-define=ACCESSPULSE_SUPABASE_ANON_KEY=$env:ACCESSPULSE_SUPABASE_ANON_KEY `
+  --dart-define=ACCESSPULSE_ENABLE_GOOGLE_MAPS=false
 ```
 
 If you prefer, pass the values directly instead of loading them from your shell
 environment.
+
+## Google Maps Shell
+
+The public-home map shell is wired behind a demo-safe flag. By default it stays
+off and the app shows the list fallback.
+
+To turn the map UI on, pass:
+
+```powershell
+--dart-define=ACCESSPULSE_ENABLE_GOOGLE_MAPS=true
+```
+
+For web, Google Maps also needs a valid Maps JavaScript API key and the
+recommended `web/index.html` script setup from the official Google Maps for
+Flutter docs. Keep real keys out of the repo and use the placeholders in
+`.env.example`.
 
 ## Demo Flow
 

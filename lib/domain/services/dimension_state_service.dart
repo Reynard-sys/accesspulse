@@ -272,6 +272,8 @@ class DimensionStateService {
         'evidenceReadiness': assessment.evidenceReadiness.name,
         'institutionReady': assessment.institutionReady,
         'nextBestAction': assessment.nextBestAction,
+        'flaggedAsSpam': assessment.flaggedAsSpam,
+        if (assessment.flagReason != null) 'flagReason': assessment.flagReason,
       },
       createdAt: timestamp,
     );
@@ -535,6 +537,7 @@ class DimensionStateService {
     required String inspectorId,
     required VerificationOutcome outcome,
     required String note,
+    InspectorVerifiedCondition? verifiedCondition,
     DateTime? now,
   }) async {
     final timestamp = now ?? DateTime.now();
@@ -551,6 +554,7 @@ class DimensionStateService {
       placeDimensionId: accessCase.placeDimensionId,
       verifiedBy: inspectorId,
       outcome: outcome,
+      verifiedCondition: verifiedCondition,
       note: note,
       performedAt: timestamp,
     );
@@ -564,12 +568,11 @@ class DimensionStateService {
             VerificationOutcome.disputed => previousState.state,
             VerificationOutcome.insufficientEvidence => previousState.state,
           }
-        : switch (outcome) {
-            VerificationOutcome.confirmed =>
-              DimensionStateValue.officiallyVerifiedDegraded,
-            VerificationOutcome.disputed => previousState.state,
-            VerificationOutcome.insufficientEvidence => previousState.state,
-          };
+        : _verificationStateValue(
+            outcome: outcome,
+            verifiedCondition: verifiedCondition,
+            previousState: previousState.state,
+          );
     final nextStatus = isRemediationVerification
         ? switch (outcome) {
             VerificationOutcome.confirmed => CaseStatus.resolved,
@@ -577,11 +580,10 @@ class DimensionStateService {
             VerificationOutcome.insufficientEvidence =>
               CaseStatus.remediationRequested,
           }
-        : switch (outcome) {
-            VerificationOutcome.confirmed => CaseStatus.verified,
-            VerificationOutcome.disputed => CaseStatus.disputed,
-            VerificationOutcome.insufficientEvidence => CaseStatus.triaging,
-          };
+        : _verificationCaseStatus(
+            outcome: outcome,
+            verifiedCondition: verifiedCondition,
+          );
 
     final currentState = previousState.copyWith(
       state: nextState,
@@ -592,6 +594,7 @@ class DimensionStateService {
       explanation: _verificationStateExplanation(
         outcome: outcome,
         isRemediationVerification: isRemediationVerification,
+        verifiedCondition: verifiedCondition,
       ),
       lastConfirmedAt: outcome == VerificationOutcome.confirmed
           ? timestamp
@@ -604,7 +607,10 @@ class DimensionStateService {
     final currentCase = accessCase.copyWith(
       status: nextStatus,
       updatedAt: timestamp,
-      closedAt: outcome == VerificationOutcome.confirmed ? timestamp : null,
+      closedAt:
+          nextStatus == CaseStatus.closed || nextStatus == CaseStatus.resolved
+          ? timestamp
+          : null,
     );
     await _repository.saveCase(currentCase);
 
@@ -629,6 +635,7 @@ class DimensionStateService {
       summary: _verificationMemorySummary(
         outcome: outcome,
         isRemediationVerification: isRemediationVerification,
+        verifiedCondition: verifiedCondition,
       ),
       createdAt: timestamp,
     );
@@ -792,9 +799,41 @@ class DimensionStateService {
     };
   }
 
+  DimensionStateValue _verificationStateValue({
+    required VerificationOutcome outcome,
+    required InspectorVerifiedCondition? verifiedCondition,
+    required DimensionStateValue previousState,
+  }) {
+    if (outcome != VerificationOutcome.confirmed) {
+      return previousState;
+    }
+    return switch (verifiedCondition) {
+      InspectorVerifiedCondition.reliable => DimensionStateValue.reliable,
+      InspectorVerifiedCondition.conditionallyUsable =>
+        DimensionStateValue.claimedAccessible,
+      InspectorVerifiedCondition.degraded => DimensionStateValue.degraded,
+      InspectorVerifiedCondition.blocked ||
+      null => DimensionStateValue.officiallyVerifiedDegraded,
+    };
+  }
+
+  CaseStatus _verificationCaseStatus({
+    required VerificationOutcome outcome,
+    required InspectorVerifiedCondition? verifiedCondition,
+  }) {
+    if (outcome == VerificationOutcome.disputed) {
+      return CaseStatus.disputed;
+    }
+    if (outcome == VerificationOutcome.insufficientEvidence) {
+      return CaseStatus.triaging;
+    }
+    return CaseStatus.verified;
+  }
+
   String _verificationStateExplanation({
     required VerificationOutcome outcome,
     required bool isRemediationVerification,
+    InspectorVerifiedCondition? verifiedCondition,
   }) {
     if (isRemediationVerification) {
       return switch (outcome) {
@@ -804,6 +843,18 @@ class DimensionStateService {
           'A human inspector did not confirm remediation. The verified barrier remains visible for follow-up.',
         VerificationOutcome.insufficientEvidence =>
           'A human inspector found that remediation needs more evidence before the place can be resolved.',
+      };
+    }
+    if (outcome == VerificationOutcome.confirmed) {
+      return switch (verifiedCondition) {
+        InspectorVerifiedCondition.reliable =>
+          'A human inspector verified this route as reliable for independent Mobility Access.',
+        InspectorVerifiedCondition.conditionallyUsable =>
+          'A human inspector verified this route as conditionally usable; some visitors may still need assistance.',
+        InspectorVerifiedCondition.degraded =>
+          'A human inspector verified degraded Mobility Access conditions that need LGU follow-up.',
+        InspectorVerifiedCondition.blocked || null =>
+          'A human inspector confirmed the Mobility Access barrier. This is an official verification outcome.',
       };
     }
     return switch (outcome) {
@@ -819,6 +870,7 @@ class DimensionStateService {
   String _verificationMemorySummary({
     required VerificationOutcome outcome,
     required bool isRemediationVerification,
+    InspectorVerifiedCondition? verifiedCondition,
   }) {
     if (isRemediationVerification) {
       return switch (outcome) {
@@ -828,6 +880,18 @@ class DimensionStateService {
           'Human verifier did not confirm the remediation; the case returned to remediation follow-up.',
         VerificationOutcome.insufficientEvidence =>
           'Human verifier marked remediation evidence insufficient; the case returned to remediation follow-up.',
+      };
+    }
+    if (outcome == VerificationOutcome.confirmed) {
+      return switch (verifiedCondition) {
+        InspectorVerifiedCondition.reliable =>
+          'Human verifier marked the route reliable.',
+        InspectorVerifiedCondition.conditionallyUsable =>
+          'Human verifier marked the route conditionally usable.',
+        InspectorVerifiedCondition.degraded =>
+          'Human verifier marked the route degraded.',
+        InspectorVerifiedCondition.blocked || null =>
+          'Human verifier confirmed the barrier and made the degraded state official.',
       };
     }
     return switch (outcome) {

@@ -24,6 +24,16 @@ class InMemoryAccessPulseRepository implements AccessPulseRepository {
         for (final observation in buildSeedObservations())
           observation.id: observation,
       },
+      _evidence = {
+        for (final evidence in buildSeedEvidence()) evidence.id: evidence,
+      },
+      _signals = {
+        for (final signal in buildSeedBarrierSignals()) signal.id: signal,
+      },
+      _cases = {
+        for (final accessCase in buildSeedAccessCases())
+          accessCase.id: accessCase,
+      },
       _memoryEvents = buildSeedMemoryEvents();
 
   InMemoryAccessPulseRepository.empty()
@@ -33,6 +43,9 @@ class InMemoryAccessPulseRepository implements AccessPulseRepository {
       _states = <String, DimensionStateRecord>{},
       _pulses = <String, DimensionPulseRecord>{},
       _observations = <String, Observation>{},
+      _evidence = <String, Evidence>{},
+      _signals = <String, BarrierSignal>{},
+      _cases = <String, AccessCase>{},
       _memoryEvents = <MemoryEvent>[];
 
   final Map<String, Place> _places;
@@ -41,11 +54,11 @@ class InMemoryAccessPulseRepository implements AccessPulseRepository {
   final Map<String, DimensionStateRecord> _states;
   final Map<String, DimensionPulseRecord> _pulses;
   final Map<String, Observation> _observations;
-  final Map<String, Evidence> _evidence = <String, Evidence>{};
+  final Map<String, Evidence> _evidence;
   final Map<String, RampMeasurement> _rampMeasurements =
       <String, RampMeasurement>{};
-  final Map<String, BarrierSignal> _signals = <String, BarrierSignal>{};
-  final Map<String, AccessCase> _cases = <String, AccessCase>{};
+  final Map<String, BarrierSignal> _signals;
+  final Map<String, AccessCase> _cases;
   final Map<String, Verification> _verifications = <String, Verification>{};
   final List<MemoryEvent> _memoryEvents;
 
@@ -55,8 +68,22 @@ class InMemoryAccessPulseRepository implements AccessPulseRepository {
   }
 
   @override
+  Future<Place> addPlace(Place place) async {
+    _places[place.id] = place;
+    return place;
+  }
+
+  @override
   Future<List<AccessibilityDimension>> listDimensions() async {
     return _dimensions.values.toList(growable: false);
+  }
+
+  @override
+  Future<PlaceDimension> addPlaceDimension(
+    PlaceDimension placeDimension,
+  ) async {
+    _placeDimensions[placeDimension.id] = placeDimension;
+    return placeDimension;
   }
 
   @override
