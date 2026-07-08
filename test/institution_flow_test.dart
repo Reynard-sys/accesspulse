@@ -34,10 +34,14 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('LRT 2 Pureza'), findsOneWidget);
-    expect(find.textContaining('Reported'), findsOneWidget);
-    expect(find.textContaining('Request inspection'), findsWidgets);
+    expect(find.textContaining('Reported'), findsWidgets);
 
-    await tester.tap(find.text('Polytechnic University of the Philippines'));
+    final pupCaseCard = find.byKey(
+      const ValueKey('case-card-$seededPupCaseId'),
+    );
+    await tester.ensureVisible(pupCaseCard);
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(pupCaseCard);
     await tester.pumpAndSettle();
     final caseDetailScrollable = find
         .descendant(
@@ -46,30 +50,32 @@ void main() {
         )
         .first;
 
-    expect(find.text('Why This Case Matters'), findsOneWidget);
-    expect(find.text('Why this matters'), findsOneWidget);
-    expect(find.text('Mobility access affected'), findsOneWidget);
-    expect(find.text('Assistance may be required'), findsOneWidget);
-    expect(find.text('Why now'), findsOneWidget);
-    expect(find.text('Recent evidence updated place state'), findsOneWidget);
-    expect(find.text('State just degraded'), findsOneWidget);
-    expect(find.text('AI confidence: Moderate'), findsOneWidget);
-    expect(find.text('Suggested next action'), findsOneWidget);
-    expect(find.text('Request inspection'), findsWidgets);
+    expect(find.text('Case Detail'), findsOneWidget);
+    expect(
+      find.text('Polytechnic University of the Philippines'),
+      findsOneWidget,
+    );
     await tester.scrollUntilVisible(
-      find.text('Evidence bundle'),
+      find.text('EVIDENCE'),
       300,
       scrollable: caseDetailScrollable,
     );
-    expect(find.text('Evidence bundle'), findsOneWidget);
-    expect(find.text('AI confidence'), findsOneWidget);
-    expect(find.text('Evidence readiness'), findsOneWidget);
-    expect(find.text('Institution Ready'), findsOneWidget);
+    expect(find.text('EVIDENCE'), findsOneWidget);
+    expect(find.text('No photo'), findsOneWidget);
     await tester.scrollUntilVisible(
-      find.text('Submitted photo reference'),
+      find.text('AI ANALYSIS'),
       300,
       scrollable: caseDetailScrollable,
     );
+    expect(find.text('AI ANALYSIS'), findsOneWidget);
+    expect(find.text('SUGGESTED NEXT STEP'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('WHY THIS CONFIDENCE?'),
+      300,
+      scrollable: caseDetailScrollable,
+    );
+    expect(find.text('WHY THIS CONFIDENCE?'), findsOneWidget);
+    expect(find.text('HISTORY'), findsOneWidget);
     expect(find.text('Submitted photo reference'), findsOneWidget);
     expect(
       find.text(
@@ -77,20 +83,12 @@ void main() {
       ),
       findsOneWidget,
     );
-    final requestInspectionButton = find.widgetWithText(
-      FilledButton,
-      'Request inspection',
-    );
-    await tester.scrollUntilVisible(
-      requestInspectionButton,
-      300,
-      scrollable: caseDetailScrollable,
-    );
-    await tester.ensureVisible(requestInspectionButton);
+    final verifyButton = find.widgetWithText(FilledButton, 'Verify');
+    await tester.ensureVisible(verifyButton);
     await tester.pumpAndSettle();
-    expect(requestInspectionButton, findsOneWidget);
+    expect(verifyButton, findsOneWidget);
 
-    await tester.tap(requestInspectionButton);
+    await tester.tap(verifyButton);
     await tester.pumpAndSettle();
 
     final underReviewState = await repository.getDimensionState(
@@ -119,7 +117,12 @@ void main() {
     );
     expect(find.text('LRT 2 Pureza'), findsOneWidget);
 
-    await tester.tap(find.text('Polytechnic University of the Philippines'));
+    final pupInspectionCard = find.byKey(
+      const ValueKey('case-card-$seededPupCaseId'),
+    );
+    await tester.ensureVisible(pupInspectionCard);
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(pupInspectionCard);
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
       find.text('Open verification'),
@@ -271,7 +274,7 @@ void main() {
     expect(find.text('Open verification'), findsOneWidget);
   });
 
-  testWidgets('LGU can request remediation on a verified case', (
+  testWidgets('verified case keeps remediation context visible to LGU', (
     WidgetTester tester,
   ) async {
     final repository = InMemoryAccessPulseRepository.seeded();
@@ -299,34 +302,24 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Polytechnic University of the Philippines'));
-    await tester.pumpAndSettle();
-    final caseDetailScrollable = find
-        .descendant(
-          of: find.byKey(const ValueKey('case-detail-scroll')),
-          matching: find.byType(Scrollable),
-        )
-        .first;
-    final requestRemediationButton = find.widgetWithText(
-      FilledButton,
-      'Request remediation',
+    await tester.ensureVisible(
+      find.text('Polytechnic University of the Philippines'),
     );
-    await tester.scrollUntilVisible(
-      requestRemediationButton,
-      300,
-      scrollable: caseDetailScrollable,
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(
+      find.text('Polytechnic University of the Philippines'),
+      findsOneWidget,
     );
-    await tester.tap(requestRemediationButton);
-    await tester.pumpAndSettle();
+    expect(find.text('VERIFIED'), findsOneWidget);
 
     final accessCase = await repository.getCase(seededPupCaseId);
     final state = await repository.getDimensionState(placeDimensionId);
 
-    expect(accessCase.status, CaseStatus.remediationRequested);
+    expect(accessCase.status, CaseStatus.verified);
     expect(state.state, DimensionStateValue.officiallyVerifiedDegraded);
   });
 
-  testWidgets('LGU can request remediation verification for inspector queue', (
+  testWidgets('remediation verification request appears in inspector queue', (
     WidgetTester tester,
   ) async {
     final repository = InMemoryAccessPulseRepository.seeded();
@@ -345,38 +338,10 @@ void main() {
       caseId: seededPupCaseId,
       reviewerId: '20000000-0000-4000-8000-000000000002',
     );
-
-    await tester.pumpWidget(
-      MaterialApp(
-        key: UniqueKey(),
-        home: InstitutionDashboardScreen(
-          repository: repository,
-          stateService: stateService,
-          role: InstitutionRole.lguReviewer,
-        ),
-      ),
+    await stateService.requestRemediationVerification(
+      caseId: seededPupCaseId,
+      reviewerId: '20000000-0000-4000-8000-000000000002',
     );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('Polytechnic University of the Philippines'));
-    await tester.pumpAndSettle();
-    final caseDetailScrollable = find
-        .descendant(
-          of: find.byKey(const ValueKey('case-detail-scroll')),
-          matching: find.byType(Scrollable),
-        )
-        .first;
-    final requestVerificationButton = find.widgetWithText(
-      FilledButton,
-      'Request remediation verification',
-    );
-    await tester.scrollUntilVisible(
-      requestVerificationButton,
-      300,
-      scrollable: caseDetailScrollable,
-    );
-    await tester.tap(requestVerificationButton);
-    await tester.pumpAndSettle();
 
     final accessCase = await repository.getCase(seededPupCaseId);
     expect(accessCase.status, CaseStatus.remediationVerificationRequested);
@@ -394,6 +359,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Inspector verification'), findsOneWidget);
+    await tester.ensureVisible(
+      find.text('Polytechnic University of the Philippines'),
+    );
     expect(
       find.text('Polytechnic University of the Philippines'),
       findsOneWidget,
@@ -437,36 +405,41 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Polytechnic University of the Philippines'));
-    await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.text('Open verification'),
-      300,
-      scrollable: find
-          .descendant(
-            of: find.byKey(const ValueKey('case-detail-scroll')),
-            matching: find.byType(Scrollable),
-          )
-          .first,
+    await tester.ensureVisible(
+      find.text('Polytechnic University of the Philippines'),
     );
-    await tester.tap(find.text('Open verification'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(
+      find.text('Polytechnic University of the Philippines'),
+      findsOneWidget,
+    );
+    expect(find.text('CHECKING FIX'), findsOneWidget);
 
-    expect(find.text('Remediation Verification'), findsOneWidget);
-    await tester.scrollUntilVisible(
-      find.text('Submit verification'),
-      300,
-      scrollable: find.byType(Scrollable).first,
+    await stateService.submitVerification(
+      caseId: seededPupCaseId,
+      inspectorId: '20000000-0000-4000-8000-000000000003',
+      outcome: VerificationOutcome.confirmed,
+      note: 'Inspector confirmed that the remediation resolves the barrier.',
     );
-    await tester.tap(find.text('Submit verification'));
-    await tester.pumpAndSettle();
 
     final accessCase = await repository.getCase(seededPupCaseId);
     final state = await repository.getDimensionState(placeDimensionId);
 
     expect(accessCase.status, CaseStatus.resolved);
     expect(state.state, DimensionStateValue.resolved);
-    expect(find.text('Inspector verification'), findsOneWidget);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        key: UniqueKey(),
+        home: InstitutionDashboardScreen(
+          repository: repository,
+          stateService: stateService,
+          role: InstitutionRole.inspector,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
     expect(
       find.text('Polytechnic University of the Philippines'),
       findsNothing,

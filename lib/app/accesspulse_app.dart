@@ -233,6 +233,15 @@ class _AccessPulseRoleShellState extends State<_AccessPulseRoleShell> {
       ),
     };
 
+    final tabNavigator = Navigator(
+      onGenerateRoute: (settings) {
+        return MaterialPageRoute<void>(
+          settings: settings,
+          builder: (context) => body,
+        );
+      },
+    );
+
     return Scaffold(
       appBar: AppBar(title: const _AccessPulseBrandTitle(fontSize: 24)),
       body: AnimatedSwitcher(
@@ -251,7 +260,7 @@ class _AccessPulseRoleShellState extends State<_AccessPulseRoleShell> {
             ),
           );
         },
-        child: KeyedSubtree(key: ValueKey(_selectedIndex), child: body),
+        child: KeyedSubtree(key: ValueKey(_selectedIndex), child: tabNavigator),
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
