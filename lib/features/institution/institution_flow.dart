@@ -985,52 +985,173 @@ class _InstitutionDashboardScreenState
 
                 if (isInspector) {
                   final cases = snapshot.data! as List<_CaseSummary>;
-                  return ListView(
-                    padding: const EdgeInsets.all(20),
-                    children: [
-                      Text(
-                        'Verification queue',
-                        style: Theme.of(context).textTheme.headlineSmall
-                            ?.copyWith(fontWeight: FontWeight.w700),
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Review cases requested by the LGU and submit a human verification outcome.',
-                      ),
-                      const SizedBox(height: 16),
-                      if (cases.isEmpty)
-                        const _EmptyQueue()
-                      else
-                        for (final summary in cases) ...[
-                          _CaseQueueTile(
-                            summary: summary,
-                            onTap: () async {
-                              final result = await Navigator.of(context)
-                                  .push<VerificationResult>(
-                                    _institutionRoute<VerificationResult>(
-                                      _CaseDetailScreen(
-                                        repository: widget.repository,
-                                        stateService: widget.stateService,
-                                        summary: summary,
-                                        role: widget.role,
-                                      ),
-                                    ),
-                                  );
-                              _refresh();
-                              if (context.mounted && result != null) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      'Verification submitted for ${summary.place.name}.',
-                                    ),
+                  final activeCount = cases.length;
+                  // Build tiles imperatively to safely close over each caseItem
+                  final caseTiles = <Widget>[];
+                  for (final caseItem in cases) {
+                    if (caseTiles.isNotEmpty) {
+                      caseTiles.add(
+                        const Divider(
+                          height: 1,
+                          color: Color(0xfff0f4f2),
+                          indent: 20,
+                          endIndent: 20,
+                        ),
+                      );
+                    }
+                    caseTiles.add(
+                      _CaseQueueTile(
+                        summary: caseItem,
+                        onTap: () async {
+                          final result = await Navigator.of(context)
+                              .push<VerificationResult>(
+                                _institutionRoute<VerificationResult>(
+                                  _CaseDetailScreen(
+                                    repository: widget.repository,
+                                    stateService: widget.stateService,
+                                    summary: caseItem,
+                                    role: widget.role,
                                   ),
-                                );
-                              }
-                            },
+                                ),
+                              );
+                          _refresh();
+                          if (context.mounted && result != null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Verification submitted for ${caseItem.place.name}.',
+                                ),
+                              ),
+                            );
+                          }
+                        },
+                      ),
+                    );
+                  }
+                  return Container(
+                    color: const Color(0xfff4f7f5),
+                    child: ListView(
+                      padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
+                      children: [
+                        // ── Header ──────────────────────────────────────
+                        Text(
+                          'Inspection Requests',
+                          style: GoogleFonts.afacad(
+                            fontSize: 30,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xff1a1f2e),
+                            height: 1.1,
                           ),
-                          const SizedBox(height: 12),
-                        ],
-                    ],
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            SvgPicture.asset(
+                              'assets/icons/location_icon.svg',
+                              width: 12,
+                              height: 12,
+                              colorFilter: const ColorFilter.mode(
+                                Color(0xff9eb5a6),
+                                BlendMode.srcIn,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Quezon City · Metro Manila',
+                              style: GoogleFonts.afacad(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xff9eb5a6),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        // ── Section header ───────────────────────────────
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'ASSIGNED TO YOU',
+                              style: GoogleFonts.afacad(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.88,
+                                color: const Color(0xff8891a8),
+                              ),
+                            ),
+                            Text(
+                              '$activeCount active',
+                              style: GoogleFonts.afacad(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xff2e7d4f),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Cases assigned for on-site verification in your jurisdiction.',
+                          style: GoogleFonts.afacad(
+                            fontSize: 13,
+                            color: const Color(0xff8891a8),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        // ── Cases ────────────────────────────────────────
+                        if (cases.isEmpty)
+                          const _EmptyQueue()
+                        else
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Color(0x0c000000),
+                                  blurRadius: 4,
+                                  offset: Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            clipBehavior: Clip.antiAlias,
+                            child: Column(children: caseTiles),
+                          ),
+                        const SizedBox(height: 20),
+                        // ── Info banner ──────────────────────────────────
+                        Container(
+                          decoration: BoxDecoration(
+                            color: const Color(0xffe8f2ec),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: const Color(0xffc5ddd1),
+                            ),
+                          ),
+                          padding: const EdgeInsets.all(16),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.assignment_outlined,
+                                size: 20,
+                                color: Color(0xff2e7d4f),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  'Tap a case to open the on-site inspection checklist and submit your verified finding.',
+                                  style: GoogleFonts.afacad(
+                                    fontSize: 13,
+                                    color: const Color(0xff14432f),
+                                    height: 1.5,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   );
                 } else {
                   final data = snapshot.data! as _LguDashboardData;
@@ -2600,8 +2721,11 @@ class _InspectorVerificationScreen extends StatefulWidget {
 class _InspectorVerificationScreenState
     extends State<_InspectorVerificationScreen> {
   VerificationOutcome _outcome = VerificationOutcome.confirmed;
+  int _selectedCondition = 0;
   late final TextEditingController _noteController;
   bool _isSubmitting = false;
+  VerificationResult? _submissionResult;
+  String _submittedNote = '';
 
   bool get _isRemediationVerification =>
       widget.detail.accessCase.status ==
@@ -2623,6 +2747,19 @@ class _InspectorVerificationScreenState
     super.dispose();
   }
 
+  void _selectCondition(int index) {
+    setState(() {
+      _selectedCondition = index;
+      _outcome = switch (index) {
+        0 => VerificationOutcome.confirmed,
+        1 => VerificationOutcome.insufficientEvidence,
+        2 => VerificationOutcome.disputed,
+        3 => VerificationOutcome.disputed,
+        _ => VerificationOutcome.confirmed,
+      };
+    });
+  }
+
   Future<void> _submit() async {
     setState(() => _isSubmitting = true);
     final result = await widget.stateService.submitVerification(
@@ -2634,98 +2771,1161 @@ class _InspectorVerificationScreenState
     if (!mounted) {
       return;
     }
-    Navigator.of(context).pop(result);
+    setState(() {
+      _isSubmitting = false;
+      _submittedNote = _noteController.text;
+      _submissionResult = result;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_submissionResult != null) {
+      return _buildCompleteScaffold(context);
+    }
+    return _buildFormScaffold(context);
+  }
+
+  // ── Screen 3: Verification Complete ─────────────────────────────────────────
+  Scaffold _buildCompleteScaffold(BuildContext context) {
+    final stateVal = widget.detail.state.state;
+    final conf = widget.detail.accessCase.confidence;
+    final String confLabel =
+        conf >= 0.8 ? 'High' : conf >= 0.5 ? 'Moderate' : 'Low';
+    final bool isRedState = stateVal == DimensionStateValue.degraded ||
+        stateVal == DimensionStateValue.officiallyVerifiedDegraded;
+    final String stateBadge = isRedState ? 'BLOCKED' : stateVal.label.toUpperCase();
+    final String caseStatusLabel = switch (_outcome) {
+      VerificationOutcome.confirmed => 'Verified & Confirmed',
+      VerificationOutcome.disputed => 'Escalated for review',
+      VerificationOutcome.insufficientEvidence => 'Pending more evidence',
+    };
+    final Color caseStatusColor = switch (_outcome) {
+      VerificationOutcome.confirmed => const Color(0xff2e7d4f),
+      VerificationOutcome.disputed => const Color(0xffc23232),
+      VerificationOutcome.insufficientEvidence => const Color(0xffc08a00),
+    };
+
     return Scaffold(
+      backgroundColor: const Color(0xfff4f7f5),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 820),
-            child: ListView(
-              padding: const EdgeInsets.all(20),
+            child: Column(
               children: [
-                Text(
-                  _isRemediationVerification
-                      ? 'Remediation Verification'
-                      : 'Inspector Verification',
-                  style: GoogleFonts.afacad(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xff17201c),
+                // Header (non-tappable — use Back to Queue below)
+                Container(
+                  color: Colors.white,
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: const BoxDecoration(
+                          color: Color(0xffeef4f1),
+                          shape: BoxShape.circle,
+                        ),
+                        alignment: Alignment.center,
+                        child: const Icon(
+                          Icons.arrow_back,
+                          size: 18,
+                          color: Color(0xff17201c),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Inspecting Case',
+                              style: GoogleFonts.afacad(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xff17201c),
+                              ),
+                            ),
+                            Text(
+                              '${widget.place.name} · Mobility Access',
+                              style: GoogleFonts.afacad(
+                                fontSize: 12,
+                                color: const Color(0xff5d6b63),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  widget.place.name,
-                  style: GoogleFonts.afacad(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xff5d6b63),
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(20, 30, 20, 40),
+                    children: [
+                      // ── Hero ────────────────────────────────────────────
+                      Center(
+                        child: Container(
+                          width: 80,
+                          height: 80,
+                          decoration: BoxDecoration(
+                            color: const Color(0xffe8f2ec),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: const Color(0xffc5ddd1),
+                              width: 1.6,
+                            ),
+                          ),
+                          alignment: Alignment.center,
+                          child: Container(
+                            width: 52,
+                            height: 52,
+                            decoration: const BoxDecoration(
+                              color: Color(0xff2f6b4f),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.check,
+                              color: Colors.white,
+                              size: 28,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Text(
+                        'Verification Complete',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.afacad(
+                          fontSize: 30,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xff1a1f2e),
+                          height: 1.1,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Text(
+                          'Your on-site findings have been recorded and the '
+                          "place's accessibility record has been updated.",
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.afacad(
+                            fontSize: 15,
+                            color: const Color(0xff5d6b63),
+                            height: 1.5,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      // ── Result card ─────────────────────────────────────
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x0c000000),
+                              blurRadius: 4,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    widget.place.name,
+                                    style: GoogleFonts.afacad(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.bold,
+                                      color: const Color(0xff1a1f2e),
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 10),
+                                  // State transition
+                                  Row(
+                                    children: [
+                                      _InspectorStateBadge(
+                                        label: stateBadge,
+                                        isRed: isRedState,
+                                      ),
+                                      const Padding(
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                        ),
+                                        child: Icon(
+                                          Icons.arrow_forward,
+                                          size: 14,
+                                          color: Color(0xffb0b5c1),
+                                        ),
+                                      ),
+                                      _InspectorStateBadge(
+                                        label: stateBadge,
+                                        isRed: isRedState,
+                                      ),
+                                    ],
+                                  ),
+                                  if (_submittedNote.isNotEmpty) ...[
+                                    const SizedBox(height: 10),
+                                    Text(
+                                      _submittedNote,
+                                      style: GoogleFonts.afacad(
+                                        fontSize: 13,
+                                        fontStyle: FontStyle.italic,
+                                        color: const Color(0xff525870),
+                                        height: 1.5,
+                                      ),
+                                      maxLines: 3,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                            const Divider(height: 1, color: Color(0xfff0f1f4)),
+                            _InspectionInfoRow(
+                              label: 'Confidence',
+                              value: confLabel,
+                              valueColor: const Color(0xff2e7d4f),
+                            ),
+                            const _InspectionInfoRow(
+                              label: 'Verified by',
+                              value: 'Insp. Maria Santos · #QC-2847',
+                              valueColor: Color(0xff1a1f2e),
+                            ),
+                            _InspectionInfoRow(
+                              label: 'Case status',
+                              value: caseStatusLabel,
+                              valueColor: caseStatusColor,
+                              dotColor: caseStatusColor,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      // ── Back to Queue button ─────────────────────────────
+                      SizedBox(
+                        height: 56,
+                        child: FilledButton(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xff1a3d2b),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          onPressed: () =>
+                              Navigator.of(context).pop(_submissionResult),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                'Back to Queue',
+                                style: GoogleFonts.afacad(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              const Icon(Icons.arrow_forward, size: 18),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      // ── Impact strips ────────────────────────────────────
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border:
+                              Border.all(color: const Color(0xffedeef1)),
+                        ),
+                        child: Column(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 14,
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 36,
+                                    height: 36,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xffe8f2ec),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: const Icon(
+                                      Icons.sync_outlined,
+                                      size: 18,
+                                      color: Color(0xff2e7d4f),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Place Updated',
+                                          style: GoogleFonts.afacad(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                            color: const Color(0xff1a1f2e),
+                                          ),
+                                        ),
+                                        Text(
+                                          "This place's accessibility state "
+                                          'now reflects your findings.',
+                                          style: GoogleFonts.afacad(
+                                            fontSize: 12,
+                                            color: const Color(0xff8891a8),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Divider(
+                              height: 1,
+                              color: Color(0xfff0f1f4),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 14,
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 36,
+                                    height: 36,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xfff0f0ff),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: const Icon(
+                                      Icons.people_outline,
+                                      size: 18,
+                                      color: Color(0xff3d3d8f),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Community Notified',
+                                          style: GoogleFonts.afacad(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                            color: const Color(0xff1a1f2e),
+                                          ),
+                                        ),
+                                        Text(
+                                          'Contributors who reported this case '
+                                          'will see the verified outcome.',
+                                          style: GoogleFonts.afacad(
+                                            fontSize: 12,
+                                            color: const Color(0xff8891a8),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Text(
+                        "This verification becomes part of the place's "
+                        'permanent accessibility history.',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.afacad(
+                          fontSize: 11,
+                          fontStyle: FontStyle.italic,
+                          color: const Color(0xffb0b5c1),
+                          height: 1.5,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  _isRemediationVerification
-                      ? 'Confirm whether the completed remediation resolves the verified barrier.'
-                      : 'Human verification is authoritative. AI evidence remains supporting context.',
-                ),
-                if (widget.detail.evidence != null) ...[
-                  const SizedBox(height: 16),
-                  _EvidencePhotoPanel(evidence: widget.detail.evidence!),
-                ],
-                const SizedBox(height: 16),
-                SegmentedButton<VerificationOutcome>(
-                  segments: const [
-                    ButtonSegment(
-                      value: VerificationOutcome.confirmed,
-                      icon: Icon(Icons.check_circle_outline),
-                      label: Text('Confirm'),
-                    ),
-                    ButtonSegment(
-                      value: VerificationOutcome.disputed,
-                      icon: Icon(Icons.report_gmailerrorred),
-                      label: Text('Dispute'),
-                    ),
-                    ButtonSegment(
-                      value: VerificationOutcome.insufficientEvidence,
-                      icon: Icon(Icons.help_outline),
-                      label: Text('Insufficient'),
-                    ),
-                  ],
-                  selected: {_outcome},
-                  onSelectionChanged: (values) {
-                    setState(() => _outcome = values.single);
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _noteController,
-                  minLines: 4,
-                  maxLines: 6,
-                  decoration: const InputDecoration(
-                    labelText: 'Verification note',
-                    alignLabelWithHint: true,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                FilledButton.icon(
-                  icon: _isSubmitting
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.verified),
-                  label: const Text('Submit verification'),
-                  onPressed: _isSubmitting ? null : _submit,
                 ),
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  // ── Screen 2: Verification Form ──────────────────────────────────────────────
+  Scaffold _buildFormScaffold(BuildContext context) {
+    final evidence = widget.detail.evidence;
+    final stateVal = widget.detail.state.state;
+
+    final String stateBadgeLabel = switch (stateVal) {
+      DimensionStateValue.degraded => 'BLOCKED',
+      DimensionStateValue.officiallyVerifiedDegraded => 'BLOCKED',
+      _ => stateVal.label.toUpperCase(),
+    };
+    final bool isBadgeRed = stateVal == DimensionStateValue.degraded ||
+        stateVal == DimensionStateValue.officiallyVerifiedDegraded;
+
+    final diff =
+        DateTime.now().difference(widget.detail.accessCase.updatedAt);
+    String assignedAgo = 'recently';
+    if (diff.inDays > 0) {
+      assignedAgo = '${diff.inDays}d ago';
+    } else if (diff.inHours > 0) {
+      assignedAgo = '${diff.inHours}h ago';
+    } else if (diff.inMinutes > 0) {
+      assignedAgo = '${diff.inMinutes}m ago';
+    }
+
+    return Scaffold(
+      backgroundColor: const Color(0xfff4f7f5),
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 820),
+            child: Column(
+              children: [
+                // ── Custom header ────────────────────────────────────────
+                Container(
+                  color: Colors.white,
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+                  child: Row(
+                    children: [
+                      GestureDetector(
+                        onTap: () => Navigator.of(context).pop(),
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: const BoxDecoration(
+                            color: Color(0xffeef4f1),
+                            shape: BoxShape.circle,
+                          ),
+                          alignment: Alignment.center,
+                          child: const Icon(
+                            Icons.arrow_back,
+                            size: 18,
+                            color: Color(0xff17201c),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _isRemediationVerification
+                                  ? 'Remediation Verification'
+                                  : 'Inspecting Case',
+                              style: GoogleFonts.afacad(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xff17201c),
+                              ),
+                            ),
+                            Text(
+                              '${widget.place.name} · Mobility Access',
+                              style: GoogleFonts.afacad(
+                                fontSize: 12,
+                                color: const Color(0xff5d6b63),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // ── Scrollable form body ────────────────────────────────
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Case info card
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: const Color(0xffedeef1),
+                            ),
+                          ),
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                    width: 44,
+                                    height: 44,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xffe8f2ec),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Center(
+                                      child: SvgPicture.asset(
+                                        'assets/icons/default_icon_building.svg',
+                                        width: 26,
+                                        height: 26,
+                                        colorFilter: const ColorFilter.mode(
+                                          Color(0xff2e7d4f),
+                                          BlendMode.srcIn,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          widget.place.name,
+                                          style: GoogleFonts.afacad(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                            color: const Color(0xff17201c),
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(height: 3),
+                                        Row(
+                                          children: [
+                                            SvgPicture.asset(
+                                              'assets/icons/location_icon.svg',
+                                              width: 11,
+                                              height: 11,
+                                              colorFilter:
+                                                  const ColorFilter.mode(
+                                                    Color(0xff9eb5a6),
+                                                    BlendMode.srcIn,
+                                                  ),
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Expanded(
+                                              child: Text(
+                                                widget.place.address ??
+                                                    'Seminary Rd, Brgy. Kalusugan',
+                                                style: GoogleFonts.afacad(
+                                                  fontSize: 12,
+                                                  color: const Color(0xff9eb5a6),
+                                                ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  // Status badge
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      color: isBadgeRed
+                                          ? const Color(0xfffdeaea)
+                                          : const Color(0xffe8f2ec),
+                                      borderRadius: BorderRadius.circular(100),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Container(
+                                          width: 5,
+                                          height: 5,
+                                          decoration: BoxDecoration(
+                                            color: isBadgeRed
+                                                ? const Color(0xffc23232)
+                                                : const Color(0xff2e7d4f),
+                                            shape: BoxShape.circle,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          stateBadgeLabel,
+                                          style: GoogleFonts.afacad(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                            color: isBadgeRed
+                                                ? const Color(0xff8b1e1e)
+                                                : const Color(0xff2e7d4f),
+                                            letterSpacing: 0.4,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              const Divider(
+                                height: 1,
+                                color: Color(0xfff0f4f2),
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.person_outline,
+                                    size: 15,
+                                    color: Color(0xff8891a8),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Reported by community',
+                                    style: GoogleFonts.afacad(
+                                      fontSize: 13,
+                                      color: const Color(0xff8891a8),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Row(
+                                children: [
+                                  SvgPicture.asset(
+                                    'assets/icons/watch_icon.svg',
+                                    width: 15,
+                                    height: 15,
+                                    colorFilter: const ColorFilter.mode(
+                                      Color(0xff8891a8),
+                                      BlendMode.srcIn,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Assigned $assignedAgo',
+                                    style: GoogleFonts.afacad(
+                                      fontSize: 13,
+                                      color: const Color(0xff8891a8),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        // ── Reported Evidence ──────────────────────────────
+                        Text(
+                          'REPORTED EVIDENCE',
+                          style: GoogleFonts.afacad(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xff5e7268),
+                            letterSpacing: 0.88,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        if (evidence != null) ...[
+                          _EvidencePhotoPanel(evidence: evidence),
+                          if (evidence.note != null) ...[
+                            const SizedBox(height: 10),
+                            Container(
+                              decoration: BoxDecoration(
+                                color: const Color(0xfffafafa),
+                                border: Border.all(
+                                  color: const Color(0xffedeef1),
+                                  width: 0.8,
+                                ),
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              padding: const EdgeInsets.all(14),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  SvgPicture.asset(
+                                    'assets/icons/icon_inspector_ver.svg',
+                                    width: 18,
+                                    height: 18,
+                                    colorFilter: const ColorFilter.mode(
+                                      Color(0xff8891a8),
+                                      BlendMode.srcIn,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'COMMUNITY NOTE',
+                                          style: GoogleFonts.afacad(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                            color: const Color(0xff8891a8),
+                                            letterSpacing: 0.66,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          evidence.note!,
+                                          style: GoogleFonts.afacad(
+                                            fontSize: 13,
+                                            fontStyle: FontStyle.italic,
+                                            color: const Color(0xff1a1f2e),
+                                            height: 1.5,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ] else
+                          Container(
+                            height: 140,
+                            decoration: BoxDecoration(
+                              color: const Color(0xfff2f2f5),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: const Center(
+                              child: Icon(
+                                Icons.image_not_supported_outlined,
+                                size: 32,
+                                color: Color(0xffb0b5c1),
+                              ),
+                            ),
+                          ),
+                        const SizedBox(height: 20),
+                        // ── On-site checklist ──────────────────────────────
+                        const _InspectorChecklist(),
+                        const SizedBox(height: 20),
+                        // ── Add Findings ───────────────────────────────────
+                        Text(
+                          'ADD FINDINGS',
+                          style: GoogleFonts.afacad(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xff5e7268),
+                            letterSpacing: 0.88,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xff2e7d4f),
+                              side: const BorderSide(
+                                color: Color(0xff2e7d4f),
+                                width: 1.5,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 14),
+                            ),
+                            icon: const Icon(
+                              Icons.add_photo_alternate_outlined,
+                              size: 20,
+                            ),
+                            label: Text(
+                              'Add Photo',
+                              style: GoogleFonts.afacad(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            onPressed: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Photo capture available in field version.',
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        TextField(
+                          controller: _noteController,
+                          minLines: 3,
+                          maxLines: 5,
+                          style: GoogleFonts.afacad(
+                            fontSize: 14,
+                            color: const Color(0xff1a1f2e),
+                          ),
+                          decoration: InputDecoration(
+                            hintText: 'Inspector notes (optional)',
+                            hintStyle: GoogleFonts.afacad(
+                              fontSize: 14,
+                              color: const Color(0xffb0b5c1),
+                            ),
+                            filled: true,
+                            fillColor: Colors.white,
+                            contentPadding: const EdgeInsets.all(14),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(
+                                color: Color(0xffedeef1),
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(
+                                color: Color(0xffedeef1),
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(
+                                color: Color(0xff2e7d4f),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        // ── Verified Condition ─────────────────────────────
+                        Text(
+                          'VERIFIED CONDITION',
+                          style: GoogleFonts.afacad(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xff5e7268),
+                            letterSpacing: 0.88,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        _VerifiedConditionGrid(
+                          selectedIndex: _selectedCondition,
+                          onSelect: _selectCondition,
+                        ),
+                        const SizedBox(height: 20),
+                        // ── Submit button ──────────────────────────────────
+                        SizedBox(
+                          height: 56,
+                          child: FilledButton(
+                            style: FilledButton.styleFrom(
+                              backgroundColor: const Color(0xff2e7d4f),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                            ),
+                            onPressed: _isSubmitting ? null : _submit,
+                            child: _isSubmitting
+                                ? const SizedBox(
+                                    width: 22,
+                                    height: 22,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2.5,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        'Submit',
+                                        style: GoogleFonts.afacad(
+                                          fontSize: 17,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      const Icon(
+                                        Icons.arrow_forward,
+                                        size: 18,
+                                      ),
+                                    ],
+                                  ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          "Your verification updates this place's accessibility record.",
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.afacad(
+                            fontSize: 11,
+                            fontStyle: FontStyle.italic,
+                            color: const Color(0xffb0b5c1),
+                            height: 1.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Helper widgets for inspector screens ────────────────────────────────────────
+
+class _InspectorChecklist extends StatelessWidget {
+  const _InspectorChecklist();
+
+  @override
+  Widget build(BuildContext context) {
+    const items = [
+      'Ramp useable without assistance',
+      'Handrail present and secure',
+      'Door width ≥ 80 cm',
+      'No obstacles along approach path',
+      'Accessible signage visible',
+    ];
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xffedeef1)),
+      ),
+      child: Column(
+        children: [
+          for (int i = 0; i < items.length; i++) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 13,
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 18,
+                    height: 18,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: const Color(0xffc5d0ca),
+                        width: 1.5,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      items[i],
+                      style: GoogleFonts.afacad(
+                        fontSize: 14,
+                        color: const Color(0xff1a1f2e),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (i < items.length - 1)
+              const Divider(
+                height: 1,
+                indent: 16,
+                endIndent: 16,
+                color: Color(0xfff0f4f2),
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _VerifiedConditionGrid extends StatelessWidget {
+  const _VerifiedConditionGrid({
+    required this.selectedIndex,
+    required this.onSelect,
+  });
+
+  final int selectedIndex;
+  final void Function(int) onSelect;
+
+  Widget _tile(
+    int index,
+    String label,
+    IconData icon,
+    Color selBg,
+    Color selBorder,
+    Color selColor,
+  ) {
+    final bool selected = selectedIndex == index;
+    return GestureDetector(
+      onTap: () => onSelect(index),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        height: 90,
+        decoration: BoxDecoration(
+          color: selected ? selBg : Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: selected ? selBorder : const Color(0xffedeef1),
+            width: selected ? 2 : 1,
+          ),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 24,
+              color: selected ? selColor : const Color(0xffb0b5c1),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.afacad(
+                fontSize: 12,
+                fontWeight:
+                    selected ? FontWeight.bold : FontWeight.normal,
+                color: selected ? selColor : const Color(0xffb0b5c1),
+                height: 1.3,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: _tile(
+                0,
+                'Reliable',
+                Icons.accessibility_new,
+                const Color(0xffe8f2ec),
+                const Color(0xff2e7d4f),
+                const Color(0xff2e7d4f),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _tile(
+                1,
+                'Conditionally\nUsable',
+                Icons.warning_amber_outlined,
+                const Color(0xfffff3e0),
+                const Color(0xffc08a00),
+                const Color(0xffc08a00),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: _tile(
+                2,
+                'Degraded',
+                Icons.trending_down,
+                const Color(0xfffff3e0),
+                const Color(0xffc05218),
+                const Color(0xffc05218),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _tile(
+                3,
+                'Blocked',
+                Icons.block,
+                const Color(0xfffdeaea),
+                const Color(0xffc23232),
+                const Color(0xffc23232),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _InspectorStateBadge extends StatelessWidget {
+  const _InspectorStateBadge({required this.label, required this.isRed});
+
+  final String label;
+  final bool isRed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isRed ? const Color(0xfffdeaea) : const Color(0xffe8f2ec),
+        borderRadius: BorderRadius.circular(100),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 5,
+            height: 5,
+            decoration: BoxDecoration(
+              color:
+                  isRed ? const Color(0xffc23232) : const Color(0xff2e7d4f),
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: GoogleFonts.afacad(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: isRed
+                  ? const Color(0xff8b1e1e)
+                  : const Color(0xff2e7d4f),
+              letterSpacing: 0.4,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -2737,140 +3937,181 @@ class _CaseQueueTile extends StatelessWidget {
   final _CaseSummary summary;
   final VoidCallback onTap;
 
-  Color _statusColor(CaseStatus status) {
-    return switch (status) {
-      CaseStatus.open => const Color(0xff52616b),
-      CaseStatus.triaging => const Color(0xff1765a6),
-      CaseStatus.inspectionRequested => const Color(0xff8a6d00),
-      CaseStatus.verified => const Color(0xff17643a),
-      CaseStatus.remediationRequested => const Color(0xff8a6d00),
-      CaseStatus.remediationVerificationRequested => const Color(0xff1765a6),
-      CaseStatus.disputed => const Color(0xffb6461a),
-      CaseStatus.resolved => const Color(0xff17643a),
-      CaseStatus.closed => const Color(0xff52616b),
-    };
-  }
-
   @override
   Widget build(BuildContext context) {
-    final pulseDisplay = const PulseService().describePlacePulse(
-      state: summary.state,
-      pulse: summary.pulse,
-    );
-    final priority = _PriorityExplanation.fromCase(
-      place: summary.place,
-      accessCase: summary.accessCase,
-      state: summary.state,
-      pulse: summary.pulse,
-    );
-    final statusColor = _statusColor(summary.accessCase.status);
+    final stateVal = summary.state.state;
+    final bool isRedState =
+        stateVal == DimensionStateValue.degraded ||
+        stateVal == DimensionStateValue.officiallyVerifiedDegraded;
 
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        key: ValueKey('case-card-${summary.accessCase.id}'),
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Severity/Status Left border strip
-              Container(width: 6, color: statusColor),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  decoration: BoxDecoration(
-                                    color: statusColor.withValues(alpha: 0.1),
-                                    borderRadius: BorderRadius.circular(6),
-                                    border: Border.all(
-                                      color: statusColor.withValues(alpha: 0.3),
-                                    ),
-                                  ),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 4,
-                                  ),
-                                  child: Text(
-                                    summary.accessCase.status.label
-                                        .toUpperCase(),
-                                    style: GoogleFonts.afacad(
-                                      color: statusColor,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 11,
-                                      letterSpacing: 0.5,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    summary.place.placeType,
-                                    style: GoogleFonts.afacad(
-                                      color: const Color(0xff5d6b63),
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 12,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 10),
-                            Text(
-                              summary.place.name,
-                              style: GoogleFonts.afacad(
-                                color: const Color(0xff17201c),
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18,
-                                height: 1.2,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              '${summary.state.state.label} · ${_institutionPulseLabel(pulseDisplay)}',
-                              style: GoogleFonts.afacad(
-                                color: const Color(0xff5d6b63),
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              priority.queueSummary,
-                              style: GoogleFonts.afacad(
-                                color: const Color(0xff17201c),
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                              ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      const Icon(
-                        Icons.chevron_right,
-                        color: Color(0xff5d6b63),
-                        size: 20,
-                      ),
-                    ],
+    final String badgeLabel = switch (stateVal) {
+      DimensionStateValue.degraded => 'BLOCKED',
+      DimensionStateValue.officiallyVerifiedDegraded => 'BLOCKED',
+      _ => stateVal.label.toUpperCase(),
+    };
+    final Color badgeBg =
+        isRedState ? const Color(0xfffdeaea) : const Color(0xfffff3e0);
+    final Color badgeText =
+        isRedState ? const Color(0xff8b1e1e) : const Color(0xff7a5000);
+    final Color badgeDot =
+        isRedState ? const Color(0xffc23232) : const Color(0xffc08a00);
+
+    // Time ago from last update
+    final difference =
+        DateTime.now().difference(summary.accessCase.updatedAt);
+    String timeAgo = 'now';
+    if (difference.inDays > 0) {
+      timeAgo = '${difference.inDays}d ago';
+    } else if (difference.inHours > 0) {
+      timeAgo = '${difference.inHours}h ago';
+    } else if (difference.inMinutes > 0) {
+      timeAgo = '${difference.inMinutes}m ago';
+    }
+
+    return InkWell(
+      key: ValueKey('case-card-${summary.accessCase.id}'),
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // Building icon
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: const Color(0xffe8f2ec),
+                borderRadius: BorderRadius.circular(13),
+              ),
+              child: Center(
+                child: SvgPicture.asset(
+                  'assets/icons/default_icon_building.svg',
+                  width: 28,
+                  height: 28,
+                  colorFilter: const ColorFilter.mode(
+                    Color(0xff2e7d4f),
+                    BlendMode.srcIn,
                   ),
                 ),
               ),
-            ],
-          ),
+            ),
+            const SizedBox(width: 14),
+            // Middle content
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    summary.place.name,
+                    style: GoogleFonts.afacad(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xff17201c),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      SvgPicture.asset(
+                        'assets/icons/location_icon.svg',
+                        width: 11,
+                        height: 11,
+                        colorFilter: const ColorFilter.mode(
+                          Color(0xff9eb5a6),
+                          BlendMode.srcIn,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          summary.place.address ??
+                              'Seminary Rd, Brgy. Kalusugan',
+                          style: GoogleFonts.afacad(
+                            fontSize: 12,
+                            color: const Color(0xff9eb5a6),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  // Status badge
+                  Container(
+                    decoration: BoxDecoration(
+                      color: badgeBg,
+                      borderRadius: BorderRadius.circular(100),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            color: badgeDot,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          badgeLabel,
+                          style: GoogleFonts.afacad(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: badgeText,
+                            letterSpacing: 0.4,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            // Right: time-ago + green chevron
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  timeAgo,
+                  style: GoogleFonts.afacad(
+                    fontSize: 12,
+                    color: const Color(0xff9eb5a6),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: const BoxDecoration(
+                    color: Color(0xff2e7d4f),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: SvgPicture.asset(
+                      'assets/icons/chevron-right.svg',
+                      width: 14,
+                      height: 14,
+                      colorFilter: const ColorFilter.mode(
+                        Colors.white,
+                        BlendMode.srcIn,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
